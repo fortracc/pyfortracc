@@ -5,8 +5,8 @@ pyForTraCC - Python Library for Tracking and Forecasting Clusters
 [![pypi](https://badge.fury.io/py/pyfortracc.svg)](https://pypi.python.org/pypi/pyfortracc)
 [![Documentation](https://readthedocs.org/projects/pyfortracc/badge/?version=latest)](https://pyfortracc.readthedocs.io/)
 [![Downloads](https://img.shields.io/pypi/dm/pyfortracc.svg)](https://pypi.python.org/pypi/pyfortracc)
-[![Contributors](https://img.shields.io/github/contributors/fortracc-project/pyfortracc.svg)](https://github.com/fortracc-project/pyfortracc/graphs/contributors)
-[![License](https://img.shields.io/pypi/l/pyfortracc.svg)](https://github.com/fortracc-project/pyfortracc/blob/main/LICENSE)
+[![Contributors](https://img.shields.io/github/contributors/fortracc-project/pyfortracc.svg)](https://github.com/fortracc/pyfortracc/graphs/contributors)
+[![License](https://img.shields.io/pypi/l/pyfortracc.svg)](https://github.com/fortracc/pyfortracc/blob/main/LICENSE)
 <!-- badges: end -->
 
 Overview
@@ -29,14 +29,14 @@ The algorithm is divided into three main modules and form the Tracking Workflow.
 
 Documentation
 =====================================================================
-For a more detailed information of `pyForTraCC` package please read the user guide available [click here]([https://link-url-here.org](https://github.com/fortracc-project/pyfortracc/blob/main/UserGuide.md)).
+For a more detailed information of `pyForTraCC` package please read the user guide available [click here]([https://link-url-here.org](https://github.com/fortracc/pyfortracc/blob/main/UserGuide.md)).
 
 
 Installation
 =====================================================================
 Download the package from github or clone the repository using the command:
 
-    git clone https://github.com/fortracc-project/pyfortracc/
+    git clone https://github.com/fortracc/pyfortracc/
 
 We recommend installing the `pyForTraCC` package with Python 3.12. To make things easier and avoid conflicts, 
 it's a good idea to use a virtual environment (Anaconda3, Miniconda, Mamba, etc.) for managing dependencies. 
@@ -61,15 +61,15 @@ Example Gallery
 To use the library we have a gallery of examples that demonstrate the application of the algorithm in different situations.
 The development of this framework is constantly evolving, and several application examples can be seen in our example gallery.
 
-[![01 - Introducing Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc-project/pyfortracc/blob/main/examples/01_Introducing_Example/01_Introducing-pyFortraCC.ipynb) - 01 - Introducing Example
+[![01 - Introducing Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/01_Introducing_Example/01_Introducing-pyFortraCC.ipynb) - 01 - Introducing Example
 
-[![02 - Algorithm Workflow with Radar Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc-project/pyfortracc/blob/main/examples/02_Algorithm_Workflow_Radar_Example/02_Algorithm_Workflow.ipynb) - 02 - Algorithm Workflow with Radar Example
+[![02 - Algorithm Workflow with Radar Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Algorithm_Workflow_Radar_Example/02_Algorithm_Workflow.ipynb) - 02 - Algorithm Workflow with Radar Example
 
-[![03 -_Track Infrared:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc-project/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) - 03 - Track Infrared
+[![03 -_Track Infrared:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) - 03 - Track Infrared
 
-[![04 - Track High Resolution Global Precipitation:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc-project/pyfortracc/blob/main/examples/04_Track-High-Resolution-Global-Precipitation-Dataset/04_Track-High-Resolution-Global-Precipitation-Dataset.ipynb) - 04 - Track High Resolution Global Precipitation
+[![04 - Track High Resolution Global Precipitation:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-High-Resolution-Global-Precipitation-Dataset/04_Track-High-Resolution-Global-Precipitation-Dataset.ipynb) - 04 - Track High Resolution Global Precipitation
 
-[![05 -_Track Deforestation:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc-project/pyfortracc/blob/main/examples/05_Track-Deforestation-Dataset/05_Track-Deforestation-Dataset.ipynb) - 05 - Track Deforestation
+[![05 -_Track Deforestation:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/05_Track-Deforestation-Dataset/05_Track-Deforestation-Dataset.ipynb) - 05 - Track Deforestation
 
 Support and Contact
 =====================================================================

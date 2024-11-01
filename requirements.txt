@@ -9,6 +9,7 @@ pyarrow
 duckdb
 netCDF4
 cartopy
+shapelysmooth
 tqdm
 ipython
 ipykernel
