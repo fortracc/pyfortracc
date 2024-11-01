@@ -11,10 +11,9 @@ import matplotlib.patheffects as patheffects
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import LinearSegmentedColormap
 from shapely.wkt import loads
-from shapely.affinity import affine_transform
-# from shapelysmooth import chaikin_smooth
-from pyfortracc.utilities.utils import get_geotransform
+from shapelysmooth import chaikin_smooth
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+from pyfortracc.default_parameters import default_parameters
 
 
 def plot(name_list, read_function, timestamp,
@@ -25,18 +24,19 @@ def plot(name_list, read_function, timestamp,
             scalebar_location=(1.5, 0.05), plot_type='imshow',
             interpolation='nearest', ticks_fontsize=10,
             scalebar_linewidth=3, scalebar_units='km', scalebar_m_per_unit=1000,
+            min_val=None, max_val=None,
             nan_operation=np.less_equal, nan_value=0.01,
-            num_colors = 20, grid_lines=True, freq='T', title_fontsize=14,
-            grid_range=True, grid_deg=30, title='Track Plot', time_zone='UTC',
+            num_colors = 20, title_fontsize=14,
+            grid_deg=None, title='Track Plot', time_zone='UTC',
             cmap = 'viridis', zoom_region=[], bounds_info=False,
-            pad=0.1, orientation='vertical', shrink=0.5,
+            pad=0.2, orientation='vertical', shrink=0.5,
             cbar_extend='both',cbar=True, cbar_title='mm/h',
             boundary=True, centroid=True, trajectory=True, vector=False,
-            info=False, info_col_name=False, smooth_trajectory=False,
-            bound_color='red', bound_linewidth=1, box_fontsize=10,
-            centr_color='black', centr_size=1, x_scale=0.1, y_scale=0.1,
-            traj_color='blue' , traj_linewidth=1, traj_alpha=0.8,
-            vector_scale=1.5, vector_color='black',
+            info=False, info_col_name=True, smooth_trajectory=True,
+            bound_color='red', bound_linewidth=2, box_fontsize=10,
+            centr_color='black', centr_size=2, x_scale=0.1, y_scale=0.1,
+            traj_color='black' , traj_linewidth=2, traj_alpha=1,
+            vector_scale=0.5, vector_color='black',
             info_cols=['uid','threshold','status'],
             save=False, save_path='output/', save_name='plot.png'):
     """
@@ -54,6 +54,7 @@ def plot(name_list, read_function, timestamp,
     elif name_list['output_path'] is None:
         print('Please set the output name for the files!')
         return None
+    name_list = default_parameters(name_list, read_function)
     track_files = name_list['output_path'] + 'track/trackingtable/'
     # Check if trackingtable is a directory with parquet files
     if pathlib.Path(track_files).is_dir() is False:
@@ -75,8 +76,8 @@ def plot(name_list, read_function, timestamp,
         tck_table = tck_table.loc[tck_table['threshold'].isin(threshold_list)]
     # Check if tck_table is empty
     if len(tck_table) == 0:
-        print('No data for the given filters')
-        return
+        print('At timestamp {} there is no data for the given uid {} or threshold {}'.format(timestamp, uid_list, threshold_list))
+        return ax
     tck_table = gpd.GeoDataFrame(tck_table)
     tck_table['geometry'] = tck_table['geometry'].apply(loads)
     tck_table['trajectory'] = tck_table['trajectory'].apply(loads)
@@ -84,37 +85,58 @@ def plot(name_list, read_function, timestamp,
     # Read data
     data = read_function(tck_table['file'].unique()[0])
     data = np.where(nan_operation(data, nan_value), np.nan, data)
+    # Fit min and max values
+    if min_val is not None:
+        data = np.where(data <= min_val, min_val, data)
+    else:
+        min_val = np.nanmin(data)
+    if max_val is not None:
+        data = np.where(data >= max_val, max_val, data)
+    else:
+        max_val = np.nanmax(data)
     # Set of plot
     cmap = plt.get_cmap(cmap)
     colors = [cmap(i) for i in range(cmap.N)]
     cmap = LinearSegmentedColormap.from_list('mycmap', colors, N=num_colors)
     # Mount main figure
     fig = plt.figure(figsize=figsize)
-    if 'lon_min' in name_list and 'lon_max' in name_list \
-            and 'lat_min' in name_list and 'lat_max' in name_list:
-            geo_transform, _= get_geotransform(name_list)
-            tck_table['geometry'] = tck_table['geometry'].affine_transform(geo_transform)
-            tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x:affine_transform(x,geo_transform))
-            if ax is None:
+    # Check if lon_min, lon_max, lat_min, lat_max are in name_list and if is not None
+    if 'lon_min' in name_list and 'lon_max' in name_list and 'lat_min' in name_list and 'lat_max' in name_list:
+        if name_list['lon_min'] is not None and name_list['lon_max'] is not None and name_list['lat_min'] is not None and name_list['lat_max'] is not None:
+            if ax is None: # Comming from animation
                 ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+            # Set extent
+            extent = [name_list['lon_min'], name_list['lon_max'],
+                    name_list['lat_min'], name_list['lat_max']]
+            ax.set_extent(extent, crs=ccrs.PlateCarree())
+            # Set background
             if background == 'stock':
                 ax.stock_img()
             elif background == 'default':
-                ax.add_feature(cfeature.LAND, edgecolor='black', facecolor='lightgray', alpha=0.1)
+                ax.add_feature(cfeature.LAND, edgecolor='black', alpha=0.5)
                 ax.add_feature(cfeature.OCEAN)
                 ax.add_feature(cfeature.COASTLINE)
                 ax.add_feature(cfeature.BORDERS, linestyle=':')
                 ax.add_feature(cfeature.LAKES, alpha=0.5)
                 ax.add_feature(cfeature.RIVERS)
-                # ax.add_feature(cfeature.STATES.with_scale('10m'))
-            if no_anim:
-                gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=False,
+            # Set grid
+            gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
                 linewidth=1, color='gray', alpha=0.5, linestyle='--')
-                gl.top_labels = False
-                gl.right_labels = False
-            extent = [name_list['lon_min'], name_list['lon_max'],
-                    name_list['lat_min'], name_list['lat_max']]
-            ax.set_extent(extent, crs=ccrs.PlateCarree())
+            gl.top_labels = False
+            gl.right_labels = False
+            if grid_deg is not None:
+                ax.set_xticks(np.arange(name_list['lon_min'], 
+                                    name_list['lon_max'] + 1,
+                                    grid_deg), crs=ccrs.PlateCarree())
+                ax.set_yticks(np.arange(name_list['lat_min'], 
+                                name_list['lat_max'] + 1,
+                                grid_deg), crs=ccrs.PlateCarree())
+                lon_formatter = LongitudeFormatter(zero_direction_label=True)
+                lat_formatter = LatitudeFormatter()
+                ax.xaxis.set_major_formatter(lon_formatter)
+                ax.yaxis.set_major_formatter(lat_formatter)
+                ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
+            # Set plot type
             if plot_type == 'imshow':
                 ax.imshow(data, cmap=cmap, origin='lower', extent=extent,
                             interpolation=interpolation)
@@ -127,12 +149,12 @@ def plot(name_list, read_function, timestamp,
             elif plot_type == 'pcolormesh':
                 lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
                 lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
-                mesh = ax.pcolormesh(lons, lats, data, transform=ccrs.PlateCarree(), cmap=cmap)
+                ax.pcolormesh(lons, lats, data, transform=ccrs.PlateCarree(), cmap=cmap)
             # calc pixel size
             pixel_size = (name_list['lon_max'] - name_list['lon_min']) / data.shape[1]
             pixel_size = pixel_size * 111.32
     else:
-        if ax is None:
+        if ax is None: # Comming from animation
             ax = fig.add_subplot(1, 1, 1)
         ax.imshow(data, cmap=cmap, origin='lower', interpolation=interpolation)
     if len(zoom_region) == 4:
@@ -142,32 +164,17 @@ def plot(name_list, read_function, timestamp,
         print('No data for the given zoom')
         return
     if cbar:
-        if no_anim:
-            # Set cax for colorbar
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="2%", pad=pad, axes_class=plt.Axes)
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(np.nanmin(data),
-                                                                    np.nanmax(data)))
-            plt.colorbar(sm, ax=ax, cax=cax, label=cbar_title, orientation=orientation,
-                        shrink=shrink, extend=cbar_extend)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="2%", pad=pad, axes_class=plt.Axes)
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min_val, 
+                                                                vmax=max_val))
+        plt.colorbar(sm, ax=ax, cax=cax, label=cbar_title, orientation=orientation,
+                    shrink=shrink, extend=cbar_extend)
         
     # Add title to the figure
     ax.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
             horizontalalignment='center', fontsize=title_fontsize,
             verticalalignment='bottom', transform=ax.transAxes)
-    if grid_range:
-        ax.set_xticks(np.arange(name_list['lon_min'], 
-                            name_list['lon_max'] + 1,
-                            grid_deg), crs=ccrs.PlateCarree())
-        ax.set_yticks(np.arange(name_list['lat_min'], 
-                        name_list['lat_max'] + 1,
-                        grid_deg), crs=ccrs.PlateCarree())
-        lon_formatter = LongitudeFormatter(zero_direction_label=True)
-        lat_formatter = LatitudeFormatter()
-        ax.xaxis.set_major_formatter(lon_formatter)
-        ax.yaxis.set_major_formatter(lat_formatter)
-        # Set ticks font size
-        ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
     ##### BOUNDARIES ##############
     if boundary:
       thresholds = tck_table['threshold'].unique()
@@ -233,11 +240,11 @@ def plot(name_list, read_function, timestamp,
                     zorder=10)
     ##### TRAJECTORY #############
     if trajectory:
-      # Apply taubin_smooth into trajectory column
-    #   if smooth_trajectory:
-        #   tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x: chaikin_smooth(x) if x.length > 0 else x)
-      traject_df = tck_table.set_geometry('trajectory')
-      traject_df.plot(ax=ax, color=traj_color , linewidth=traj_linewidth, alpha=traj_alpha)
+        # Apply taubin_smooth into trajectory column
+        if smooth_trajectory:
+                tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x: chaikin_smooth(x) if x.length > 0 else x)
+        traject_df = tck_table.set_geometry('trajectory')
+        traject_df.plot(ax=ax, color=traj_color , linewidth=traj_linewidth, alpha=traj_alpha)
     if save:
         plt.savefig(save_path + save_name)
     plt.close(fig)

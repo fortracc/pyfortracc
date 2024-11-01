@@ -2,6 +2,9 @@ import pandas as pd
 import geopandas as gpd
 from shapely import affinity
 
+
+import matplotlib.pyplot as plt
+
 def edge_clusters(cur_df, left_edge, right_edge):
     """
     This function checks if any of the clusters in cur_df are touching the left 
@@ -30,14 +33,36 @@ def edge_clusters(cur_df, left_edge, right_edge):
     # Check if there is any intersected lef_board
     if r_board.empty and l_board.empty:
         return [], []
-    # Get first point of left line
-    left_coord = left_edge['geometry'].values[0].xy[0][0]
+    # Get first point of left line to calculate the distance to the right board
+    left_coord = left_edge['geometry'].iloc[0].coords[0][0]
+    if left_coord <= -180:
+        left_coord = 360
+    else:
+        left_coord = -left_coord
+    # Add buffer to the right board to avoid touching
+    r_board['geometry'] = r_board['geometry'].apply(lambda x: x.buffer(0.05))
+    l_board['geometry'] = l_board['geometry'].apply(lambda x: x.buffer(0.05))
+
     # Send Geometries at right board to the left by affine transformation
-    r_board['geometry'] = r_board['geometry'].apply(affinity.translate,
-                                                    xoff=left_coord)
+    l_board['geometry'] = l_board['geometry'].apply(lambda x: affinity.translate(x,
+                                                                                 xoff=left_coord,
+                                                                                 yoff=0))
     # Merge left and right boards by touches
-    touches = gpd.sjoin(l_board, r_board, how="inner", predicate="touches",
+    touches = gpd.sjoin(l_board, r_board, how="inner", predicate="intersects",
                         lsuffix="1", rsuffix="2")
+    # print(touches)
+    # fig, ax = plt.subplots()
+    # # left_edge.plot(ax=ax, color='red')
+    # # right_edge.plot(ax=ax, color='red')
+    # l_board.plot(ax=ax, color='blue')
+    # r_board.plot(ax=ax, color='green')
+    # # set ylim
+    # ax.set_ylim(26, 30)
+    # ax.set_xlim(178, 182)
+
+    # plt.show()
+
+    # Group touches by index
     grouped_touches = touches.groupby(touches.index)
     for _, group in grouped_touches:
         g1 = group[['size_1']].reset_index().drop_duplicates()

@@ -1,5 +1,4 @@
 import glob
-import os
 import duckdb
 import pandas as pd
 import multiprocessing as mp
@@ -60,10 +59,9 @@ def compute_duration(namelist, parallel=True):
         HAVING 
             DATEDIFF('minute', MIN(timestamp), MAX(timestamp)) > 0
     """
-    print('Querying Track files...\n')
     con.execute("CREATE TABLE df AS " + query)
     con.execute('PRAGMA disable_progress_bar;')
-    print('Updating Parquet files...')
+    print('Computing duration:')
     # Loop over files
     load_bar = get_loading_bar(files)
     if parallel:

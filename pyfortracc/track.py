@@ -1,8 +1,8 @@
-from .default_parameters import default_parameters
 from .features_extraction import features_extraction
 from .spatial_operations import spatial_operations
 from .cluster_linking import cluster_linking
 from .concat import concat
+from .post_processing.duration import compute_duration
 
 
 def track(name_lst={},
@@ -11,7 +11,8 @@ def track(name_lst={},
             feat_ext=True,
             spat_ope=True,
             clst_lnk=True,
-            concat_r=True):
+            concat_r=True,
+            duration=True):
     """ Track Module
     It is a module that performs the tracking clusters in time and space.
 
@@ -35,8 +36,6 @@ def track(name_lst={},
         raise ValueError('name_lst parameter is empty')
     if read_fnc is None:
         raise ValueError('read_fnc object is empty')
-    # Get default parameters
-    name_lst = default_parameters(name_lst, read_fnc)
     # Extract features
     if feat_ext:
         features_extraction(name_lst, read_fnc, parallel=parallel)
@@ -49,3 +48,6 @@ def track(name_lst={},
     # Concatenate results
     if concat_r:
         concat(name_lst)
+    # Compute duration
+    if duration:
+        compute_duration(name_lst, parallel=parallel)

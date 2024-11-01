@@ -1,10 +1,9 @@
 
 import geopandas as gpd
 from shapely.wkt import loads
-from shapely.affinity import affine_transform
 from multiprocessing import Pool
 from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
-                                        set_nworkers, get_geotransform,
+                                        set_nworkers, 
                                         read_parquet, create_dirs)
 
 def trajectories(name_list, start_time, end_time, driver='GeoJSON', mode = 'track'):
@@ -34,13 +33,12 @@ def trajectories(name_list, start_time, end_time, driver='GeoJSON', mode = 'trac
     parquets = parquets.loc[start_time:end_time]
     parquets = parquets.groupby(parquets.index)
     loading_bar = get_loading_bar(parquets)
-    geo_transf, _ = get_geotransform(name_list)
     n_workers = set_nworkers(name_list)
     out_path = name_list['output_path'] + mode + '/geometry/trajectory/'
     create_dirs(out_path)
     with Pool(n_workers) as pool:
         for _ in pool.imap_unordered(translate_trajectory,
-                                    [(geo_transf, out_path, driver, parquet)
+                                    [(out_path, driver, parquet)
                                     for _, parquet
                                     in enumerate(parquets)]):
             loading_bar.update(1)
@@ -66,9 +64,8 @@ def translate_trajectory(args):
     -------
     None
     """
-    geotran = args[0]
-    output_path = args[1]
-    driver = args[2]
+    output_path = args[0]
+    driver = args[1]
     parquet = args[-1][1]
     parquet_file = parquet['file'].unique()[0]
     file_name = parquet_file.split('/')[-1].replace('.parquet', '.'+driver)
@@ -79,15 +76,13 @@ def translate_trajectory(args):
     trajectories_ = parquet['trajectory']
     # Load geometry
     trajectories_ = trajectories_.apply(loads)
-    # Transform geometry
-    parquet['trajectory'] = trajectories_.apply(lambda x:
-                                                affine_transform(x, geotran))
     # Select columns
     parquet = parquet[columns + ['trajectory']]
     if 'timestamp' in parquet.columns:
         parquet['timestamp'] = parquet['timestamp'].astype(str)
     if 'lifetime' in parquet.columns:
         parquet['lifetime'] = parquet['lifetime'].astype(str)
-    parquet = gpd.GeoDataFrame(parquet, geometry='trajectory')
+    parquet = gpd.GeoDataFrame(parquet)
+    parquet['geometry'] = trajectories_
     parquet.to_file(output_path + file_name, driver=driver)
     return

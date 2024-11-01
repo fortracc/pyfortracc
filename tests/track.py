@@ -55,13 +55,7 @@ if __name__ == '__main__':
                     x_scale=0.1, y_scale=0.1, traj_color='blue', traj_linewidth=1, traj_alpha=0.8,
                     vector_scale=20, vector_color='black', info_cols=['uid','status', 'lifetime'],
                     save=True, save_path='output/', save_name='plot.png')
-    pyfortracc.post_processing.spatial_info(name_list, threshold_level=0, min_duration=0, min_distance=1, 
-                                             parallel=False, frequency='1D',
-                                        var_cols=['status','lifetime','size',
-                                                  'u_', 'v_','u_opt','u_noc','far','far_'])
     tracking_files = sorted(glob.glob(name_list['output_path'] + '/track/trackingtable/*.parquet'))
     tracking_table = pd.concat(pd.read_parquet(f) for f in tracking_files)
     tracking_table.to_csv(name_list['output_path'] + '/track/tracking_table.csv')
-    print(tracking_table[['timestamp','uid','status','duration','lifetime',
-                          'far', 'method', 'u_noc', 'v_noc','u_elp','v_elp','far_','far_elp']].head(50))
 

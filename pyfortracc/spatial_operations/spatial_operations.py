@@ -46,7 +46,7 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
     """
     print('Spatial Operations:')
     # Set default parameters
-    name_lst = default_parameters(name_lst)
+    name_lst = default_parameters(name_lst, read_fnc)
     # Get feature files to be processed
     feat_path = name_lst['output_path'] + 'track/processing/features/'
     feat_files = get_feature_files(feat_path)
@@ -56,7 +56,7 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
     name_lst['output_spatial'] = output_path
     create_dirs(output_path)  # Create the directories
     # Get edges of the data, used to check if the cluster is on the edges
-    left_edge, right_edge = get_edges(name_lst['edges'], feat_files, read_fnc)
+    left_edge, right_edge = get_edges(name_lst, feat_files, read_fnc)
     # Get loading bar
     loading_bar = get_loading_bar(feat_files)
     # Initialize schema
@@ -177,6 +177,9 @@ def spatial_operation(args):
             cur_frame.loc[touch_lowr,'board'] = True
             cur_frame.loc[touch_lowr,'board_idx'] = touch_lrg
         cur_frame['trajectory'] = cur_frame['trajectory'].astype(str)
+        if nm_lst['validation']:
+            cur_frame['method'] = 'noc'
+            cur_frame['far'] = 1
         write_parquet(cur_frame[spatial_col], output_file)
         return
     # Get previous file based on current file and search in previous files
@@ -204,10 +207,10 @@ def spatial_operation(args):
     if fct:
         prv_frame.reset_index(drop=True, inplace=True)
     # Compute the overlays for each threshold
-    # Loop over thresholds to perform spatial operations
+    # Loop over reversed (inside to outise) thresholds to perform spatial operations
     for threshold in thresholds[::-1]:
         operation_df = operations(cur_frame, prv_frame, threshold, 
-                                l_edge, r_edg, nm_lst)
+                                  l_edge, r_edg, nm_lst)
         # Update current frame based on index
         cur_frame.loc[operation_df.index] = operation_df
     # Optical flow method: Read instructions in optical_flow.py
@@ -232,6 +235,9 @@ def spatial_operation(args):
             cur_frame['v_noc'] = cur_frame['v_']
             # Call validation function
             cur_frame = validation(cur_frame, prv_frame, nm_lst)
+            # Fill method equals None to noc
+            cur_frame['method'] = cur_frame['method'].fillna('noc')
+            cur_frame['far'] = cur_frame['far'].fillna(1)
     # Save the result
     write_parquet(cur_frame[spatial_col], output_file)
     return

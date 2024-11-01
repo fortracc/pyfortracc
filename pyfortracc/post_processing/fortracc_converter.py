@@ -5,9 +5,9 @@ import geopandas as gpd
 from datetime import datetime
 import pathlib
 from shapely import wkt
-from shapely.affinity import affine_transform
+# from shapely.affinity import affine_transform
 from pyfortracc.utilities.math_utils import uv2angle, uv2magn, calculate_vel_area
-from pyfortracc.utilities.utils import get_geotransform, get_pixarea, calculate_pixel_area
+# from pyfortracc.utilities.utils import get_geotransform, get_pixarea, calculate_pixel_area
 
 
 def convert_parquet_to_family(name_list,defaults_path = 'track', default_undef=-999.99, csv_out=True):
@@ -23,13 +23,7 @@ def convert_parquet_to_family(name_list,defaults_path = 'track', default_undef=-
     # Convert the 'geometry' column from WKT string to Shapely geometry and create the GeoDataFrame
     tracking_table['geometry'] = tracking_table['geometry'].apply(wkt.loads)
     geo_tracking_table = gpd.GeoDataFrame(tracking_table, geometry='geometry')
-    
-    # Geotransformation function using information from name_list
-    geotransform, _ = get_geotransform(name_list)
-    
-    # Apply the affine transformation to the 'geometry' column, transforming spatial coordinates into lat/lon coordinates
-    geo_tracking_table['geometry'] = geo_tracking_table['geometry'].apply(lambda x: affine_transform(x, geotransform))
-    
+        
     # Group the data by 'uid' and concatenate the groups into a single DataFrame
     family_group = geo_tracking_table.groupby('uid')
     family_table = pd.concat([group for _, group in family_group])
@@ -53,18 +47,18 @@ def convert_parquet_to_family(name_list,defaults_path = 'track', default_undef=-
     # Get pixel size based on geotransform:
     # pixel_size = (geotransform[0] + geotransform[3]) / 2
     # Get delta_time in minutes:
-    delta_time = name_list['delta_time']
-    #get the area of the pixel and the xlat and xlon vectors:
-    pixel_area, xlat, xlon = calculate_pixel_area(name_list)
+    # delta_time = name_list['delta_time']
+    # #get the area of the pixel and the xlat and xlon vectors:
+    # pixel_area, xlat, xlon = calculate_pixel_area(name_list)
 
-    family_table['vel'] = family_table[['u_', 'v_', 'clon', 'clat']].apply(lambda x:
-                                            calculate_vel_area(
-                                            uv2magn(x['u_'], x['v_']),
-                                            'km/h', 
-                                            get_pixarea(x['clon'], x['clat'], xlon, xlat, pixel_area),
-                                            delta_time)
-                                            if not default_undef in x.values
-                                            else default_undef, axis=1)
+    # family_table['vel'] = family_table[['u_', 'v_', 'clon', 'clat']].apply(lambda x:
+    #                                         calculate_vel_area(
+    #                                         uv2magn(x['u_'], x['v_']),
+    #                                         'km/h', 
+    #                                         get_pixarea(x['clon'], x['clat'], xlon, xlat, pixel_area),
+    #                                         delta_time)
+    #                                         if not default_undef in x.values
+    #                                         else default_undef, axis=1)
 
     family_table['dir'] = family_table[['u_', 'v_']].apply(lambda x:
                                                     uv2angle(x['u_'], x['v_'])
@@ -75,7 +69,7 @@ def convert_parquet_to_family(name_list,defaults_path = 'track', default_undef=-
     pathlib.Path(name_list['output_path'] + defaults_path + '/family').mkdir(parents=True, exist_ok=True)
     
     # Prepare the data for saving
-    output_columns = ['uid', 'cluster_id', 'timestamp', 'time', 'duration', 'clat', 'clon', 'size', 'expansion', 'vel', 'dir', 'status']
+    output_columns = ['uid', 'cluster_id', 'timestamp', 'time', 'duration', 'clat', 'clon', 'size', 'expansion', 'dir','u_' ,'v_', 'status']
         
     #output file is based on the family_table first timestamp and last timestamp using family_YEAR1MONTH1DAY1HOUR1_YEAR2MONTH2DAY2HOUR2.txt:
     min_timestamp = family_table['timestamp'].min().strftime('%Y%m%d%H')
@@ -104,8 +98,8 @@ def convert_parquet_to_family(name_list,defaults_path = 'track', default_undef=-
             output_columns_2.remove('timestamp')
             
             #ALAN: ja converter no parquet
-            # Convert TIME to hours
-            group['TIME_H'] = group['time'].dt.total_seconds() / 3600.0
+            # Convert TIME to hours, the original time are in minutes
+            group['TIME_H'] = group['time'] / 60
             group.drop('time', axis=1, inplace=True)
             group = group.rename(columns={'TIME_H': 'time'})
             group2 = group[output_columns_2]
