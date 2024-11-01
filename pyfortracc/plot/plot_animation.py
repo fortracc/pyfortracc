@@ -35,7 +35,8 @@ def plot_animation(name_list = None,
                   interval=500,
                   repeat_delay=1000,
                   path_files=None,
-                  num_frames=None):
+                  num_frames=None,
+                  grid_deg=None):
       """
       Generate an animated plot from geospatial or raster data.
 
@@ -184,7 +185,8 @@ def plot_animation(name_list = None,
                         cbar_extend=cbar_extend, cbar_title=cbar_title, boundary=boundary, centroid=centroid, trajectory=trajectory, vector=vector,
                         info=info, info_col_name=info_col_name, smooth_trajectory=smooth_trajectory, bound_color=bound_color, bound_linewidth=bound_linewidth,
                         centr_color=centr_color, centr_size=centr_size, traj_color=traj_color, traj_linewidth=traj_linewidth, traj_alpha=traj_alpha,
-                        vector_scale=vector_scale, vector_color=vector_color, info_cols=info_cols, no_anim=False, min_val=min_val, max_val=max_val)
+                        vector_scale=vector_scale, vector_color=vector_color, info_cols=info_cols, no_anim=False, min_val=min_val, max_val=max_val,
+                        grid_deg=grid_deg)
                   return ax
       # Animation
       ani = animation.FuncAnimation(fig, update,
