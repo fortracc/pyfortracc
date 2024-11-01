@@ -78,6 +78,6 @@ from pyfortracc.features_extraction import features_extraction
 from pyfortracc.spatial_operations import spatial_operations
 from pyfortracc.cluster_linking import cluster_linking
 from .concat import concat
-from pyfortracc.plot.plot_animation import plot_animation
 from pyfortracc.plot.plot import plot
+from pyfortracc.plot.plot_animation import plot_animation
 from pyfortracc.spatial_conversions import spatial_conversions
