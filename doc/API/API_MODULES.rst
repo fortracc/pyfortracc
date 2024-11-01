@@ -5,6 +5,7 @@ Pyfortracc  package
     :caption: Submodules
     :maxdepth: 2
 
+    API_description
     API_cluster_linking
     API_features_extraction
     API_forecast
