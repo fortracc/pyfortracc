@@ -1,0 +1,8 @@
+ipykernel
+nbsphinx
+numpy
+sphinx_rtd_theme
+sphinx-gallery
+myst-parser
+sphinx
+sphinx_bootstrap_theme

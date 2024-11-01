@@ -1,0 +1,8 @@
+# C/cython source files
+include pyfortracc/*
+include README.md
+include LICENSE
+include tests/*.*
+include requirements.txt
+recursive-include pyfortracc *.c
+include pyproject.toml

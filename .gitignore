@@ -1,3 +1,22 @@
+# pyfortracc ignore files
+*.nc
+*.parquet
+*.zip
+*.GeoJSON
+*.GPKG
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.tif
+*.c
+.DS_Store
+# Ignore examples data each have input or output path
+input/
+output/
+experiments/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -106,10 +125,8 @@ ipython_config.py
 #pdm.lock
 #   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
 #   in version control.
-#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
+#   https://pdm.fming.dev/#use-with-ide
 .pdm.toml
-.pdm-python
-.pdm-build/
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
