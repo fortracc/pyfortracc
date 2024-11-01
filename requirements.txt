@@ -1,0 +1,16 @@
+rasterio
+geopandas
+opencv-python
+opencv_contrib_python
+xarray
+scipy
+scikit-learn
+pyarrow
+duckdb
+netCDF4
+cartopy
+tqdm
+ipython
+ipykernel
+psutil
+numba
