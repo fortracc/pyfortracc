@@ -13,37 +13,73 @@ from matplotlib.colors import LinearSegmentedColormap
 from shapely.wkt import loads
 from shapelysmooth import chaikin_smooth
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+from io import BytesIO
+from PIL import Image
 from pyfortracc.default_parameters import default_parameters
 
 
-def plot(name_list, read_function, timestamp,
-            ax=None, no_anim=True,
-            uid_list=[], threshold_list=[],
-            figsize=(7,7), background='default',
-            scalebar=False, scalebar_metric=100,
-            scalebar_location=(1.5, 0.05), plot_type='imshow',
-            interpolation='nearest', ticks_fontsize=10,
-            scalebar_linewidth=3, scalebar_units='km', scalebar_m_per_unit=1000,
-            min_val=None, max_val=None,
-            nan_operation=np.less_equal, nan_value=0.01,
-            num_colors = 20, title_fontsize=14,
-            grid_deg=None, title='Track Plot', time_zone='UTC',
-            cmap = 'viridis', zoom_region=[], bounds_info=False,
-            pad=0.2, orientation='vertical', shrink=0.5,
-            cbar_extend='both',cbar=True, cbar_title='mm/h',
-            boundary=True, centroid=True, trajectory=True, vector=False,
-            info=False, info_col_name=True, smooth_trajectory=True,
-            bound_color='red', bound_linewidth=2, box_fontsize=10,
-            centr_color='black', centr_size=2, x_scale=0.1, y_scale=0.1,
-            traj_color='black' , traj_linewidth=2, traj_alpha=1,
-            vector_scale=0.5, vector_color='black',
-            info_cols=['uid','threshold','status'],
-            save=False, save_path='output/', save_name='plot.png'):
+def plot(name_list,
+        read_function,
+        timestamp,
+        ax=None,
+        animate=False,
+        uid_list=[],
+        threshold_list=[],
+        figsize=(7,7),
+        background='default',
+        scalebar=False,
+        scalebar_metric=100,
+        scalebar_location=(1.5, 0.05),
+        plot_type='imshow',
+        interpolation='nearest',
+        ticks_fontsize=10,
+        scalebar_linewidth=3,
+        scalebar_units='km',
+        min_val=None,
+        max_val=None,
+        nan_operation=np.less_equal,
+        nan_value=0.01,
+        num_colors = 20,
+        title_fontsize=14,
+        grid_deg=None,
+        title='Track Plot',
+        time_zone='UTC',
+        cmap = 'viridis',
+        zoom_region=[],
+        bounds_info=False,
+        pad=0.2,
+        orientation='vertical',
+        shrink=0.5,
+        cbar_extend='both',
+        cbar=True,
+        cbar_title='',
+        boundary=True,
+        centroid=True, trajectory=True, vector=False,
+        info=True,
+        info_col_name=True,
+        smooth_trajectory=True,
+        bound_color='red', 
+        bound_linewidth=2, 
+        box_fontsize=10,
+        centr_color='black',
+        centr_size=2,
+        x_scale=0.1,
+        y_scale=0.1,
+        traj_color='black',
+        traj_linewidth=2,
+        traj_alpha=1,
+        vector_scale=0.5,
+        vector_color='black',
+        info_cols=['uid'],
+        save=False,
+        save_path='output/',
+        save_name='plot.png'):
     """
     This function is designed to visualize tracking data on a map or a simple 2D plot. 
     The function reads in tracking data, filters it based on various criteria, and plots it using Matplotlib, 
     with optional customizations such as colorbars, boundaries, centroids, trajectories, and additional information annotations. 
     """
+        
     if read_function is None:
         print('Please set a read function to open the files!')
         return None
@@ -245,7 +281,7 @@ def plot(name_list, read_function, timestamp,
         traject_df.plot(ax=ax, color=traj_color , linewidth=traj_linewidth, alpha=traj_alpha)
     if save:
         plt.savefig(save_path + save_name)
-    plt.close(fig)
+    
     # Add matrix info
     if bounds_info:
         ax.annotate(str(data.shape[1]) + ' Columns', xy=(0.5, -0.1), xytext=(0.5, -0.18),
@@ -262,7 +298,17 @@ def plot(name_list, read_function, timestamp,
     if len(tck_table) > 0 and len(zoom_region) == 4:
         ax.set_xlim(zoom_region[0], zoom_region[1])
         ax.set_ylim(zoom_region[2], zoom_region[3])
-    return fig
+
+    if animate:
+        buf = BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        plt.close(fig)
+        return Image.open(buf)
+    else:
+        plt.close(fig)
+        return fig
+
 
 from math import floor
 def utm_from_lon(lon):
