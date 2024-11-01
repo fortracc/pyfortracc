@@ -4,9 +4,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 from matplotlib import animation
+from matplotlib.colorbar import Colorbar
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from IPython.display import HTML
 from .plot import plot
+from pyfortracc.default_parameters import default_parameters
 
 
 def plot_animation(name_list = None,
@@ -14,19 +16,21 @@ def plot_animation(name_list = None,
                   start_stamp = '1900-01-01 00:00:00',
                   end_stamp = '2099-01-01 00:00:00',
                   uid_list=[], threshold_list=[],
-                  figsize=(7,7),
-                  nan_operation=np.less_equal, nan_value=0.01,
+                  figsize=(5,5),
+                  nan_operation=np.less_equal, 
+                  min_val=None, max_val=None,
+                  nan_value=0.01,
                   num_colors = 20, freq='T',
                   cmap = 'viridis', zoom_region=[],
                   pad=0.1, orientation='vertical', shrink=0.5,
                   cbar_extend='both', cbar_title='mm/h',
                   cbar_min=None, cbar_max=None, x_scale=0.1, y_scale=0.1,
                   boundary=True, centroid=True, trajectory=True, vector=False,
-                  info=False, info_col_name=False, smooth_trajectory=False,
+                  info=False, info_col_name=True, smooth_trajectory=False,
                   bound_color='red', bound_linewidth=1,
                   centr_color='black', centr_size=1,
-                  traj_color='blue' , traj_linewidth=1, traj_alpha=0.8,
-                  vector_scale=1.5, vector_color='black',
+                  traj_color='black' , traj_linewidth=2, traj_alpha=1,
+                  vector_scale=0.5, vector_color='black',
                   info_cols=['uid','threshold','status'],
                   interval=500,
                   repeat_delay=1000,
@@ -137,6 +141,8 @@ def plot_animation(name_list = None,
       customized further by setting parameters like time intervals, number of colors, and 
       vector overlays.
       """
+      if name_list is not None:
+            name_list = default_parameters(name_list)
       fig = plt.figure(figsize=figsize)
       # Plot data from path_files
       if path_files is not None:
@@ -151,56 +157,40 @@ def plot_animation(name_list = None,
                               vmin=cbar_min, vmax=cbar_max)
                   ax.set_xlabel('X')
                   ax.set_ylabel('Y')
-                  ax.grid( linestyle='-', linewidth=0.5, alpha=0.5)
-                  divider = make_axes_locatable(ax)
-                  cax = divider.append_axes("right", size="2%", pad=pad, axes_class=plt.Axes)
-                  sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=cbar_min, vmax=cbar_max))
-                  plt.colorbar(sm, ax=ax, cax=cax, label=cbar_title, orientation=orientation,
-                              shrink=shrink)                  
+                  ax.grid( linestyle='-', linewidth=0.5, alpha=0.5)      
                   ax.set_title(f'{frame}')
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="2%", pad=pad, axes_class=plt.Axes)
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=cbar_min, vmax=cbar_max))
+            sm._A = []
+            cbar = plt.colorbar(sm, cax=cax, orientation=orientation, extend=cbar_extend)
+            cbar.set_label(cbar_title)
       else:
             # Mount timestamplist based on start and end time and name_list['delta_time']
             files = sorted(glob.glob(name_list['output_path'] + 'track/trackingtable/*.parquet'))
             files = [f.split('/')[-1] for f in files]
             files = pd.to_datetime(files, format='%Y%m%d_%H%M.parquet')
             files = files[(files >= start_stamp) & (files <= end_stamp)]
-            if 'lon_min' in name_list and 'lon_max' in name_list \
-                  and 'lat_min' in name_list and 'lat_max' in name_list:
-                  ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+            if 'lon_min' in name_list and 'lon_max' in name_list and 'lat_min' in name_list and 'lat_max' in name_list:
+                  if name_list['lon_min'] is not None and name_list['lon_max'] is not None and name_list['lat_min'] is not None and name_list['lat_max'] is not None:
+                        ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
             else:
                   ax = fig.add_subplot(1, 1, 1)
             def update(frame):
                   ax.clear()
                   ax.set_aspect('auto')
-                  img = plot(name_list, read_function, frame, ax=ax, nan_operation=nan_operation, nan_value=nan_value, uid_list=uid_list, threshold_list=threshold_list,
-                              num_colors=num_colors, cmap=cmap, zoom_region=zoom_region, pad=pad, orientation=orientation, shrink=shrink, x_scale=x_scale, y_scale=y_scale,
-                              cbar_extend=cbar_extend, cbar_title=cbar_title, boundary=boundary, centroid=centroid, trajectory=trajectory, vector=vector,
-                              info=info, info_col_name=info_col_name, smooth_trajectory=smooth_trajectory, bound_color=bound_color, bound_linewidth=bound_linewidth,
-                              centr_color=centr_color, centr_size=centr_size, traj_color=traj_color, traj_linewidth=traj_linewidth, traj_alpha=traj_alpha,
-                              vector_scale=vector_scale, vector_color=vector_color, info_cols=info_cols, no_anim=False)
-                  del img
-            if 'lon_min' in name_list and 'lon_max' in name_list \
-                  and 'lat_min' in name_list and 'lat_max' in name_list:
-                  extent = [name_list['lon_min'], name_list['lon_max'],
-                              name_list['lat_min'], name_list['lat_max']]
-                  # Check if have zoom_region
-                  if len(zoom_region) > 0:
-                        extent = zoom_region
-                  # Add new axis to solve error in cartopy with animation for gridlines
-                  axp = ax.get_position()
-                  gl_ax = fig.add_axes(axp, projection=ccrs.PlateCarree(), zorder=-1)
-                  gl_ax.set_extent(extent, crs=ccrs.PlateCarree())
-                  gl_ax.axis('off')
-                  gls = gl_ax.gridlines(zorder=-1, crs=ccrs.PlateCarree(), draw_labels=True)
-                  gls.top_labels = False
-                  gls.right_labels = False
-                  ax.set_xlim(extent[0], extent[1])
-                  ax.set_ylim(extent[2], extent[3])
-
+                  fplt = plot(name_list, read_function, frame, ax=ax, nan_operation=nan_operation, nan_value=nan_value, uid_list=uid_list, threshold_list=threshold_list,
+                        num_colors=num_colors, cmap=cmap, zoom_region=zoom_region, pad=pad, orientation=orientation, shrink=shrink, x_scale=x_scale, y_scale=y_scale,
+                        cbar_extend=cbar_extend, cbar_title=cbar_title, boundary=boundary, centroid=centroid, trajectory=trajectory, vector=vector,
+                        info=info, info_col_name=info_col_name, smooth_trajectory=smooth_trajectory, bound_color=bound_color, bound_linewidth=bound_linewidth,
+                        centr_color=centr_color, centr_size=centr_size, traj_color=traj_color, traj_linewidth=traj_linewidth, traj_alpha=traj_alpha,
+                        vector_scale=vector_scale, vector_color=vector_color, info_cols=info_cols, no_anim=False, min_val=min_val, max_val=max_val)
+                  return ax
+      # Animation
       ani = animation.FuncAnimation(fig, update,
                               frames=files,
-                              interval=interval, repeat=True, blit=False, repeat_delay=repeat_delay)
-      # Tight layout to avoid overlap
+                              interval=interval, repeat=True, blit=False, 
+                              repeat_delay=repeat_delay)
       ani = ani.to_jshtml()
       html_output = HTML(ani)
       plt.close(fig)

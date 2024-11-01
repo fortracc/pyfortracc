@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import warnings
 from multiprocessing import Pool
 from pyfortracc.default_parameters import default_parameters
@@ -9,7 +8,6 @@ from pyfortracc.utilities.utils import (get_input_files, set_operator,
                                         create_dirs, write_parquet, set_schema,
                                         set_outputdf, set_nworkers,
                                         get_loading_bar, get_filestamp)
-from pyfortracc.utilities.conversions import dbz2mm6m3, mm6m32dbz
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -29,7 +27,7 @@ def features_extraction(name_lst, read_fnc, parallel=True):
     """
     print('Features Extraction:')
     # Set default parameters
-    name_lst = default_parameters(name_lst)
+    name_lst = default_parameters(name_lst, read_fnc)
     # Get the input files and filestamp
     files = get_input_files(name_lst['input_path'])
     # Set the operator used to thresholding segmentation
@@ -43,6 +41,8 @@ def features_extraction(name_lst, read_fnc, parallel=True):
     create_dirs(output_path)
     # Initialize schema of the output dataframe
     schema = set_schema('features', name_lst)
+    # Get geotransform
+    # geotrnf, _ = get_geotransform(name_lst)
     if parallel:
         # Set number of workers
         n_workers = set_nworkers(name_lst)
@@ -104,17 +104,9 @@ def extract_features(args):
         clu_stats['threshold'] = threshold
         clu_stats['threshold_level'] = thld_lvl
         output_df = pd.concat([output_df, clu_stats], axis=0)
-    # If mean_dbz is True, calculate the mean_dbz for dbz values
-    if 'mean_dbz' in name_list.keys() and name_list['mean_dbz']:
-        mm6m3_values = output_df['array_values'].apply(dbz2mm6m3)
-        mean_mm6m3_values = mm6m3_values.apply(np.nanmean)
-        std_mm6m3_values = mm6m3_values.apply(np.nanstd)
-        # Convert back to dbz and store in the output_df
-        output_df['mean'] = mean_mm6m3_values.apply(mm6m32dbz)
-        output_df['std'] = std_mm6m3_values.apply(mm6m32dbz)
     # Save the features
-    output_df['file'] = file
     output_df['timestamp'] = tstamp
+    output_df['file'] = file
     output_df.reset_index(inplace=True, drop=True)
     write_parquet(output_df, feature_file)
     return

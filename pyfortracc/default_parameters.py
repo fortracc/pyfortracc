@@ -64,12 +64,8 @@ def default_parameters(name_lst=None, read_function=None):
         Vector correction method for optical flow.
     opt_method: str
         Optical flow method. It can be 'farneback' or 'lucas-kanade'
-<<<<<<< HEAD
-
-=======
     elp_correction: bool
         Vector correction method for ellipse fitting.
->>>>>>> c4ddef333c1032f35658b7b2c25e4903b8a78f90
     Returns
     -------
     name_lst : dict
@@ -102,8 +98,22 @@ def default_parameters(name_lst=None, read_function=None):
         for file in files:
             if read_function:
                 data = read_function(file)
-                name_lst['x_dim'], name_lst['y_dim'] = data.shape
+                name_lst['y_dim'], name_lst['x_dim'] = data.shape
                 break
+    if 'lat_min' not in name_lst:
+        name_lst['lat_min'] = None
+    if 'lon_min' not in name_lst:
+        name_lst['lon_min'] = None
+    if 'lat_max' not in name_lst:
+        name_lst['lat_max'] = None
+    if 'lon_max' not in name_lst:
+        name_lst['lon_max'] = None
+    if name_lst['lat_min'] == None and name_lst['lat_max'] == None:
+        name_lst['y_res'] = 1
+        name_lst['x_res'] = 1
+    else:
+        name_lst['y_res'] = abs(name_lst['lat_min'] - name_lst['lat_max']) / name_lst['y_dim']
+        name_lst['x_res'] = abs(name_lst['lon_min'] - name_lst['lon_max']) / name_lst['x_dim']
     if 'spl_correction' not in name_lst:
         name_lst['spl_correction'] = False
     if 'mrg_correction' not in name_lst:

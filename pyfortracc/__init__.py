@@ -81,4 +81,3 @@ from .concat import concat
 from pyfortracc.plot.plot_animation import plot_animation
 from pyfortracc.plot.plot import plot
 from pyfortracc.spatial_conversions import spatial_conversions
-from pyfortracc.post_processing import add_geofeature, add_rasterfeature
