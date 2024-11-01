@@ -301,7 +301,7 @@ def plot(name_list,
 
     if animate:
         buf = BytesIO()
-        plt.savefig(buf, format='png')
+        plt.savefig(buf, format='png', bbox_inches='tight')
         buf.seek(0)
         plt.close(fig)
         return Image.open(buf)
