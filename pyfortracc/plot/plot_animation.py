@@ -14,23 +14,29 @@ from .plot import plot
 from pyfortracc.default_parameters import default_parameters
 
 def process_frame(args):
-    """Wrapper function to enable multiprocessing of the update function."""
-    frame, read_function, cmap, cbar_min, cbar_max = args
-    fig, ax = plt.subplots(figsize=(5, 5))
-    data = read_function(frame)
-    ax.imshow(data, cmap=cmap, origin='lower', interpolation='nearest', aspect='auto',
-              vmin=cbar_min, vmax=cbar_max)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.grid(linestyle='-', linewidth=0.5, alpha=0.5)
-    ax.set_title(f'{frame}')
+      """Wrapper function to enable multiprocessing of the update function."""
+      frame, read_function, cmap, cbar_min, cbar_max = args
+      fig, ax = plt.subplots(figsize=(5, 5))
+      data = read_function(frame)
+      fi = ax.imshow(data, cmap=cmap, origin='lower', interpolation='nearest', aspect='auto',
+                  vmin=cbar_min, vmax=cbar_max)
+      
+      # Add simple colorbar
+      divider = make_axes_locatable(ax)
+      cax = divider.append_axes("right", size="5%", pad=0.07)
+      cbar = plt.colorbar(fi, cax=cax)
+      cbar.set_label('Value')
+      ax.set_xlabel('X')
+      ax.set_ylabel('Y')
+      ax.grid(linestyle='-', linewidth=0.5, alpha=0.5)
+      ax.set_title(f'{frame}')
 
-    # Convert figure to image and close to free memory
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close(fig)
-    return Image.open(buf)
+      # Convert figure to image and close to free memory
+      buf = BytesIO()
+      plt.savefig(buf, format='png', bbox_inches='tight')
+      buf.seek(0)
+      plt.close(fig)
+      return Image.open(buf)
 
 def plot_wrapper(args):
       return plot(*args)
@@ -46,7 +52,7 @@ def plot_animation(
         animate=True,
         uid_list=[],
         threshold_list=[],
-        figsize=(7,7),
+        figsize=(5,5),
         background='default',
         scalebar=False,
         scalebar_metric=100,
