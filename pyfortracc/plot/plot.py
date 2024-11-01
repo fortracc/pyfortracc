@@ -101,58 +101,57 @@ def plot(name_list, read_function, timestamp,
     # Mount main figure
     fig = plt.figure(figsize=figsize)
     # Check if lon_min, lon_max, lat_min, lat_max are in name_list and if is not None
-    if 'lon_min' in name_list and 'lon_max' in name_list and 'lat_min' in name_list and 'lat_max' in name_list:
-        if name_list['lon_min'] is not None and name_list['lon_max'] is not None and name_list['lat_min'] is not None and name_list['lat_max'] is not None:
-            if ax is None: # Comming from animation
-                ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
-            # Set extent
-            extent = [name_list['lon_min'], name_list['lon_max'],
-                    name_list['lat_min'], name_list['lat_max']]
-            ax.set_extent(extent, crs=ccrs.PlateCarree())
-            # Set background
-            if background == 'stock':
-                ax.stock_img()
-            elif background == 'default':
-                ax.add_feature(cfeature.LAND, edgecolor='black', alpha=0.5)
-                ax.add_feature(cfeature.OCEAN)
-                ax.add_feature(cfeature.COASTLINE)
-                ax.add_feature(cfeature.BORDERS, linestyle=':')
-                ax.add_feature(cfeature.LAKES, alpha=0.5)
-                ax.add_feature(cfeature.RIVERS)
-            # Set grid
-            gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
-                linewidth=1, color='gray', alpha=0.5, linestyle='--')
-            gl.top_labels = False
-            gl.right_labels = False
-            if grid_deg is not None:
-                ax.set_xticks(np.arange(name_list['lon_min'], 
-                                    name_list['lon_max'] + 1,
-                                    grid_deg), crs=ccrs.PlateCarree())
-                ax.set_yticks(np.arange(name_list['lat_min'], 
-                                name_list['lat_max'] + 1,
+    if name_list['lon_min'] is not None and name_list['lon_max'] is not None and name_list['lat_min'] is not None and name_list['lat_max'] is not None:
+        if ax is None: # Comming from animation
+            ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+        # Set extent
+        extent = [name_list['lon_min'], name_list['lon_max'],
+                name_list['lat_min'], name_list['lat_max']]
+        ax.set_extent(extent, crs=ccrs.PlateCarree())
+        # Set background
+        if background == 'stock':
+            ax.stock_img()
+        elif background == 'default':
+            ax.add_feature(cfeature.LAND, edgecolor='black', alpha=0.5)
+            ax.add_feature(cfeature.OCEAN)
+            ax.add_feature(cfeature.COASTLINE)
+            ax.add_feature(cfeature.BORDERS, linestyle=':')
+            ax.add_feature(cfeature.LAKES, alpha=0.5)
+            ax.add_feature(cfeature.RIVERS)
+        # Set grid
+        gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+            linewidth=1, color='gray', alpha=0.5, linestyle='--')
+        gl.top_labels = False
+        gl.right_labels = False
+        if grid_deg is not None:
+            ax.set_xticks(np.arange(name_list['lon_min'], 
+                                name_list['lon_max'] + 1,
                                 grid_deg), crs=ccrs.PlateCarree())
-                lon_formatter = LongitudeFormatter(zero_direction_label=True)
-                lat_formatter = LatitudeFormatter()
-                ax.xaxis.set_major_formatter(lon_formatter)
-                ax.yaxis.set_major_formatter(lat_formatter)
-                ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
-            # Set plot type
-            if plot_type == 'imshow':
-                ax.imshow(data, cmap=cmap, origin='lower', extent=extent,
-                            interpolation=interpolation)
-            elif plot_type == 'contourf':
-                ax.contourf(data, cmap=cmap, origin='lower', extent=extent,
-                            interpolation=interpolation)
-            elif plot_type == 'contour':
-                ax.contour(data, cmap=cmap, origin='lower', extent=extent,
-                            interpolation=interpolation)
-            elif plot_type == 'pcolormesh':
-                lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
-                lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
-                ax.pcolormesh(lons, lats, data, transform=ccrs.PlateCarree(), cmap=cmap)
-            # calc pixel size
-            pixel_size = (name_list['lon_max'] - name_list['lon_min']) / data.shape[1]
-            pixel_size = pixel_size * 111.32
+            ax.set_yticks(np.arange(name_list['lat_min'], 
+                            name_list['lat_max'] + 1,
+                            grid_deg), crs=ccrs.PlateCarree())
+            lon_formatter = LongitudeFormatter(zero_direction_label=True)
+            lat_formatter = LatitudeFormatter()
+            ax.xaxis.set_major_formatter(lon_formatter)
+            ax.yaxis.set_major_formatter(lat_formatter)
+            ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
+        # Set plot type
+        if plot_type == 'imshow':
+            ax.imshow(data, cmap=cmap, origin='lower', extent=extent,
+                        interpolation=interpolation)
+        elif plot_type == 'contourf':
+            ax.contourf(data, cmap=cmap, origin='lower', extent=extent,
+                        interpolation=interpolation)
+        elif plot_type == 'contour':
+            ax.contour(data, cmap=cmap, origin='lower', extent=extent,
+                        interpolation=interpolation)
+        elif plot_type == 'pcolormesh':
+            lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
+            lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
+            ax.pcolormesh(lons, lats, data, transform=ccrs.PlateCarree(), cmap=cmap)
+        # calc pixel size
+        pixel_size = (name_list['lon_max'] - name_list['lon_min']) / data.shape[1]
+        pixel_size = pixel_size * 111.32
     else:
         if ax is None: # Comming from animation
             ax = fig.add_subplot(1, 1, 1)
@@ -170,7 +169,6 @@ def plot(name_list, read_function, timestamp,
                                                                 vmax=max_val))
         plt.colorbar(sm, ax=ax, cax=cax, label=cbar_title, orientation=orientation,
                     shrink=shrink, extend=cbar_extend)
-        
     # Add title to the figure
     ax.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
             horizontalalignment='center', fontsize=title_fontsize,

@@ -144,8 +144,7 @@ def plot_animation(name_list = None,
       """
       if name_list is not None:
             name_list = default_parameters(name_list)
-      fig = plt.figure(figsize=figsize)
-      # Plot data from path_files
+      fig = plt.figure(figsize=figsize, tight_layout=True)
       if path_files is not None:
             files = sorted(glob.glob(path_files, recursive=True))
             files = files[:num_frames]
@@ -153,7 +152,7 @@ def plot_animation(name_list = None,
             def update(frame):
                   ax.clear()
                   data = read_function(frame)
-                  img = ax.imshow(data, cmap=cmap, origin='lower', 
+                  ax.imshow(data, cmap=cmap, origin='lower', 
                               interpolation='nearest', aspect='auto',
                               vmin=cbar_min, vmax=cbar_max)
                   ax.set_xlabel('X')
@@ -167,27 +166,25 @@ def plot_animation(name_list = None,
             cbar = plt.colorbar(sm, cax=cax, orientation=orientation, extend=cbar_extend)
             cbar.set_label(cbar_title)
       else:
-            # Mount timestamplist based on start and end time and name_list['delta_time']
             files = sorted(glob.glob(name_list['output_path'] + 'track/trackingtable/*.parquet'))
             files = [f.split('/')[-1] for f in files]
             files = pd.to_datetime(files, format='%Y%m%d_%H%M.parquet')
             files = files[(files >= start_stamp) & (files <= end_stamp)]
-            if 'lon_min' in name_list and 'lon_max' in name_list and 'lat_min' in name_list and 'lat_max' in name_list:
-                  if name_list['lon_min'] is not None and name_list['lon_max'] is not None and name_list['lat_min'] is not None and name_list['lat_max'] is not None:
-                        ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+            if name_list['lon_min'] is not None and name_list['lon_max'] is not None and name_list['lat_min'] is not None and name_list['lat_max'] is not None:
+                  ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
             else:
                   ax = fig.add_subplot(1, 1, 1)
             def update(frame):
                   ax.clear()
                   ax.set_aspect('auto')
-                  fplt = plot(name_list, read_function, frame, ax=ax, nan_operation=nan_operation, nan_value=nan_value, uid_list=uid_list, threshold_list=threshold_list,
+                  plot(name_list, read_function, frame, ax=ax, nan_operation=nan_operation, nan_value=nan_value, uid_list=uid_list, threshold_list=threshold_list,
                         num_colors=num_colors, cmap=cmap, zoom_region=zoom_region, pad=pad, orientation=orientation, shrink=shrink, x_scale=x_scale, y_scale=y_scale,
                         cbar_extend=cbar_extend, cbar_title=cbar_title, boundary=boundary, centroid=centroid, trajectory=trajectory, vector=vector,
                         info=info, info_col_name=info_col_name, smooth_trajectory=smooth_trajectory, bound_color=bound_color, bound_linewidth=bound_linewidth,
                         centr_color=centr_color, centr_size=centr_size, traj_color=traj_color, traj_linewidth=traj_linewidth, traj_alpha=traj_alpha,
                         vector_scale=vector_scale, vector_color=vector_color, info_cols=info_cols, no_anim=False, min_val=min_val, max_val=max_val,
                         grid_deg=grid_deg)
-                  return ax
+                  pass
       # Animation
       ani = animation.FuncAnimation(fig, update,
                               frames=files,
