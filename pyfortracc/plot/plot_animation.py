@@ -12,6 +12,10 @@ from io import BytesIO
 from PIL import Image
 from .plot import plot
 from pyfortracc.default_parameters import default_parameters
+from matplotlib import rcParams
+
+rcParams['animation.embed_limit'] = 50 # Increase the limit for the size of the animation
+
 
 def process_frame(args):
       """Wrapper function to enable multiprocessing of the update function."""
