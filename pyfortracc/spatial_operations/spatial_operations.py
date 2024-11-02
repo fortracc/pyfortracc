@@ -352,7 +352,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     cur_frme.loc[cont_indx_1, 'prev_idx'] = cont_indx_2
     cur_frme.loc[mergs_idx_1,'prev_idx'] =  mergs_idx_2
     cur_frme.loc[splits_idx_1,'prev_idx'] =  split_prev_idx
-    cur_frme.loc[nw_splt_idx,'split_idx'] =  nw_splt_prv_idx
+    cur_frme.loc[nw_splt_idx,'split_prv_idx'] =  nw_splt_prv_idx
     cur_frme.loc[mergs_idx_1,'merge_idx'] =  merge_frame['merge_ids'].values
     # Mount the trajectory LineString, distance and direction
     # Select non null prev_idx is concat into a single array
@@ -373,7 +373,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     # Split method: Read instructions in split_mtd.py
     if nm_lst['spl_correction'] and len(nw_splt_idx) > 0:
         cur_spl = cur_frme.loc[nw_splt_idx]
-        prv_spl = prv_frme.loc[cur_spl['split_idx'].values]
+        prv_spl = prv_frme.loc[cur_spl['split_prv_idx'].values]
         lines, u_, v_ = split_mtd(cur_spl, prv_spl, nw_splt_idx)
         cur_frme.loc[nw_splt_idx,'trajectory'] = lines
         cur_frme.loc[nw_splt_idx,'u_spl'] = u_

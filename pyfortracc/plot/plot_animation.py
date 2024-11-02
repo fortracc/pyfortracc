@@ -86,7 +86,7 @@ def plot_animation(
         info_col_name=True,
         smooth_trajectory=True,
         bound_color='red', 
-        bound_linewidth=2, 
+        bound_linewidth=1.5, 
         box_fontsize=10,
         centr_color='black',
         centr_size=2,
@@ -182,7 +182,7 @@ def plot_animation(
 
       # Set up the figure for the animation
       fig, ax = plt.subplots(figsize=figsize)
-      img = ax.imshow(np.zeros((10, 10)), cmap=cmap)  # Dummy initial image
+      img = ax.imshow(np.zeros((1, 1)), cmap=cmap, aspect='auto')
       ax.axis('off')
       
       interval = 1000  # Interval between frames in milliseconds

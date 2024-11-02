@@ -108,7 +108,7 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['lat_max'] = None
     if 'lon_max' not in name_lst:
         name_lst['lon_max'] = None
-    if name_lst['lat_min'] == None and name_lst['lat_max'] == None:
+    if name_lst['lat_min'] == None and name_lst['lat_max'] == None or read_function == None:
         name_lst['y_res'] = 1
         name_lst['x_res'] = 1
     else:

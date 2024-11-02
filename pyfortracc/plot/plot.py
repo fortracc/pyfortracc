@@ -59,7 +59,7 @@ def plot(name_list,
         info_col_name=True,
         smooth_trajectory=True,
         bound_color='red', 
-        bound_linewidth=2, 
+        bound_linewidth=1.5, 
         box_fontsize=10,
         centr_color='black',
         centr_size=2,
@@ -174,24 +174,24 @@ def plot(name_list,
         # Set plot type
         if plot_type == 'imshow':
             ax.imshow(data, cmap=cmap, origin='lower', extent=extent,
-                        interpolation=interpolation)
+                        interpolation=interpolation, aspect='auto', zorder=10)
         elif plot_type == 'contourf':
             ax.contourf(data, cmap=cmap, origin='lower', extent=extent,
-                        interpolation=interpolation)
+                        interpolation=interpolation, zorder=10)
         elif plot_type == 'contour':
             ax.contour(data, cmap=cmap, origin='lower', extent=extent,
-                        interpolation=interpolation)
+                        interpolation=interpolation, zorder=10)
         elif plot_type == 'pcolormesh':
             lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
             lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
-            ax.pcolormesh(lons, lats, data, transform=ccrs.PlateCarree(), cmap=cmap)
+            ax.pcolormesh(lons, lats, data, transform=ccrs.PlateCarree(), cmap=cmap, zorder=10)
         # calc pixel size
         pixel_size = (name_list['lon_max'] - name_list['lon_min']) / data.shape[1]
         pixel_size = pixel_size * 111.32
     else:
         if ax is None: # Comming from animation
             ax = fig.add_subplot(1, 1, 1)
-        ax.imshow(data, cmap=cmap, origin='lower', interpolation=interpolation)
+        ax.imshow(data, cmap=cmap, origin='lower', interpolation=interpolation, zorder=10)
     if len(zoom_region) == 4:
         tck_table = tck_table.cx[zoom_region[0]:zoom_region[1],
                                 zoom_region[2]:zoom_region[3]]
@@ -208,29 +208,43 @@ def plot(name_list,
     # Add title to the figure
     ax.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
             horizontalalignment='center', fontsize=title_fontsize,
-            verticalalignment='bottom', transform=ax.transAxes)
+            verticalalignment='bottom', transform=ax.transAxes, zorder=11)
+    # Zoom region
+    if len(tck_table) > 0 and len(zoom_region) == 4:
+        ax.set_xlim(zoom_region[0], zoom_region[1])
+        ax.set_ylim(zoom_region[2], zoom_region[3])
     ##### BOUNDARIES ##############
     if boundary:
-      thresholds = tck_table['threshold'].unique()
-      bound_df = tck_table
-      if len(thresholds) > 1:
-        bound_df = bound_df.loc[bound_df['threshold'] == thresholds[0]]
-        # Filter only boundaries inside the zoom region
-        if len(zoom_region) == 4:
-            bound_df = bound_df.cx[zoom_region[0]:zoom_region[1],
-                                    zoom_region[2]:zoom_region[3]]
-      bound_df.boundary.plot(ax=ax, color=bound_color,
-                               linewidth=bound_linewidth)
-      if centroid:
-        bound_df.centroid.plot(ax=ax, color=centr_color, markersize=centr_size)
-      if vector:
+        thresholds = tck_table['threshold'].unique()
+        bound_df = tck_table
+        if len(thresholds) > 1:
+            bound_df = bound_df.loc[bound_df['threshold'] == thresholds[0]]
+            # Filter only boundaries inside the zoom region
+            if len(zoom_region) == 4:
+                bound_df = bound_df.cx[zoom_region[0]:zoom_region[1],
+                                        zoom_region[2]:zoom_region[3]]
+        bound_df.boundary.plot(ax=ax, color=bound_color,
+                               linewidth=bound_linewidth, zorder=12)
+    ##### CENTROID ##############
+    if centroid:
+        bound_df.centroid.plot(ax=ax, color=centr_color, markersize=centr_size, zorder=13)
+    ##### VECTOR ##############
+    if vector:
         for i, point in enumerate(bound_df.centroid):
             u = bound_df['u_'].iloc[i]
             v = bound_df['v_'].iloc[i]
             ax.quiver(point.x, point.y, u, v, scale=vector_scale,
                     color=vector_color, scale_units='inches',
-                    zorder=10)
-      if info:
+                    zorder=14)
+    ##### TRAJECTORY #############
+    if trajectory:
+        # Apply taubin_smooth into trajectory column
+        if smooth_trajectory:
+                tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x: chaikin_smooth(x) if x.length > 0 else x)
+        traject_df = tck_table.set_geometry('trajectory')
+        traject_df.plot(ax=ax, color=traj_color , linewidth=traj_linewidth, alpha=traj_alpha, zorder=15)
+    ##### INFO #############
+    if info:
         buffer = [patheffects.withStroke(linewidth=2, foreground="w")]
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
         # Filter only boundaries.centroid inside the zoom region
@@ -271,14 +285,8 @@ def plot(name_list,
                     verticalalignment='baseline',
                     path_effects=buffer,
                     bbox=props,
-                    zorder=10)
-    ##### TRAJECTORY #############
-    if trajectory:
-        # Apply taubin_smooth into trajectory column
-        if smooth_trajectory:
-                tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x: chaikin_smooth(x) if x.length > 0 else x)
-        traject_df = tck_table.set_geometry('trajectory')
-        traject_df.plot(ax=ax, color=traj_color , linewidth=traj_linewidth, alpha=traj_alpha)
+                    clip_on=True,
+                    zorder=16)
     if save:
         plt.savefig(save_path + save_name)
     
@@ -295,9 +303,6 @@ def plot(name_list,
     if scalebar:
         scale_bar(ax, ccrs.Mercator(), scalebar_metric, location=scalebar_location,
                 linewidth=scalebar_linewidth, units=scalebar_units)
-    if len(tck_table) > 0 and len(zoom_region) == 4:
-        ax.set_xlim(zoom_region[0], zoom_region[1])
-        ax.set_ylim(zoom_region[2], zoom_region[3])
 
     if animate:
         buf = BytesIO()

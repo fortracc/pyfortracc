@@ -104,6 +104,9 @@ def linking(args):
         if len(nm_lst['thresholds']) > 1:
             cur_frame['iuid'] = []
         cur_frame = cur_frame.astype({'cindex': 'int64', 'uid': 'int64'})
+        # Calculate lifetime
+        cur_frame['lifetime'] = []
+        cur_frame['lifetime'] = cur_frame['lifetime'].fillna(0)
         write_parquet(cur_frame, output_file)
         return cur_frame, prv_stamp, uid_iter, icdx
     # Get schema and cols
@@ -128,6 +131,8 @@ def linking(args):
         cur_frame = board_clusters(cur_frame)
         cur_frame = refact_inside(cur_frame)
         uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
+        # Calculate lifetime
+        cur_frame['lifetime'] = 0
         write_parquet(cur_frame[linked_cols], output_file)
         return cur_frame, cur_stamp, uid_iter, cdx_range[-1]
     # Get previous indx based for conditions:
@@ -152,6 +157,19 @@ def linking(args):
     cur_frame = refact_inside(cur_frame)
     # Update max uid
     uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
+    # Calculate lifetime, get previous lifetime and add to current lifetime
+    prev_lifetime = prv_frame.loc[prv_idx]['lifetime'].values
+    # Calc time interval
+    time_int = (cur_stamp - prv_stamp).total_seconds() / 60
+    cur_frame.loc[cur_idx, 'lifetime'] = prev_lifetime + time_int
+    # Split lifetime: Preserve lifetime of split clusters
+    split_frs = cur_frame.loc[cur_frame['split_prv_idx'].notnull()]
+    if len(split_frs) > 0:
+        split_idx = split_frs['split_prv_idx'].values.astype(int)
+        lifetimes = prv_frame.loc[split_idx]['lifetime']
+        cur_frame.loc[split_frs.index, 'lifetime'] = lifetimes.values
+    # Fill NaN values to 0
+    cur_frame['lifetime'] = cur_frame['lifetime'].fillna(0)
     # Write linked file
     write_parquet(cur_frame[linked_cols], output_file)
     return cur_frame, cur_stamp, uid_iter, cdx_range[-1]
