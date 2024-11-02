@@ -423,7 +423,8 @@ def set_schema(module,name_list):
                 'prev_idx': list,
                 'inside_idx': list,
                 'merge_idx': list,
-                'split_idx': list,
+                'split_prv_idx': list,
+                'split_cur_idx': list,
                 'overlap': float,
                 'within': bool,
                 'contains': bool,
@@ -441,7 +442,7 @@ def set_schema(module,name_list):
                 'uid': int,
                 'iuid': float,
                 'threshold_level': int,
-                # 'lifetime': 'timedelta64[us]',
+                'lifetime': int,
                 'trajectory': str,
             }
         }

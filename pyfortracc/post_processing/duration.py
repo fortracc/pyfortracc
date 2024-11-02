@@ -118,18 +118,28 @@ def update_parquet(args):
         # Update duration, start_time, and end_time
         update['duration'] = clusters['duration']
         update['start_time'] = clusters['first_timestamp']
+        update['end_time'] = clusters['last_timestamp']
         update.set_index('cindex', inplace=True)
         feature_df['duration'] = update['duration']
         feature_df['duration'] = feature_df['duration'].fillna(0)
         feature_df['duration'] = feature_df['duration'].astype(int)
+        # This part is used to compute lifetime using duration module, uncomment if needed
         # Calculate lifetime based on timestamp and end_time
-        feature_df['lifetime'] = feature_df['timestamp'] - update['start_time']
-        feature_df['lifetime'] = feature_df['lifetime'].dt.total_seconds() / 60
-        feature_df['lifetime'] = feature_df['lifetime'].fillna(0)
-        feature_df['lifetime'] = feature_df['lifetime'].astype(int)
+        # feature_df['lifetime'] = feature_df['timestamp'] - update['start_time']
+        # feature_df['lifetime'] = feature_df['lifetime'].dt.total_seconds() / 60
+        # feature_df['lifetime'] = feature_df['lifetime'].fillna(0)
+        # feature_df['lifetime'] = feature_df['lifetime'].astype(int)
+        # # This part get lifetime of split clusters and add to splited clusters
+        # if len(feature_df.loc[feature_df['split_cur_idx'].notnull()]) > 0:
+        #     feature_df.reset_index(inplace=True)
+        #     split_frs = feature_df.loc[feature_df['split_cur_idx'].notnull()]
+        #     split_idx = split_frs['split_cur_idx'].values.astype(int)
+        #     lifetimes = feature_df.loc[split_idx]['lifetime']
+        #     feature_df.loc[split_frs.index, 'lifetime'] = lifetimes.values
+        #     feature_df.set_index('cindex', inplace=True)
         # Add genesis column to indicate the start and end of the cluster
         feature_df.loc[feature_df['timestamp'] == update['start_time'], 'genesis'] = 1
-        feature_df.loc[feature_df['duration'] == feature_df['lifetime'], 'genesis'] = -1
+        feature_df.loc[feature_df['timestamp'] == update['end_time'], 'genesis'] = -1
         feature_df['genesis'] = feature_df['genesis'].fillna(0)
         feature_df['genesis'] = feature_df['genesis'].astype(int)
         del clusters
