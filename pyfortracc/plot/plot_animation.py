@@ -2,19 +2,20 @@ import glob
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
 from matplotlib import animation
-from matplotlib.colorbar import Colorbar
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from IPython.display import HTML
-from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Pool
 from io import BytesIO
 from PIL import Image
 from .plot import plot
 from pyfortracc.default_parameters import default_parameters
+from pyfortracc.utilities.utils import set_nworkers
 from matplotlib import rcParams
+import warnings
+warnings.filterwarnings("ignore")
 
-rcParams['animation.embed_limit'] = 50 # Increase the limit for the size of the animation
+
 
 
 def process_frame(args):
@@ -57,7 +58,7 @@ def plot_animation(
         uid_list=[],
         threshold_list=[],
         figsize=(5,5),
-        background='default',
+        background='stock',
         scalebar=False,
         scalebar_metric=100,
         scalebar_location=(1.5, 0.05),
@@ -104,18 +105,30 @@ def plot_animation(
         info_cols=['uid'],
         save=False,
         save_path='output/',
-        save_name='plot.png'):
-    
+        save_name='plot.png',
+        parallel=True):
+      # Set the limit of the animation size
+      rcParams['animation.embed_limit'] = 2**128
+      # Set default parameters
       if name_list is not None:
             name_list = default_parameters(name_list, read_function)
       print('Generating animation...', end=' ', flush=True)
-
       # Get the list of frames
       if path_files is not None:
             files = sorted(glob.glob(path_files, recursive=True))[:num_frames]
-            # Process each frame in parallel and store images in a list
-            with ProcessPoolExecutor() as executor:
-                  frames = list(executor.map(process_frame, [(frame, read_function, cmap, min_val, max_val) for frame in files]))
+            if len(files) == 0:
+                  raise ValueError('No files found. Check the path_files parameter.')
+            if parallel:
+                  with Pool() as pool:
+                        frames = list(pool.imap(process_frame,
+                                                          [(frame, read_function,
+                                                            cmap, min_val, max_val
+                                                            ) for frame in files]))
+                  pool.close()
+            else:
+                  frames = []
+                  for frame in files:
+                        frames.append(process_frame((frame, read_function, cmap, min_val, max_val)))
       else:
             files = sorted(glob.glob(name_list['output_path'] + 'track/trackingtable/*.parquet'))
             files = pd.to_datetime([f.split('/')[-1] for f in files], format='%Y%m%d_%H%M.parquet')
@@ -181,8 +194,17 @@ def plot_animation(
                   save_path,
                   save_name))
 
-            with ProcessPoolExecutor() as executor:
-                  frames = list(executor.map(plot_wrapper, args))
+            if parallel:
+                  n_workers = set_nworkers(name_list)
+                  with Pool(n_workers) as pool:
+                        frames = []
+                        for frame in pool.imap(plot_wrapper, args):
+                              frames.append(frame)
+                  pool.close()
+            else:
+                  frames = []
+                  for arg in args:
+                        frames.append(plot_wrapper(arg))
 
       # Set up the figure for the animation
       fig, ax = plt.subplots(figsize=figsize)
