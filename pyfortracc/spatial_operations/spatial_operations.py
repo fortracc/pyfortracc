@@ -173,7 +173,7 @@ def spatial_operation(args):
         # Check if the cluster is on the edges
         if nm_lst['edges']:
             cur_frame['board'] = False  # Set all clusters as False
-            touch_lrg, touch_lowr = edge_clusters(cur_frame, l_edge, r_edg)
+            touch_lrg, touch_lowr = edge_clusters(cur_frame, l_edge, r_edg, nm_lst)
             cur_frame.loc[touch_lowr,'board'] = True
             cur_frame.loc[touch_lowr,'board_idx'] = touch_lrg
         cur_frame['trajectory'] = cur_frame['trajectory'].astype(str)
@@ -191,7 +191,7 @@ def spatial_operation(args):
         # Check if the cluster is on the edges
         if nm_lst['edges']:
             cur_frame['board'] = False  # Set all clusters as False
-            touch_lrg, touch_lowr = edge_clusters(cur_frame, l_edge, r_edg)
+            touch_lrg, touch_lowr = edge_clusters(cur_frame, l_edge, r_edg, nm_lst)
             cur_frame.loc[touch_lowr,'board'] = True
             cur_frame.loc[touch_lowr,'board_idx'] = touch_lrg
         cur_frame['trajectory'] = cur_frame['trajectory'].astype(str)
@@ -284,7 +284,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     if overlays.empty:
         # Check if the cluster is on the edges
         if nm_lst['edges'] and nm_lst['thresholds'][0] == threshold:
-            touch_lrg, touch_lowr = edge_clusters(cur_frme, l_edge, r_edg)
+            touch_lrg, touch_lowr = edge_clusters(cur_frme, l_edge, r_edg, nm_lst)
             cur_frme.loc[touch_lowr,'board'] = True
             cur_frme.loc[touch_lowr,'board_idx'] = touch_lrg
         return cur_frme
@@ -413,7 +413,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     # Check if the cluster is on the edges
     if nm_lst['edges'] and nm_lst['thresholds'][0] == threshold:
         cur_frme['board'] = False
-        touch_lrg, touch_lowr = edge_clusters(cur_frme, l_edge, r_edg)
+        touch_lrg, touch_lowr = edge_clusters(cur_frme, l_edge, r_edg, nm_lst)
         cur_frme.loc[touch_lowr,'board'] = True
         cur_frme.loc[touch_lowr,'board_idx'] = touch_lrg
     return cur_frme

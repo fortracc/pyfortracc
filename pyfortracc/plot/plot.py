@@ -72,7 +72,7 @@ def plot(name_list,
         vector_color='black',
         info_cols=['uid'],
         save=False,
-        save_path='output/',
+        save_path='output/img/',
         save_name='plot.png'):
     """
     This function is designed to visualize tracking data on a map or a simple 2D plot. 
@@ -254,7 +254,7 @@ def plot(name_list,
                                     zoom_region[2]:zoom_region[3]]
 
         for i, point in enumerate(bound_df.centroid):
-            text = bound_df[info_cols].iloc[i]
+            text = bound_df[info_cols].iloc[i].astype(int)          
             # check if have lifetime in the info_cols and convert lifetime delta to minutes
             if 'lifetime' in info_cols:
                 text['lifetime'] = str(int(text['lifetime'])) + 'min'
@@ -287,6 +287,9 @@ def plot(name_list,
                     bbox=props,
                     clip_on=True,
                     zorder=16)
+    # set save_name as timestamp in string
+    save_name = timestamp.strftime('%Y%m%d_%H%M.png')
+
     if save:
         plt.savefig(save_path + save_name)
     

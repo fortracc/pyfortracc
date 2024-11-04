@@ -12,7 +12,7 @@ def track(name_lst={},
             spat_ope=True,
             clst_lnk=True,
             concat_r=True,
-            duration=True):
+            duration=False):
     """ Track Module
     It is a module that performs the tracking clusters in time and space.
 

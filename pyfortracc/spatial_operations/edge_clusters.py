@@ -3,9 +3,7 @@ import geopandas as gpd
 from shapely import affinity
 
 
-import matplotlib.pyplot as plt
-
-def edge_clusters(cur_df, left_edge, right_edge):
+def edge_clusters(cur_df, left_edge, right_edge, name_lst):
     """
     This function checks if any of the clusters in cur_df are touching the left 
     or right edge.
@@ -28,38 +26,47 @@ def edge_clusters(cur_df, left_edge, right_edge):
     """
     # Set output
     touch_larger, touch_lower = [], []
+    # Check if there is any intersected right_board
     l_board = gpd.sjoin(cur_df, left_edge, how="inner", predicate="intersects")
     r_board = gpd.sjoin(cur_df, right_edge, how="inner", predicate="intersects")
     # Check if there is any intersected lef_board
     if r_board.empty and l_board.empty:
-        return [], []
+        return touch_larger, touch_lower
     # Get first point of left line to calculate the distance to the right board
-    left_coord = left_edge['geometry'].iloc[0].coords[0][0]
-    if left_coord <= -180:
-        left_coord = 360
+    # left_coord = left_edge['geometry'].iloc[0].coords[0][0]
+    rigth_coord = right_edge['geometry'].iloc[0].coords[0][0]
+    if rigth_coord + name_lst['x_res'] > 180:
+        rigth_coord = -360
+    elif rigth_coord - name_lst['x_res'] < -180:
+        rigth_coord = 360
     else:
-        left_coord = -left_coord
-    # Add buffer to the right board to avoid touching
-    r_board['geometry'] = r_board['geometry'].apply(lambda x: x.buffer(0.05))
-    l_board['geometry'] = l_board['geometry'].apply(lambda x: x.buffer(0.05))
+        rigth_coord = 0
 
     # Send Geometries at right board to the left by affine transformation
-    l_board['geometry'] = l_board['geometry'].apply(lambda x: affinity.translate(x,
-                                                                                 xoff=left_coord,
+    r_board['geometry'] = r_board['geometry'].apply(lambda x: affinity.translate(x,
+                                                                                 xoff=rigth_coord,
                                                                                  yoff=0))
+    
+    # Apply buffer to avoid touching
+    r_board['geometry'] = r_board['geometry'].buffer(name_lst['x_res'])
+    # Apply buffer to avoid touching
+    l_board['geometry'] = l_board['geometry'].buffer(name_lst['x_res'])
+
     # Merge left and right boards by touches
     touches = gpd.sjoin(l_board, r_board, how="inner", predicate="intersects",
                         lsuffix="1", rsuffix="2")
-    # print(touches)
+    
+    # If there is no touch, return empty lists
+    if touches.empty:
+        return touch_larger, touch_lower
+
     # fig, ax = plt.subplots()
-    # # left_edge.plot(ax=ax, color='red')
-    # # right_edge.plot(ax=ax, color='red')
+    # # left_edge.plot(ax=ax, color='yellow')
+    # right_edge.plot(ax=ax, color='red')
     # l_board.plot(ax=ax, color='blue')
     # r_board.plot(ax=ax, color='green')
-    # # set ylim
-    # ax.set_ylim(26, 30)
-    # ax.set_xlim(178, 182)
-
+    # ax.set_ylim(25, 50)
+    # ax.set_xlim(-182, -179)
     # plt.show()
 
     # Group touches by index
@@ -79,4 +86,5 @@ def edge_clusters(cur_df, left_edge, right_edge):
         # Append to output
         touch_larger.extend(largest_idx)
         touch_lower.extend(lowest_idx)
+ 
     return touch_larger, touch_lower
