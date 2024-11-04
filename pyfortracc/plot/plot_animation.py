@@ -58,7 +58,7 @@ def plot_animation(
         uid_list=[],
         threshold_list=[],
         figsize=(5,5),
-        background='stock',
+        background='default',
         scalebar=False,
         scalebar_metric=100,
         scalebar_location=(1.5, 0.05),
