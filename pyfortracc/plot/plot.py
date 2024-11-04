@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import cartopy.io.img_tiles as cimgt
 import matplotlib.patches as patches
 from matplotlib import font_manager as mfonts
 import matplotlib.patheffects as patheffects
@@ -19,6 +18,9 @@ from PIL import Image
 from pyfortracc.default_parameters import default_parameters
 
 
+import cartopy.io.img_tiles as cimgt
+
+
 def plot(name_list,
         read_function,
         timestamp,
@@ -26,8 +28,8 @@ def plot(name_list,
         animate=False,
         uid_list=[],
         threshold_list=[],
-        figsize=(7,7),
-        background='stock',
+        figsize=(10,7),
+        background='default',
         scalebar=False,
         scalebar_metric=100,
         scalebar_location=(1.5, 0.05),
@@ -74,7 +76,7 @@ def plot(name_list,
         info_cols=['uid'],
         save=False,
         save_path='output/img/',
-        save_name='plot.png'):
+        save_name=None):
     """
     This function is designed to visualize tracking data on a map or a simple 2D plot. 
     The function reads in tracking data, filters it based on various criteria, and plots it using Matplotlib, 
@@ -140,48 +142,39 @@ def plot(name_list,
     # Check if lon_min, lon_max, lat_min, lat_max are in name_list and if is not None
     if name_list['lon_min'] is not None and name_list['lon_max'] is not None and name_list['lat_min'] is not None and name_list['lat_max'] is not None:
         if ax is None: # Comming from animation
-            ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
+            ax = fig.add_subplot(1, 1, 1, projection= ccrs.PlateCarree())
         # Set extent
         extent = [name_list['lon_min'], name_list['lon_max'],
-                name_list['lat_min'], name_list['lat_max']]
-        ax.set_extent(extent, crs=ccrs.PlateCarree())
-        # Calc scale
-        
-
-
+                  name_list['lat_min'], name_list['lat_max']]
+        orig_extent = extent
+        if len(zoom_region) == 4:
+            extent = [zoom_region[0], zoom_region[1], zoom_region[2], zoom_region[3]]
+        ax.set_extent(extent, crs= ccrs.PlateCarree())
         # Set background
         if background == 'stock':
-            ax.stock_img()
+            ax.stock_img()            
+        elif background =='satellite':
+            google_terrain = cimgt.GoogleTiles(style=background)
+            ax.add_image(google_terrain, calc_zoom(extent))
+        elif background == 'google':
+            request = cimgt.GoogleTiles()
+            ax.add_image(request, calc_zoom(extent))
         elif background == 'default':
             ax.add_feature(cfeature.LAND, edgecolor='black', alpha=0.5)
             ax.add_feature(cfeature.OCEAN)
-            ax.add_feature(cfeature.COASTLINE)
             ax.add_feature(cfeature.BORDERS, linestyle=':')
-            ax.add_feature(cfeature.LAKES, alpha=0.5)
-            ax.add_feature(cfeature.RIVERS)
-        elif background=='map':
-            ## background STYLE
-            cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
-            img = cimgt.OSM() # spoofed, downloaded street map
-            ax.add_image(img, 8) # add OSM with zoom level 8
-        elif background =='satellite':
-            # SATELLITE STYLE
-            cimgt.QuadtreeTiles.get_image = image_spoof # reformat web request for street map spoofing
-            img = cimgt.QuadtreeTiles() # spoofed, downloaded street map
-            ax.add_image(img, 8) # add OSM with zoom level 8
-            
         # Set grid
-        gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+        gl = ax.gridlines(crs= ccrs.PlateCarree(), draw_labels=True,
             linewidth=1, color='gray', alpha=0.5, linestyle='--')
         gl.top_labels = False
         gl.right_labels = False
         if grid_deg is not None:
             ax.set_xticks(np.arange(name_list['lon_min'], 
                                 name_list['lon_max'] + 1,
-                                grid_deg), crs=ccrs.PlateCarree())
+                                grid_deg), crs= ccrs.PlateCarree())
             ax.set_yticks(np.arange(name_list['lat_min'], 
                             name_list['lat_max'] + 1,
-                            grid_deg), crs=ccrs.PlateCarree())
+                            grid_deg), crs= ccrs.PlateCarree())
             lon_formatter = LongitudeFormatter(zero_direction_label=True)
             lat_formatter = LatitudeFormatter()
             ax.xaxis.set_major_formatter(lon_formatter)
@@ -189,18 +182,19 @@ def plot(name_list,
             ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
         # Set plot type
         if plot_type == 'imshow':
-            ax.imshow(data, cmap=cmap, origin='lower', extent=extent,
-                        interpolation=interpolation, aspect='auto', zorder=10)
+            ax.imshow(data, cmap=cmap, origin='lower', extent=orig_extent,
+                        interpolation=interpolation, aspect='auto', 
+                        zorder=10)
         elif plot_type == 'contourf':
-            ax.contourf(data, cmap=cmap, origin='lower', extent=extent,
+            ax.contourf(data, cmap=cmap, origin='lower', extent=orig_extent,
                         interpolation=interpolation, zorder=10)
         elif plot_type == 'contour':
-            ax.contour(data, cmap=cmap, origin='lower', extent=extent,
+            ax.contour(data, cmap=cmap, origin='lower', extent=orig_extent,
                         interpolation=interpolation, zorder=10)
         elif plot_type == 'pcolormesh':
             lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
             lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
-            ax.pcolormesh(lons, lats, data, transform=ccrs.PlateCarree(), cmap=cmap, zorder=10)
+            ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap, zorder=10)
         # calc pixel size
         pixel_size = (name_list['lon_max'] - name_list['lon_min']) / data.shape[1]
         pixel_size = pixel_size * 111.32
@@ -225,10 +219,6 @@ def plot(name_list,
     ax.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
             horizontalalignment='center', fontsize=title_fontsize,
             verticalalignment='bottom', transform=ax.transAxes, zorder=11)
-    # Zoom region
-    if len(tck_table) > 0 and len(zoom_region) == 4:
-        ax.set_xlim(zoom_region[0], zoom_region[1])
-        ax.set_ylim(zoom_region[2], zoom_region[3])
     ##### BOUNDARIES ##############
     if boundary:
         thresholds = tck_table['threshold'].unique()
@@ -270,12 +260,12 @@ def plot(name_list,
                                     zoom_region[2]:zoom_region[3]]
 
         for i, point in enumerate(bound_df.centroid):
-            text = bound_df[info_cols].iloc[i].astype(int)          
+            text = bound_df[info_cols].iloc[i]          
             # check if have lifetime in the info_cols and convert lifetime delta to minutes
             if 'lifetime' in info_cols:
                 text['lifetime'] = str(int(text['lifetime'])) + 'min'
             if 'uid' in info_cols:
-                text['uid'] = int(text['uid'])
+                text['uid'] =f"{int(text['uid'])}"
             if 'size' in info_cols and 'pixel_size' in locals():
                 try:
                     text['size'] = text['size'] * pixel_size * pixel_size
@@ -303,10 +293,12 @@ def plot(name_list,
                     bbox=props,
                     clip_on=True,
                     zorder=16)
-    # set save_name as timestamp in string
-    save_name = timestamp.strftime('%Y%m%d_%H%M.png')
 
+    # set save_name as timestamp in string
     if save:
+        pathlib.Path(save_path).mkdir(parents=True, exist_ok=True)
+        if save_name is None:
+            save_name = timestamp.strftime('%Y%m%d_%H%M')
         plt.savefig(save_path + save_name)
     
     # Add matrix info
@@ -394,20 +386,9 @@ def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
     ax.plot(bar_xs, [sbcy, sbcy], transform=ccrs.PlateCarree(),
             color='k', linewidth=linewidth, zorder=3)
 
-import io
-from urllib.request import urlopen, Request
-
-def image_spoof(self, tile):
-    '''this function reformats web requests from OSM for cartopy
-    Heavily based on code by Joshua Hrisko at:
-        https://makersportal.com/blog/2020/4/24/geographic-visualizations-in-python-with-cartopy'''
-
-    url = self._image_url(tile)                # get the url of the street map API
-    req = Request(url)                         # start request
-    req.add_header('User-agent','Anaconda 3')  # add user agent to request
-    fh = urlopen(req) 
-    im_data = io.BytesIO(fh.read())            # get image
-    fh.close()                                 # close url
-    img = Image.open(im_data)                  # open image with PIL
-    img = img.convert(self.desired_tile_form)  # set image format
-    return img, self.tileextent(tile), 'lower' # reformat for cartopy
+def calc_zoom(extent):
+    lon_min, lon_max, lat_min, lat_max = extent
+    lon_range = abs(lon_max - lon_min)
+    lat_range = abs(lat_max - lat_min)
+    zoom = int(np.clip(12 - np.log2(lon_range + lat_range), 1, 12))
+    return zoom

@@ -75,7 +75,7 @@ def default_parameters(name_lst=None, read_function=None):
     if 'mean_dbz' not in name_lst:
         name_lst['mean_dbz'] = False
     if 'cluster_method' not in name_lst:
-        name_lst['cluster_method'] = 'dbscan'
+        name_lst['cluster_method'] = 'ndimage'
     if 'eps' not in name_lst:
         name_lst['eps'] = 1
     if 'delta_tolerance' not in name_lst:
