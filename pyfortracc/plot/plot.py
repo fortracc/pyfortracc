@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+import cartopy.io.img_tiles as cimgt
 import matplotlib.patches as patches
 from matplotlib import font_manager as mfonts
 import matplotlib.patheffects as patheffects
@@ -144,6 +145,10 @@ def plot(name_list,
         extent = [name_list['lon_min'], name_list['lon_max'],
                 name_list['lat_min'], name_list['lat_max']]
         ax.set_extent(extent, crs=ccrs.PlateCarree())
+        # Calc scale
+        
+
+
         # Set background
         if background == 'stock':
             ax.stock_img()
@@ -154,6 +159,17 @@ def plot(name_list,
             ax.add_feature(cfeature.BORDERS, linestyle=':')
             ax.add_feature(cfeature.LAKES, alpha=0.5)
             ax.add_feature(cfeature.RIVERS)
+        elif background=='map':
+            ## background STYLE
+            cimgt.OSM.get_image = image_spoof # reformat web request for street map spoofing
+            img = cimgt.OSM() # spoofed, downloaded street map
+            ax.add_image(img, 8) # add OSM with zoom level 8
+        elif background =='satellite':
+            # SATELLITE STYLE
+            cimgt.QuadtreeTiles.get_image = image_spoof # reformat web request for street map spoofing
+            img = cimgt.QuadtreeTiles() # spoofed, downloaded street map
+            ax.add_image(img, 8) # add OSM with zoom level 8
+            
         # Set grid
         gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
             linewidth=1, color='gray', alpha=0.5, linestyle='--')
@@ -377,3 +393,21 @@ def scale_bar(ax, proj, length, location=(0.5, 0.05), linewidth=3,
     # Plot the scalebar without buffer, in case covered by text buffer
     ax.plot(bar_xs, [sbcy, sbcy], transform=ccrs.PlateCarree(),
             color='k', linewidth=linewidth, zorder=3)
+
+import io
+from urllib.request import urlopen, Request
+
+def image_spoof(self, tile):
+    '''this function reformats web requests from OSM for cartopy
+    Heavily based on code by Joshua Hrisko at:
+        https://makersportal.com/blog/2020/4/24/geographic-visualizations-in-python-with-cartopy'''
+
+    url = self._image_url(tile)                # get the url of the street map API
+    req = Request(url)                         # start request
+    req.add_header('User-agent','Anaconda 3')  # add user agent to request
+    fh = urlopen(req) 
+    im_data = io.BytesIO(fh.read())            # get image
+    fh.close()                                 # close url
+    img = Image.open(im_data)                  # open image with PIL
+    img = img.convert(self.desired_tile_form)  # set image format
+    return img, self.tileextent(tile), 'lower' # reformat for cartopy
