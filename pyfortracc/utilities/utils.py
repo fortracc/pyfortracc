@@ -176,7 +176,7 @@ def get_loading_bar(files_list):
         An initialized `tqdm` progress bar object. This object can be used in a loop to update the progress
         of file processing.
     """
-    lding_bard = tqdm(total=len(files_list), ncols=100, 
+    lding_bard = tqdm(total=len(files_list), ncols=100, position=0, leave=True,
                     bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} + \
                     [Elapsed:{elapsed} Remaining:<{remaining}]')
     return lding_bard
