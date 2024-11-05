@@ -67,7 +67,7 @@ def geo_statistics(cluster_matrix, cluster_labels, values_matrix, name_list):
                                     'array_values': [cluster_values],
                                     'array_x': [array_x],
                                     'array_y': [array_y],
-                                    'geometry': boundary.wkt})
+                                    'geometry': boundary})
         # Append the statistics to the dataframe
         output_df = pd.concat([output_df, cluster_stat], axis=0)
     # Reset index
@@ -89,9 +89,14 @@ def geo_statistics(cluster_matrix, cluster_labels, values_matrix, name_list):
             output_df.loc[group.index[0], 'mean'] = group['mean'].mean()
             output_df.loc[group.index[0], 'max'] = group['max'].max()
             output_df.loc[group.index[0], 'std'] = group['std'].mean()
-            output_df.loc[group.index[0], 'geometry'] = multi_geo.wkt
+            output_df.loc[group.index[0], 'geometry'] = multi_geo
             output_df.at[group.index[0], 'array_values'] = m_array
             output_df.at[group.index[0], 'array_x'] = m_array_x
             output_df.at[group.index[0], 'array_y'] = m_array_y
             output_df.drop(group.index[1:], inplace=True)
+    # Check convex hull
+    if name_list['convex_hull']:
+        output_df['geometry'] = output_df['geometry'].apply(lambda x: x.convex_hull)
+    # Convert geometry to wkt
+    output_df['geometry'] = output_df['geometry'].apply(lambda x: x.wkt)
     return output_df
