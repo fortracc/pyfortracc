@@ -32,7 +32,7 @@ def split_mtd(cur_df, prv_df, spl_idx):
     for sidx in spl_idx:
         cur_i_df = cur_df.loc[sidx]
         cur_geom = cur_i_df['geometry']
-        prv_geom = prv_df.loc[cur_i_df['split_idx']]['geometry']
+        prv_geom = prv_df.loc[cur_i_df['split_pr_idx']]['geometry']
         # if is a instance of GeoSeries get the first geometry
         if isinstance(cur_geom, gpd.GeoSeries):
             cur_geom = cur_geom.iloc[0]
