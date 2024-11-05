@@ -114,6 +114,8 @@ def default_parameters(name_lst=None, read_function=None):
     else:
         name_lst['y_res'] = abs(name_lst['lat_min'] - name_lst['lat_max']) / name_lst['y_dim']
         name_lst['x_res'] = abs(name_lst['lon_min'] - name_lst['lon_max']) / name_lst['x_dim']
+    if 'convex_hull' not in name_lst:
+        name_lst['convex_hull'] = False
     if 'spl_correction' not in name_lst:
         name_lst['spl_correction'] = False
     if 'mrg_correction' not in name_lst:
