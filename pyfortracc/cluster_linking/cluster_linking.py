@@ -163,11 +163,12 @@ def linking(args):
     time_int = (cur_stamp - prv_stamp).total_seconds() / 60
     cur_frame.loc[cur_idx, 'lifetime'] = prev_lifetime + time_int
     # Split lifetime: Preserve lifetime of split clusters
-    split_frs = cur_frame.loc[cur_frame['split_prv_idx'].notnull()]
-    if len(split_frs) > 0:
-        split_idx = split_frs['split_prv_idx'].values.astype(int)
-        lifetimes = prv_frame.loc[split_idx]['lifetime']
-        cur_frame.loc[split_frs.index, 'lifetime'] = lifetimes.values
+    if nm_lst['preserv_split']:
+        split_frs = cur_frame.loc[cur_frame['split_pr_idx'].notnull()]
+        if len(split_frs) > 0:
+            split_idx = split_frs['split_pr_idx'].values.astype(int)
+            lifetimes = prv_frame.loc[split_idx]['lifetime']
+            cur_frame.loc[split_frs.index, 'lifetime'] = lifetimes.values
     # Fill NaN values to 0
     cur_frame['lifetime'] = cur_frame['lifetime'].fillna(0)
     # Write linked file

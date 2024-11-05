@@ -54,6 +54,22 @@ def default_parameters(name_lst=None, read_function=None):
         Minimum overlap between two clusters to be considered as the same.
     x_dim: int and y_dim: int
         Dimensions of the data.
+    lat_min: float
+        Minimum latitude.
+    lon_min: float
+        Minimum longitude.
+    lat_max: float
+        Maximum latitude.
+    lon_max: float
+        Maximum longitude.
+    y_res: float
+        Resolution in the y axis in degrees.
+    x_res: float
+        Resolution in the x axis in degrees.
+    convex_hull: bool
+        If True, the convex hull is used to calculate the geometry of the clusters.
+    preserv_split: bool
+        If True, the split lifetime events are preserved for NEW/SPLIT events.
     spl_correction: bool
         Vector correction method for split events.
     mrg_correction: bool
@@ -116,6 +132,8 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['x_res'] = abs(name_lst['lon_min'] - name_lst['lon_max']) / name_lst['x_dim']
     if 'convex_hull' not in name_lst:
         name_lst['convex_hull'] = False
+    if 'preserv_split' not in name_lst:
+        name_lst['preserv_split'] = False
     if 'spl_correction' not in name_lst:
         name_lst['spl_correction'] = False
     if 'mrg_correction' not in name_lst:
