@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import pathlib
 import urllib.request
@@ -46,6 +47,13 @@ if __name__ == '__main__':
     n_prev = args.n
     channel = args.c
     output_path = args.p
+
+    # Create output directory
+    pathlib.Path(output_path).mkdir(parents=True, exist_ok=True)
+
+    # Remove all files into output_path
+    for file in os.listdir(output_path):
+        os.remove(output_path + file)
 
     timestamp = pd.Timestamp.now()
     latest_files = get_latest_file(timestamp, nprev=-n_prev)

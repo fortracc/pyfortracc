@@ -205,6 +205,9 @@ def plot_animation(
                   frames = []
                   for arg in args:
                         frames.append(plot_wrapper(arg))
+      # Check if all vaues in frames are None
+      if all([frame is None for frame in frames]):
+            return print('No frames found. Check the input parameters.')
 
       # Set up the figure for the animation
       fig, ax = plt.subplots(figsize=figsize)
@@ -217,9 +220,8 @@ def plot_animation(
       def update(i):
             img.set_data(frames[i])
             return [img]
-
+      # Create the animation
       ani = animation.FuncAnimation(fig, update, frames=len(frames), interval=interval, repeat=True, blit=False, repeat_delay=repeat_delay)
-      
       ani_html = ani.to_jshtml()
       plt.close(fig)
       return HTML(ani_html)

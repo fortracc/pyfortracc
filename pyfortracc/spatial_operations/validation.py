@@ -23,26 +23,33 @@ def validation(cur_frame, prv_frame, name_list):
     cur_frame : pd.DataFrame
         Updated current frame DataFrame with validation results and optional validation scores.
     """
-    # Get uv columns incluiding u_ and v_ of methods
-    u_v_cols = cur_frame.columns[cur_frame.columns.str.contains('u_|v_')][1:]
-    # Remove noc and v_non columns from u_v_cols
-    u_v_cols = u_v_cols[~u_v_cols.str.contains('noc')]
+    # Get u columns except u_noc
+    u_cols = cur_frame.columns[cur_frame.columns.str.contains('u_') &
+                                ~cur_frame.columns.str.contains('noc')]
+    v_cols = cur_frame.columns[cur_frame.columns.str.contains('v_') &
+                                ~cur_frame.columns.str.contains('noc')]
+    # Apply x_res and y_res to u_cols and v_cols
+    cur_frame[u_cols] = cur_frame[u_cols] / name_list['x_res']
+    cur_frame[v_cols] = cur_frame[v_cols] / name_list['y_res']
     # Select not nan values of prev_idx
-    cur_prv_frame = cur_frame[~cur_frame['prev_idx'].isna()]
-    prv_y = prv_frame.loc[cur_prv_frame['prev_idx']]['array_y']
-    prv_x = prv_frame.loc[cur_prv_frame['prev_idx']]['array_x']
+    cur_prv_frame = cur_frame[~cur_frame['past_idx'].isna()]
+    prv_y = prv_frame.loc[cur_prv_frame['past_idx']]['array_y']
+    prv_x = prv_frame.loc[cur_prv_frame['past_idx']]['array_x']
     # Get the cluster points of prv_frame (Previous is t - 1) and add to cur_frame rows
     cur_prv_frame.loc[cur_prv_frame.index, 'prev_y'] = prv_y.values
     cur_prv_frame.loc[cur_prv_frame.index, 'prev_x'] = prv_x.values
-    cur_prv_frame[u_v_cols] = cur_prv_frame[u_v_cols]
     # Add columns prev_y and prev_x to list of u_v columns
-    u_v_cols = u_v_cols.insert(0, 'array_y')
-    u_v_cols = u_v_cols.insert(1, 'array_x')
-    u_v_cols = u_v_cols.insert(2, 'prev_y')
-    u_v_cols = u_v_cols.insert(3, 'prev_x')
+    # u_v_cols = u_v_cols.insert(0, 'array_y')
+    # u_v_cols = u_v_cols.insert(1, 'array_x')
+    # u_v_cols = u_v_cols.insert(2, 'prev_y')
+    # u_v_cols = u_v_cols.insert(3, 'prev_x')
+    # print(u_v_cols)
     # Calculate the scores
-    methods = cur_prv_frame[u_v_cols].apply(lambda row: extrapolate(row), axis=1)
+    methods = cur_prv_frame.apply(lambda row: extrapolate(row, u_cols, v_cols), axis=1)
     if methods.empty:
+        # Return u_cols and v_cols to original values
+        cur_frame[u_cols] = cur_frame[u_cols] * name_list['x_res']
+        cur_frame[v_cols] = cur_frame[v_cols] * name_list['y_res']
         return cur_frame
     cur_frame.loc[methods.index, 'u_'] = methods['u_']
     cur_frame.loc[methods.index, 'v_'] = methods['v_']
@@ -55,9 +62,12 @@ def validation(cur_frame, prv_frame, name_list):
         cur_frame = cur_frame.drop(columns=methods.columns)
         # Join the methods to cur_frame
         cur_frame = cur_frame.join(methods)
+    # Return u_cols and v_cols to original values
+    cur_frame[u_cols] = cur_frame[u_cols] * name_list['x_res']
+    cur_frame[v_cols] = cur_frame[v_cols] * name_list['y_res']
     return cur_frame
 
-def extrapolate(row):
+def extrapolate(row, u_, v_):
     """
     Extrapolates the previous cluster to the current frame and evaluates the correction methods.
 
@@ -78,14 +88,14 @@ def extrapolate(row):
     """
     # Set current cluster points
     cur_cluster = tuple(zip(row['array_y'], row['array_x']))
-    u_ = row.index[4::2] # Get the u_ columns
-    v_ = row.index[5::2] # Get the v_ columns
     # Loop over the methods
     used_methods = []
     best_method = pd.DataFrame()
     for uv in range(len(u_)):
         # Get u and v values and round to int
-        mtd_u, mtd_v = np.round(row[u_[uv]]).astype(int), np.round(row[v_[uv]]).astype(int)
+        mtd_u, mtd_v = row[u_[uv]], row[v_[uv]]
+        mtd_u = np.round(mtd_u).astype(int)
+        mtd_v = np.round(mtd_v).astype(int)
         mtd_u = mtd_u + row['prev_y'] # Apply method to previous cluster
         mtd_v = mtd_v + row['prev_x'] # Apply method to previous cluster
         # Create a tuple with the extrapolated previous cluster

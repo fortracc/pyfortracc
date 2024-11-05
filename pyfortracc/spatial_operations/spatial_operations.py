@@ -8,7 +8,7 @@ from pyfortracc.default_parameters import default_parameters
 from pyfortracc.utilities.utils import (get_feature_files, get_edges,
                                         get_loading_bar, get_previous_file,
                                         get_previous_proccessed_files,
-                                        get_featstamp, set_nworkers, 
+                                        get_geotransform, set_nworkers, 
                                         create_dirs, set_schema, set_outputdf,
                                         read_parquet, write_parquet)
 from pyfortracc.vector_methods.split_mtd import split_mtd
@@ -63,6 +63,8 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
     schema = set_schema('spatial', name_lst)
     # Get number of prev_files to skip based on the number of prev_time
     prev_skip = name_lst['num_prev_skip']
+    # Get geotransform
+    geotrf, inv_geotrf = get_geotransform(name_lst)
     if parallel:
         # Set number of workers
         n_workers = set_nworkers(name_lst)
@@ -75,7 +77,7 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
                                                        prev_skip) - 1:
                                                       feat_time],
                                            name_lst, left_edge, right_edge,
-                                           read_fnc, schema, False)
+                                           read_fnc, schema, False, geotrf)
                                           for feat_time, feat_file
                                           in enumerate(feat_files)]):
                 loading_bar.update(1)
@@ -87,7 +89,7 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
                                feat_files[(feat_time - 1 + prev_skip) - 1:
                                           feat_time],
                                name_lst, left_edge, right_edge, 
-                               read_fnc, schema, False))
+                               read_fnc, schema, False, geotrf))
             loading_bar.update(1)
     loading_bar.close()
     return
@@ -141,7 +143,7 @@ def spatial_operation(args):
     None
     """
     (time_, cur_file, prv_file, prv_files, nm_lst, \
-    l_edge, r_edg, read_fnc, schm, fct) = args
+    l_edge, r_edg, read_fnc, schm, fct, geotrf) = args
     
     # Get current_file name
     current_file_name = cur_file.split('/')[-1]
@@ -216,10 +218,11 @@ def spatial_operation(args):
     # Optical flow method: Read instructions in optical_flow.py
     # This method is used outside the thresholds loop because not necessary
     if nm_lst['opt_correction']:
-        opt_idx, u_, v_, v_field = opticalflow_mtd(cur_frame, prv_frame,
-                                                        read_fnc,
-                                                        nm_lst['operator'],
-                                                        nm_lst['opt_mtd'])
+        opt_idx, u_, v_, v_field = opticalflow_mtd(cur_frame,
+                                                   prv_frame,
+                                                   read_fnc,
+                                                   nm_lst,
+                                                   geotrf)
         # Update current frame based on index
         cur_frame.loc[opt_idx,'u_opt'] = u_
         cur_frame.loc[opt_idx,'v_opt'] = v_
@@ -229,7 +232,7 @@ def spatial_operation(args):
     cur_frame['trajectory'] = cur_frame['trajectory'].astype(str)
     # Calculate best method if validation is True
     if nm_lst['validation']:
-        if time_ > 0:
+        if time_ >= 1: # Validate only after the second frame
             # Copy columns u_ and v_ to u_noc and v_noc
             cur_frame['u_noc'] = cur_frame['u_']
             cur_frame['v_noc'] = cur_frame['v_']
@@ -349,9 +352,9 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     cur_frme.loc[splits_idx_1,'status'] =  'SPL'
     cur_frme.loc[nw_splt_idx,'status'] =  'NEW/SPL'
     cur_frme.loc[mergs_splits_idx,'status'] =  'MRG/SPL'
-    cur_frme.loc[cont_indx_1, 'prev_idx'] = cont_indx_2
-    cur_frme.loc[mergs_idx_1,'prev_idx'] =  mergs_idx_2
-    cur_frme.loc[splits_idx_1,'prev_idx'] =  split_prev_idx
+    cur_frme.loc[cont_indx_1, 'past_idx'] = cont_indx_2
+    cur_frme.loc[mergs_idx_1,'past_idx'] =  mergs_idx_2
+    cur_frme.loc[splits_idx_1,'past_idx'] =  split_prev_idx
     cur_frme.loc[nw_splt_idx,'split_pr_idx'] =  nw_splt_prv_idx
     cur_frme.loc[mergs_idx_1,'merge_idx'] =  merge_frame['merge_ids'].values
     # Mount the trajectory LineString, distance and direction
@@ -361,7 +364,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     cur_non_null_idx = np.concatenate((cont_indx_1, mergs_idx_1, splits_idx_1))
     if len(cur_non_null_idx) > 0:
         cur_trj = cur_frme.loc[cur_non_null_idx]
-        prev_trj = prv_frme.loc[cur_trj['prev_idx'].values]
+        prev_trj = prv_frme.loc[cur_trj['past_idx'].values]
         lines, u_, v_ = trajectory(cur_trj, prev_trj)
         cur_frme.loc[cur_non_null_idx,'trajectory'] = lines
         cur_frme.loc[cur_non_null_idx,'u_'] = u_
@@ -406,7 +409,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     # Ellipse method: Read instructions in ellipse_mtd.py
     if nm_lst['elp_correction'] and len(cur_non_null_idx) > 0:
         cur_ell = cur_frme.loc[cur_non_null_idx]
-        prev_ell = prv_frme.loc[cur_ell['prev_idx'].values]
+        prev_ell = prv_frme.loc[cur_ell['past_idx'].values]
         u_, v_ = ellipse_mtd(cur_ell, prev_ell)
         cur_frme.loc[cur_non_null_idx,'u_elp'] = u_
         cur_frme.loc[cur_non_null_idx,'v_elp'] = v_
