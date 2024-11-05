@@ -195,9 +195,9 @@ def plot(name_list,
             lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
             lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
             ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap, zorder=10)
-        # calc pixel size
-        pixel_size = (name_list['lon_max'] - name_list['lon_min']) / data.shape[1]
-        pixel_size = pixel_size * 111.32
+        # calc pixel size in km
+        lon_size = (name_list['lon_max'] - name_list['lon_min']) / data.shape[1] * 111.32
+        lat_size = (name_list['lat_max'] - name_list['lat_min']) / data.shape[0] * 111.32
     else:
         if ax is None: # Comming from animation
             ax = fig.add_subplot(1, 1, 1)
@@ -253,7 +253,10 @@ def plot(name_list,
     if info:
         buffer = [patheffects.withStroke(linewidth=2, foreground="w")]
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
-        # Filter only boundaries.centroid inside the zoom region
+        if 'area' in info_cols:
+            # Calculate area of the bound_df
+            bound_df['area'] = bound_df['geometry'].set_crs(epsg=4326).to_crs(epsg=6933).area / 10**6
+        # Get the centroid of the bound_df
         bound_df['geometry'] = bound_df['geometry'].centroid
         if len(zoom_region) == 4:
             bound_df = bound_df.cx[zoom_region[0]:zoom_region[1],
@@ -266,19 +269,15 @@ def plot(name_list,
                 text['lifetime'] = str(int(text['lifetime'])) + 'min'
             if 'uid' in info_cols:
                 text['uid'] =f"{int(text['uid'])}"
-            if 'size' in info_cols and 'pixel_size' in locals():
-                try:
-                    text['size'] = text['size'] * pixel_size * pixel_size
-                    text['size'] = f"{int(text['size']):,}".replace(",", ".") + ' km²'
-                except:
-                    pass
+            if 'size' in info_cols:
+                text['size'] = f"{int(text['size'])}" + ' pixels'
             if 'duration' in info_cols:
                 text['duration'] = str(int(text['duration'])) + 'min'
             if 'max' in info_cols:
-                # Around to 2 decimal places
                 text['max'] = round(text['max'], 2)
-                # Convert to string and add cb_title
                 text['max'] = str(text['max']) + ' ' + cbar_title
+            if 'area' in info_cols:
+                text['area'] =  f"{int(text['area']):,}".replace(",", ".") + ' km²'
             if info_col_name:
                 text = '\n'.join([f'{col}:{value}' for col, value in text.items()])
             else:
