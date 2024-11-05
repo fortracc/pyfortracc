@@ -35,12 +35,12 @@ def merge_trajectory(cur_frame, cur_idx, prv_frame, prv_idx):
     - The resulting merged trajectory is stored back in the `trajectory` column of `cur_frame`.
     """
     # Get the current and previous trajectories
-    cur_traj = cur_frame.loc[cur_idx][['trajectory','prev_idx']]   
+    cur_traj = cur_frame.loc[cur_idx][['trajectory','past_idx']]   
     cur_traj = cur_traj[cur_traj['trajectory'] != 'LINESTRING EMPTY']
     cur_traj = cur_traj.reset_index()
     cur_traj = cur_traj.rename(columns={'index':'index_c',
                                         'trajectory':'cur_traj'})
-    cur_traj.set_index('prev_idx', inplace=True)
+    cur_traj.set_index('past_idx', inplace=True)
     prv_traj = prv_frame.loc[prv_idx][['trajectory']]
     prv_traj = prv_traj.rename(columns={'trajectory':'prev_traj'})
     # Merge trajectories

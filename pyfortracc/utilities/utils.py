@@ -420,7 +420,7 @@ def set_schema(module,name_list):
                 'status': object,
                 'threshold_level': int,
                 'inside_clusters': object,
-                'prev_idx': list,
+                'past_idx': list,
                 'inside_idx': list,
                 'merge_idx': list,
                 'split_pr_idx': list,
@@ -634,54 +634,54 @@ def read_parquet(path_file, columns):
     return dataframe
 
 
-# def get_geotransform(name_list):
-#     """
-#     Calculate geotransform parameters based on input bounding coordinates and dimensions.
+def get_geotransform(name_list):
+    """
+    Calculate geotransform parameters based on input bounding coordinates and dimensions.
 
-#     Parameters
-#     ----------
-#     name_list : dict
-#         Dictionary containing the bounding coordinates and dimensions needed to calculate the geotransform.
-#         Expected keys: 'lon_min', 'lon_max', 'lat_min', 'lat_max', 'x_dim', 'y_dim'.
+    Parameters
+    ----------
+    name_list : dict
+        Dictionary containing the bounding coordinates and dimensions needed to calculate the geotransform.
+        Expected keys: 'lon_min', 'lon_max', 'lat_min', 'lat_max', 'x_dim', 'y_dim'.
 
-#     Returns
-#     -------
-#     tuple
-#         A tuple containing the geotransform and its inverse.
-#         geotransform: (xres, 0, 0, yres, LON_MIN, LAT_MIN)
-#         geotransform_inv: (xres_inv, 0, 0, yres_inv, LON_MIN_inv, LAT_MIN_inv)
+    Returns
+    -------
+    tuple
+        A tuple containing the geotransform and its inverse.
+        geotransform: (xres, 0, 0, yres, LON_MIN, LAT_MIN)
+        geotransform_inv: (xres_inv, 0, 0, yres_inv, LON_MIN_inv, LAT_MIN_inv)
 
-#     Raises
-#     ------
-#     KeyError
-#         If any of the required keys are missing in name_list.
-#     """
-#     required_keys = {'lon_min', 'lon_max', 'lat_min', 'lat_max', 'x_dim', 'y_dim'}
-#     if not required_keys.issubset(name_list):
-#         # Return null geo transform
-#         return (1, 0, 0, 1, 0, 0), (1, 0, 0, 1, 0, 0)
-#     # Get the parameters
-#     LON_MIN = name_list['lon_min']
-#     LON_MAX = name_list['lon_max']
-#     LAT_MIN = name_list['lat_min']
-#     LAT_MAX = name_list['lat_max']
-#     X_DIM = name_list['x_dim']
-#     Y_DIM = name_list['y_dim']
-#     # Calculate pixel size
-#     xres = abs(LON_MAX - LON_MIN) / X_DIM
-#     yres = abs(LAT_MAX - LAT_MIN) / Y_DIM
-#     # Transform matrix
-#     matrix = np.array([[xres, 0, LON_MIN], [0, yres, LAT_MIN], [0, 0, 1]])
-#     # Calculate geotransform
-#     geotransform = (matrix[0, 0], matrix[0, 1], matrix[1, 0],
-#                     matrix[1, 1], matrix[0, 2], matrix[1, 2])
-#     # Calculate inverse matrix
-#     matrix_inv = np.linalg.inv(matrix)
-#     # Calculate inverse geotransform
-#     geotransform_inv = (matrix_inv[0, 0], matrix_inv[0, 1],
-#                         matrix_inv[1, 0], matrix_inv[1, 1],
-#                         matrix_inv[0, 2], matrix_inv[1, 2])
-#     return geotransform, geotransform_inv
+    Raises
+    ------
+    KeyError
+        If any of the required keys are missing in name_list.
+    """
+    # Check if all keys are present in name_list and if all values is None
+    if name_list['lon_min'] is None and name_list['lon_max'] \
+        is None and name_list['lat_min'] is None and name_list['lat_max'] is None:
+        return (1, 0, 0, 1, 0, 0), (1, 0, 0, 1, 0, 0)
+    # Get the parameters
+    LON_MIN = name_list['lon_min']
+    LON_MAX = name_list['lon_max']
+    LAT_MIN = name_list['lat_min']
+    LAT_MAX = name_list['lat_max']
+    X_DIM = name_list['x_dim']
+    Y_DIM = name_list['y_dim']
+    # Calculate pixel size
+    xres = abs(LON_MAX - LON_MIN) / X_DIM
+    yres = abs(LAT_MAX - LAT_MIN) / Y_DIM
+    # Transform matrix
+    matrix = np.array([[xres, 0, LON_MIN], [0, yres, LAT_MIN], [0, 0, 1]])
+    # Calculate geotransform
+    geotransform = (matrix[0, 0], matrix[0, 1], matrix[1, 0],
+                    matrix[1, 1], matrix[0, 2], matrix[1, 2])
+    # Calculate inverse matrix
+    matrix_inv = np.linalg.inv(matrix)
+    # Calculate inverse geotransform
+    geotransform_inv = (matrix_inv[0, 0], matrix_inv[0, 1],
+                        matrix_inv[1, 0], matrix_inv[1, 1],
+                        matrix_inv[0, 2], matrix_inv[1, 2])
+    return geotransform, geotransform_inv
 
 # def calculate_pixel_area(name_list):
 #     """

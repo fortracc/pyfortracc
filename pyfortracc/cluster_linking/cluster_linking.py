@@ -91,7 +91,7 @@ def linking(args):
     time_, cur_file, prv_frame, prv_stamp, nm_lst, uid_iter, max_dt, schm, icdx = args
     # Read current file        print('Empty frame:', cur_file)
     cur_frame = read_parquet(cur_file, ['status','threshold_level',
-                                        'prev_idx','inside_idx',
+                                        'past_idx','inside_idx',
                                         'board','board_idx',
                                         'trajectory'])
     # Set output file
@@ -139,10 +139,10 @@ def linking(args):
     #  - prev_idx is not null
     #  - status is not NEW
     # The association values is based on prev_idx
-    cur_prev_idx = cur_frame.loc[(~cur_frame['prev_idx'].isnull())]
+    cur_prev_idx = cur_frame.loc[(~cur_frame['past_idx'].isnull())]
     cur_prev_idx = cur_prev_idx[~cur_prev_idx['status'].str.contains('NEW')]
     cur_idx = cur_prev_idx.index
-    prv_idx = pd.Index(cur_prev_idx['prev_idx'].values.astype(int))
+    prv_idx = pd.Index(cur_prev_idx['past_idx'].values.astype(int))
     previous_uids = prv_frame.loc[prv_idx]['uid'].values
     previous_iuids = prv_frame.loc[prv_idx]['iuid'].values
     cur_frame.loc[cur_idx, 'uid'] = previous_uids

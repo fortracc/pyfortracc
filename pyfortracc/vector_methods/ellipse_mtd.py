@@ -27,7 +27,7 @@ def ellipse_mtd(cur_df, prv_df):
     prv_df['elipse'] = prv_df.geometry.apply(envole_ellipse)
     for _, row in cur_df.iterrows():
         cur_ellip_cent = row.elipse.centroid
-        prv_ellip_cent = prv_df.loc[row.prev_idx].elipse.centroid
+        prv_ellip_cent = prv_df.loc[row['past_idx']].elipse.centroid
         # If prv_ellip_cent is more than one, get centroid between points
         if isinstance(prv_ellip_cent, Point) == False:
             prv_ellip_cent = prv_ellip_cent.unary_union.centroid

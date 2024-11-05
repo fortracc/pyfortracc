@@ -195,19 +195,29 @@ def plot(name_list,
             lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
             lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
             ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap, zorder=10)
-        # calc pixel size in km
-        lon_size = (name_list['lon_max'] - name_list['lon_min']) / data.shape[1] * 111.32
-        lat_size = (name_list['lat_max'] - name_list['lat_min']) / data.shape[0] * 111.32
     else:
         if ax is None: # Comming from animation
             ax = fig.add_subplot(1, 1, 1)
         ax.imshow(data, cmap=cmap, origin='lower', interpolation=interpolation, zorder=10)
+    # Add title to the figure
+    ax.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
+            horizontalalignment='center', fontsize=title_fontsize,
+            verticalalignment='bottom', transform=ax.transAxes, zorder=11)
+
     if len(zoom_region) == 4:
         tck_table = tck_table.cx[zoom_region[0]:zoom_region[1],
                                 zoom_region[2]:zoom_region[3]]
     if len(tck_table) == 0:
-        print('No data for the given zoom')
-        return
+        if animate:
+            buf = BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            plt.close(fig)
+            return Image.open(buf)
+        else:
+            plt.close(fig)
+            return fig
+    # Set colorbar
     if cbar:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="2%", pad=pad, axes_class=plt.Axes)
@@ -215,10 +225,6 @@ def plot(name_list,
                                                                 vmax=max_val))
         plt.colorbar(sm, ax=ax, cax=cax, label=cbar_title, orientation=orientation,
                     shrink=shrink, extend=cbar_extend)
-    # Add title to the figure
-    ax.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
-            horizontalalignment='center', fontsize=title_fontsize,
-            verticalalignment='bottom', transform=ax.transAxes, zorder=11)
     ##### BOUNDARIES ##############
     if boundary:
         thresholds = tck_table['threshold'].unique()
@@ -246,7 +252,7 @@ def plot(name_list,
     if trajectory:
         # Apply taubin_smooth into trajectory column
         if smooth_trajectory:
-                tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x: chaikin_smooth(x) if x.length > 0 else x)
+            tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x: chaikin_smooth(x) if x.length > 0 else x)
         traject_df = tck_table.set_geometry('trajectory')
         traject_df.plot(ax=ax, color=traj_color , linewidth=traj_linewidth, alpha=traj_alpha, zorder=15)
     ##### INFO #############
@@ -313,7 +319,6 @@ def plot(name_list,
     if scalebar:
         scale_bar(ax, ccrs.Mercator(), scalebar_metric, location=scalebar_location,
                 linewidth=scalebar_linewidth, units=scalebar_units)
-
     if animate:
         buf = BytesIO()
         plt.savefig(buf, format='png', bbox_inches='tight')

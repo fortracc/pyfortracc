@@ -6,12 +6,14 @@ from shapely.geometry import Point, LineString, MultiLineString, MultiPoint
 from pyfortracc.utilities.utils import set_operator
 from pyfortracc.utilities.math_utils import point_position, calc_mean_uv
 from .opticalflow_filters import histogram_equalization
+from shapely.affinity import affine_transform
+
 
 # Set number of threads cv2
 cv2.setNumThreads(2)
 
 
-def opticalflow_mtd(cur_df, prev_df, read_fnc, operator, opt_mtd):
+def opticalflow_mtd(cur_df, prev_df, read_fnc, name_list, geotrf):
     """
     Calculate optical flow between two frames using specified optical flow methods.
 
@@ -27,11 +29,11 @@ def opticalflow_mtd(cur_df, prev_df, read_fnc, operator, opt_mtd):
         The previous frame containing the geometries and thresholds used for optical flow calculation.
     read_fnc : function
         Function used to read and normalize the image frames.
-    operator : str
-        Operator to be used in the image processing, defined by a specific function.
-    opt_mtd : str
-        The optical flow method to use. Options are 'lucas-kanade' or 'farneback'.
-
+    name_list : dict
+        A dictionary containing configuration information, including paths and settings.
+    geotrf : tuple
+        A tuple containing the geotransform information for the image frames.
+        
     Returns
     -------
     index : list
@@ -62,11 +64,11 @@ def opticalflow_mtd(cur_df, prev_df, read_fnc, operator, opt_mtd):
     # Set read_function parameters to use in map function
     min_val = cur_df['threshold'].min()
     max_val = cur_df['threshold'].max()
-    operator = set_operator(operator)
+    operator = set_operator(name_list['operator'])
     # Set optical flow method
-    if opt_mtd == 'lucas-kanade':
+    if name_list['opt_mtd'] == 'lucas-kanade':
         optical_flow = lucas_kanade
-    elif opt_mtd == 'farneback':
+    elif name_list['opt_mtd'] == 'farneback':
         optical_flow = farneback
     # Initialize empty array for current points
     currPts = np.empty((0,1,2), dtype=int)
@@ -89,13 +91,19 @@ def opticalflow_mtd(cur_df, prev_df, read_fnc, operator, opt_mtd):
         prevPts, currPts = optical_flow(cur_img, prv_img, currPts)
         for point in zip(prevPts, currPts):
             # Calculate u and v components
-            u = point[1][0][0] - point[0][0][0] 
-            v = point[1][0][1] - point[0][0][1]
+            u = (point[1][0][0] - point[0][0][0]) * name_list['x_res']
+            v = (point[1][0][1] - point[0][0][1]) * name_list['y_res']
             # Append u and v components
             u_vec.append(u)
             v_vec.append(v)
-            v_field.append(LineString([Point(point[0]), Point(point[1])]))
-            p0_.append(Point(point[1]))
+            # Mount vector Line
+            vect_line = LineString([Point(point[0]), Point(point[1])])
+            # Apply transformation to vector Line
+            vect_line = affine_transform(vect_line, geotrf)
+            v_field.append(vect_line)
+            # Get p0 points
+            p0 = affine_transform(Point(point[1]), geotrf)
+            p0_.append(p0)
         currPts = prevPts # Set current points
     # Check if no vector field was calculated
     if len(v_field) == 0:
