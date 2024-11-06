@@ -78,7 +78,7 @@ def default_parameters(name_lst=None, read_function=None):
         Vector correction method for inner cells.
     opt_correction: bool
         Vector correction method for optical flow.
-    opt_method: str
+    opt_mtd: str
         Optical flow method. It can be 'farneback' or 'lucas-kanade'
     elp_correction: bool
         Vector correction method for ellipse fitting.
