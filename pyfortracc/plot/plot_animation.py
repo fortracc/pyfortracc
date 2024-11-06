@@ -193,7 +193,6 @@ def plot_animation(
                   save,
                   save_path,
                   save_name))
-
             if parallel:
                   n_workers = set_nworkers(name_list)
                   with Pool(n_workers) as pool:

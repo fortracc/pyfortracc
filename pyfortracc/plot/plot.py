@@ -113,10 +113,23 @@ def plot(name_list,
         tck_table = tck_table.loc[tck_table['uid'].isin(uid_list)]
     if len(threshold_list) > 0:
         tck_table = tck_table.loc[tck_table['threshold'].isin(threshold_list)]
-    # Check if tck_table is empty
+    #Check if tck_table is empty
     if len(tck_table) == 0:
-        print('At timestamp {} there is no data for the given uid {} or threshold {}'.format(timestamp, uid_list, threshold_list))
-        return ax
+        fig = plt.figure(figsize=figsize)
+        # Add title to the figure
+        plt.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
+                horizontalalignment='center', fontsize=title_fontsize,
+                verticalalignment='bottom', zorder=11)
+        if animate:
+            buf = BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight')
+            buf.seek(0)
+            plt.close(fig)
+            return Image.open(buf)
+        else:
+            plt.close(fig)
+            return fig
+    # Read the tracking table
     tck_table = gpd.GeoDataFrame(tck_table)
     tck_table['geometry'] = tck_table['geometry'].apply(loads)
     tck_table['trajectory'] = tck_table['trajectory'].apply(loads)
