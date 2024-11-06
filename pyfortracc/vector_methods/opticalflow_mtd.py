@@ -115,7 +115,7 @@ def opticalflow_mtd(cur_df, prev_df, read_fnc, name_list, geotrf):
             v_field = [v_field]
         elif isinstance(v_field, MultiLineString):
             v_field = list(v_field.geoms)
-    # # Create GeoDataFrame with p0 points p0_x and p0_y
+    # Create GeoDataFrame with p0 points p0_x and p0_y
     vec_field = gpd.GeoDataFrame({'vector_field': v_field,
                                 'geometry': p0_,
                                 'u': u_vec,
@@ -123,7 +123,8 @@ def opticalflow_mtd(cur_df, prev_df, read_fnc, name_list, geotrf):
     # Before spatial join, apply a buffer into current frame to increase the
     # area of the polygon and avoid points that are outside of the polygon
     ccur_df = cur_df.copy()
-    ccur_df['geometry'] = ccur_df['geometry'].buffer(0.5)
+    buffer_size = (name_list['x_res'] + name_list['y_res']) / 2
+    ccur_df['geometry'] = ccur_df['geometry'].buffer(buffer_size)
     # Spatial join to associate vector_field with current frame
     within = gpd.sjoin(vec_field, ccur_df, how='inner', predicate='within', 
                     lsuffix='l', rsuffix='r').reset_index()
