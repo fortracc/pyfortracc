@@ -63,15 +63,11 @@ The development of this framework is constantly evolving, and several applicatio
 
 [![01 - Introducing Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/01_Introducing_Example/01_Introducing-pyFortraCC.ipynb) - 01 - Introducing Example
 
-[![02 - Algorithm Workflow with Radar Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Algorithm_Workflow_Radar_Example/02_Algorithm_Workflow.ipynb) - 02 - Algorithm Workflow with Radar Example
+[![02 - Track Radar Reflectivity (Algorithm Workflow)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Algorithm_Workflow_Radar_Example/02_Algorithm_Workflow.ipynb) - 02 - Track Radar Reflectivity (Algorithm Workflow)
 
-[![03 - Infrared:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) - 03 - Track Infrared
+[![03 - Track Infrared (Real Time Tracking):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) - 03 - Track Infrared (Real Time Tracking)
 
-[![04 - Global Precipitation:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-Global-Precipitation-EDA/04_Track-Global-Precipitation.ipynb) - 04 - Track Global Precipitation (Milton Hurricane)
-
-[![05 - Track High Resolution Global Precipitation:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/05_Track-High-Resolution-Global-Precipitation-Dataset/05_Track-High-Resolution-Global-Precipitation-Dataset.ipynb) - 05 - Track High Resolution Global Precipitation
-
-[![06 -_Track Deforestation:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/06_Track-Deforestation-Dataset/06_Track-Deforestation-Dataset.ipynb) - 06 - Track Deforestation
+[![04 - Track Global Precipitation (Milton Hurricane):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-Global-Precipitation-EDA/04_Track-Global-Precipitation.ipynb) - 04 - Track Global Precipitation (Milton Hurricane)
 
 Support and Contact
 =====================================================================
