@@ -135,6 +135,7 @@ def read_files(args):
     concat_df.set_index('cindex', inplace=True)
     # Drop duplicates columns
     concat_df = concat_df.loc[:,~concat_df.columns.duplicated()]
+    # Check if schema is None
     if schema is None:
         return Schema.from_pandas(concat_df)
     # Get the name of file
@@ -249,4 +250,8 @@ def default_columns(name_list=None):
         columns = columns + ['u_elp'] + ['v_elp']
         if name_list['validation_scores']:
             columns = columns + ['far_elp', 'hit_elp', 'false-alarm_elp']
+    if name_list['calc_dir']:
+        columns = columns + ['dir']
+    if name_list['calc_speed']:
+        columns = columns + ['speed']
     return columns

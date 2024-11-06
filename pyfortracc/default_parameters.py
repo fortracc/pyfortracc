@@ -82,6 +82,8 @@ def default_parameters(name_lst=None, read_function=None):
         Optical flow method. It can be 'farneback' or 'lucas-kanade'
     elp_correction: bool
         Vector correction method for ellipse fitting.
+    'epsg': int
+        EPSG code for the projection.
     Returns
     -------
     name_lst : dict
@@ -152,4 +154,11 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['validation'] = False
     if 'validation_scores' not in name_lst:
         name_lst['validation_scores'] = False
+    if 'calc_dir' not in name_lst:
+        name_lst['calc_dir'] = False
+    if 'calc_speed' not in name_lst:
+        name_lst['calc_speed'] = False
+        name_lst['speed_units'] = 'm/s'
+    if 'epsg' not in name_lst:
+        name_lst['epsg'] = 4326
     return name_lst
