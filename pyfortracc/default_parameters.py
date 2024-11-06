@@ -27,7 +27,7 @@ def get_input_files(input_path):
 
 
 def default_parameters(name_lst=None, read_function=None):
-    '''Default parameters for the fortracc module
+    '''Default parameters for the pyfortracc module
 
     Parameters
     -------

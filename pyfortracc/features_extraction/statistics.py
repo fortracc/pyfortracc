@@ -95,8 +95,9 @@ def geo_statistics(cluster_matrix, cluster_labels, values_matrix, name_list):
             output_df.at[group.index[0], 'array_y'] = m_array_y
             output_df.drop(group.index[1:], inplace=True)
     # Check convex hull
-    if name_list['convex_hull']:
+    if name_list['convex_hull'] and len(output_df) > 0:
         output_df['geometry'] = output_df['geometry'].apply(lambda x: x.convex_hull)
     # Convert geometry to wkt
-    output_df['geometry'] = output_df['geometry'].apply(lambda x: x.wkt)
+    if len(output_df) > 0:
+        output_df['geometry'] = output_df['geometry'].apply(lambda x: x.wkt)
     return output_df
