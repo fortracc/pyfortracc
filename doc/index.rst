@@ -10,7 +10,7 @@ By utilizing a time-varying 2D input images and a specified threshold value, pyF
 software then establishes consistent trajectories that represent the complete lifecycle of a single cell of feature through the tracking step. 
 Furthermore, pyForTraCC provides analysis and visualization methods that facilitate the utilization and display of the tracking results.
 
-This algorithm was inspired by the research presented in the publication titled "Impact of Multi-Thresholds and Vector Correction for Tracking Precipitating 
+This algorithm was initially developed and used in the publication "Impact of Multi-Thresholds and Vector Correction for Tracking Precipitating 
 Systems over the Amazon Basin" (https://doi.org/10.3390/rs14215408). The methods presented in the research paper "Impact of Multi-Thresholds and Vector 
 Correction for Tracking Precipitating Systems over the Amazon Basin" have enabled the implementation of robust techniques for extracting the motion vector 
 field and trajectory of individual clusters of precipitating cells. These techniques play a crucial role in accurately identifying and analyzing precipitation 
