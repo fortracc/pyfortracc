@@ -1,8 +1,9 @@
 
 import os
+
 try:
-    os.system("pip install --upgrade setuptools")
     os.system("python -m ensurepip --upgrade")
+    os.system("python -m pip install --upgrade setuptools")
 except:
     pass
 
@@ -20,11 +21,11 @@ setup(
     name="pyfortracc",
     version=__version__.strip().strip('"'),
     author="Helvecio B. L. Neto, Alan J. P. Calheiros",
-    author_email="fortraccproject@gmail.com",
-    description="A Python package for track and forecasting.",
+    author_email="fortracc.project@inpe.br",
+    description="A Python package for track and forecasting configurable clusters.",
     long_description=open("README.md").read(),
     long_description_content_type="text/x-rst",
-    url="https://github.com/fortracc-project/fortracc",
+    url="https://github.com/fortracc/fortracc",
     packages=find_packages(),
     install_requires=requirements,
     license="LICENSE",

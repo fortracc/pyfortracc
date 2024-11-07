@@ -14,4 +14,3 @@ tqdm
 ipython
 ipykernel
 psutil
-numba
