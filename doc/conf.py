@@ -13,7 +13,7 @@ import sphinx_bootstrap_theme
 sys.path.insert(0, os.path.abspath('../'))
 
 project = 'pyForTraCC'
-copyright = '2024, Helvecio Neto, Alan Calheiros'
+copyright = '2024, COPDT/CGIP/INPE (Brazil)'
 author = 'Helvecio Neto, Alan Calheiros'
 release = '1.0.0'
 
