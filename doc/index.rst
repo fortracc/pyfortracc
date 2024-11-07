@@ -1,19 +1,18 @@
 pyForTraCC - Python Library for Tracking and Forecasting Configurable Clusters
 =======================================================
 
-pyForTraCC is a Python package designed to identify, track, forecast and analyze clusters moving in a time-varying field.
-It offers a modular framework that incorporates different algorithms for feature identification, tracking, and analyses.
-One of the key advantages of pyForTraCC is its versatility, as it does not depend on specific input variables or a particular grid structure.
-In its current implementation, pyForTraCC identifies individual cluster features in a 2D field by applying a specified threshold value.
+The Forecasting and Tracking the Evolution of Cloud Clusters (ForTraCC) algorithm, introduced by Vila et al. (2008) (https://doi.org/10.1175/2007WAF2006121.1), was a pioneering tool in monitoring and predicting the evolution of cloud clusters, with significant applications in weather forecasting. Building upon this foundation, the Python Forecasting and Tracking the Evolution of Configurable Clusters (pyForTraCC) extends these capabilities with new customization options. The term "configurable" replaces "cloud" to reflect a key enhancement: pyForTraCC allows users to adjust and modify the tracked clusters based on specific configurations or parameters. This flexibility enables tailored definitions and monitoring of clusters, adapting to varying criteria or specific user needs. This added customization makes pyForTraCC a versatile tool for a broader range of tracking and forecasting applications, from precipitation systems to other phenomena.
 
-By utilizing a time-varying 2D input images and a specified threshold value, pyForTraCC can determine the associated volume for these features. The 
-software then establishes consistent trajectories that represent the complete lifecycle of a single cell of feature through the tracking step. 
-Furthermore, pyForTraCC provides analysis and visualization methods that facilitate the utilization and display of the tracking results.
+The development of the pyForTraCC algorithm was driven by the need to create innovative tools for nowcasting – short-term forecasting of atmospheric phenomena – with a focus on precipitation systems. This project aligns directly with Strategic Objective OE-14 from the 2022-2026 Strategic Plan, which aims to maintain INPE’s leadership in cutting-edge science by promoting innovative technologies, products, and services in remote sensing, geospatial data science, environmental science, and geoinformatics, applied to Earth system science studies. The pyForTraCC also supports the strategic milestone M-14.3, which emphasizes the need for meteorological products derived from satellite and radar data, essential for meteorological agencies, governmental decision makers, public and private institutions, and society at large. pyForTraCC contributes to this goal by focusing on weather forecasting with satellite-derived products.
 
-This algorithm was initially developed and used in the publication "Impact of Multi-Thresholds and Vector Correction for Tracking Precipitating 
-Systems over the Amazon Basin" (https://doi.org/10.3390/rs14215408). The methods presented in the research paper have enabled the implementation of robust techniques for extracting the motion vector 
-field and trajectory of individual clusters of precipitating cells. These techniques have been applied to the Amazon Basin, where the tracking of 
-precipitating systems is essential for understanding the hydrological cycle and its impacts on the environment and used in this algorithm
+pyForTraCC is a Python package designed to identify, track, and forecasting for several types of datasets. It offers a modular framework that incorporates different algorithms for feature identification, tracking, and forecasting. One of the key advantages of pyForTraCC is its versatility, as it usually does not depend on specific input variables or a particular grid structure.
+
+The algorithm was initially presented in the research paper “Impact of Multi-Thresholds and Vector Correction for Tracking Precipitating Systems over the Amazon Basin” (https://doi.org/10.3390/rs14215408), which details the implementation of robust techniques for extracting the motion vector field and trajectory of clusters of precipitating cells. These techniques play a crucial role in accurately identifying and analyzing precipitation systems, enhancing the ability to monitor and forecast significant weather events with direct impact on nowcasting.
+
+
+By utilizing a time-varying 2D input images and a specified threshold value, pyForTraCC can determine the associated volume for these features. The software then establishes consistent trajectories that represent the complete lifecycle of a single cell of feature through the tracking step. Furthermore, pyForTraCC provides analysis and visualization methods that facilitate the utilization and display of the tracking results. Also, the forecasting module uses these lifecycle information to predict, by extrapolation, the behavior of the clusters for many lead times.
+
+For further information on pyForTraCC, its modules, and the continuous development process, please refer to the official documentation and stay tuned for updates from the community.
 
 The algorithm is divided into two main routines Track and Forecast. 
 
