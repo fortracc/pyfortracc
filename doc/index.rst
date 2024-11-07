@@ -35,31 +35,3 @@ from the community.
    please don't hesitate to reach out to Helvecio Neto or Alan Calheiros for assistance. Thank you for your understanding and support as we work to enhance this 
    resource.
 
-.. toctree::
-   :caption: Basic Information
-   :maxdepth: 3
-
-   BI/BI_INSTALL
-   BI/BI_DATA
-   BI/BI_NAMELIST
-   BI/BI_TRACKING
-   BI/BI_FORECAST
-   BI/BI_UTILITIES
-   BI/BI_EXAMPLES
-   BI/BI_PUBLICATIONS
-   BI/BI_CONTACT
-
-.. toctree::
-   :caption: Conceptual Framework
-   :maxdepth: 2
-
-   CF/ALGORITHM
-   CF/SCOPE
-   CF/TRACKING
-   CF/CORRECTION
-
-.. toctree::
-   :caption: API Reference
-   :maxdepth: 2
-
-   API/API_MODULES
