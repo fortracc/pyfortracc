@@ -98,13 +98,13 @@ Example Gallery
 To use the library we have a gallery of examples that demonstrate the application of the algorithm in different situations.
 The development of this framework is constantly evolving, and several application examples can be seen in our example gallery.
 
-[![01 - Introducing Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/01_Introducing_Example/01_Introducing-pyFortraCC.ipynb) - 01 - Introducing Example
+[![01 - Introducing Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/01_Introducing_Example/01_Introducing-pyFortraCC.ipynb) - 01 - Track Synthetic data (Introducing Example) 
 
-[![02 - Track Radar Reflectivity (Algorithm Workflow)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Algorithm_Workflow_Radar_Example/02_Algorithm_Workflow.ipynb) - 02 - Track Radar Reflectivity (Algorithm Workflow)
+[![02 - Track Radar Reflectivity (Algorithm Workflow)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Algorithm_Workflow_Radar_Example/02_Algorithm_Workflow.ipynb) - 02 - Track Radar (Algorithm Workflow)
 
-[![03 - Track Infrared (Real Time Tracking):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) - 03 - Track Infrared (Real Time Tracking)
+[![03 - Track Infrared (Real Time Tracking):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) - 03 - Track GOES16-IR (Real Time Tracking)
 
-[![04 - Track Global Precipitation (Milton Hurricane):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-Global-Precipitation-EDA/04_Track-Global-Precipitation.ipynb) - 04 - Track Global Precipitation (Milton Hurricane)
+[![04 - Track Global Precipitation (Milton Hurricane):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-Global-Precipitation-EDA/04_Track-Global-Precipitation.ipynb) - 04 - Track GSMAP (Milton Hurricane)
 
 Support and Contact
 =====================================================================
