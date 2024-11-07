@@ -34,7 +34,7 @@ The algorithm is divided into two main routines Track and Forecast.
 
 Documentation
 =====================================================================
-For a more detailed information of `pyForTraCC` package please read the user guide available [click here]([https://link-url-here.org](https://github.com/fortracc/pyfortracc/blob/main/UserGuide.md)).
+For a more detailed information of `pyForTraCC` package please read the user guide available [Documentation](https://pyfortracc.readthedocs.io/).
 
 
 Installation
@@ -55,11 +55,17 @@ Create environment using conda and install from environment.yml file:
 
  or you can install the the `pyForTraCC` package using pip3 or conda.
 
+ pip install:
+
  	pip3 install pyfortracc
 
- or
+ conda install:
   
-  conda install -c conda-forge pyfortracc
+  	conda install -c conda-forge pyfortracc
+
+Running pyFortracc
+=====================================================================
+
 
 
 Example Gallery
