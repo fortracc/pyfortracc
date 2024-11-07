@@ -3,6 +3,9 @@ Contact Details
 
 For any questions, suggestions, or feedback regarding the pyForTraCC guide, please feel free to reach out to the main contacts:
 
+* Fortracc Project
+    Email: fortracc.project@inpe.br
+
 * Alan Calheiros
     Email: alan.calheiros@inpe.br
 
