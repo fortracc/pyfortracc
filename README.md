@@ -12,20 +12,25 @@ pyForTraCC - Python Library for Tracking and Forecasting Clusters
 Overview
 =====================================================================
 
-`pyForTraCC` is a Python package designed to identify, track, and analyze hydrological phenomena using various data formats. 
-By working with time-varying 2D input frames and user-specified parameters, pyForTraCC can detect objects (clusters) and track their movement over time.
-The package also saves tracking files in user-friendly formats, enabling scientific research on various scenarios where the tracked targets are non-rigid objects. 
-This makes it easier to study and understand the behavior of these phenomena in different conditions.
+`pyForTraCC` is a Python package designed to identify, track, forecast and analyze clusters moving in a time-varying field.
+It offers a modular framework that incorporates different algorithms for feature identification, tracking, and analyses.
+One of the key advantages of pyForTraCC is its versatility, as it does not depend on specific input variables or a particular grid structure.
+In its current implementation, pyForTraCC identifies individual cluster features in a 2D field by applying a specified threshold value
 
 ##### Algorithm Workflow
 
-The algorithm is divided into three main modules and form the Tracking Workflow. 
-<ol>
-  <li><b>Feature detection</b>: Focuses on identifying individual clusters detection from individual frame of data and extraction of features and statistics.
-  </li>
-  <li><b>Spatial Operations</b>: Involves spatial operations (overlap, union, difference, etc) between objects (clusters) from consecutive time steps (t-1 and t).
-  <li><b>Trajectory Linking</b>: Link objects of consecutive time steps based on the spatial association.
-  </li>
+The algorithm is divided into two main routines Track and Forecast. 
+
+1. **Track**: The tracking routine is responsible for identifying and tracking the clusters in a time-varying field. This routine is divided into four main steps: 
+  - **Features Extraction**: The first step is to identify the features in a time-varying field. The features are identified by applying a multi-thresholding technique to the field, clustering the contiguous pixels with values above the threshold and vectorizing the clusters into a geospatial object.
+  - **Spatial Operations**: The second step is to perform spatial operations on the features. The spatial operations are used to identify the spatial relationships between the features and create a vector displacement between the centroids of the features.
+  - **Cluster Linkage**: The third step is to link the features between the time steps. The linkage is performed by indexing the features in the current time step with the features in the previous time step and create a unique identifier for each cluster that is maintained throughout the tracking process. Additionally, the algorithm creates a trajectory for each cluster and a lifetime of the cluster.
+  - **Concatenation**: The fourth step is to concatenate the features and trajectories into a single parquet file. The parquet file contains enteire tracking information of the clusters. And a create a generalized track entity called `tracking table` that contains all information of track process.
+
+2. **Forecast**: The forecasting routine is responsible for predicting the future position of the clusters. This routine is a loop that iterates over the time steps and performs two main steps:
+  - **Virtual Image**: The first step is to create a virtual image based persistence forecast of individual clusters. The virtual image is created by shifting the clusters in the current time step to the `n` time steps ahead. The extrapolation is performed by applying a mean vector displacement of the clusters based on u and v components.
+  - **Track Routing**: The second step uses a `Track Routine` to identify the clusters in the virtual image. The track routine is applied to the virtual image to identify the clusters in the future time step.  
+
 
 Documentation
 =====================================================================
@@ -51,9 +56,10 @@ Create environment using conda and install from environment.yml file:
  or you can install the the `pyForTraCC` package using pip3 or conda.
 
  	pip3 install pyfortracc
-  or
+
+ or
   
-  	conda install -c conda-forge pyfortracc
+  conda install -c conda-forge pyfortracc
 
 
 Example Gallery
@@ -71,4 +77,7 @@ The development of this framework is constantly evolving, and several applicatio
 
 Support and Contact
 =====================================================================
-For support, email helvecio.neto@inpe.br, alan.calheiros@inpe.br
+For support and contact e-mail:
+- fortracc.project@inpe.br
+- helvecio.neto@inpe.br
+- alan.calheiros@inpe.br
