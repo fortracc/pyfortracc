@@ -19,14 +19,14 @@ Overview
 The algorithm is divided into two main routines Track and Forecast. 
 
 1. **Track**: The tracking routine is responsible for identifying and tracking the clusters in a time-varying field. This routine is divided into four main steps: 
-  - **Features Extraction**: The first step is to identify the features in a time-varying field. The features are identified by applying a multi-thresholding technique to the field, clustering the contiguous pixels with values above the threshold and vectorizing the clusters into a geospatial object.
-  - **Spatial Operations**: The second step is to perform spatial operations on the features. The spatial operations are used to identify the spatial relationships between the features and create a vector displacement between the centroids of the features.
-  - **Cluster Linkage**: The third step is to link the features between the time steps. The linkage is performed by indexing the features in the current time step with the features in the previous time step and create a unique identifier for each cluster that is maintained throughout the tracking process. Additionally, the algorithm creates a trajectory for each cluster and a lifetime of the cluster.
-  - **Concatenation**: The fourth step is to concatenate the features and trajectories into a single parquet file. The parquet file contains enteire tracking information of the clusters. And a create a generalized track entity called `tracking table` that contains all information of track process.
+	  - **Features Extraction**: The first step is to identify the features in a time-varying field. The features are identified by applying a multi-thresholding technique to the field, clustering the contiguous pixels with values above the threshold and vectorizing the clusters into a geospatial object.
+	  - **Spatial Operations**: The second step is to perform spatial operations on the features. The spatial operations are used to identify the spatial relationships between the features and create a vector displacement between the centroids of the features.
+	  - **Cluster Linkage**: The third step is to link the features between the time steps. The linkage is performed by indexing the features in the current time step with the features in the previous time step and create a unique identifier for each cluster that is maintained throughout the tracking process. Additionally, the algorithm creates a trajectory for each cluster and a lifetime of the cluster.
+ 	 - **Concatenation**: The fourth step is to concatenate the features and trajectories into a single parquet file. The parquet file contains enteire tracking information of the clusters. And a create a generalized track entity called `tracking table` that contains all information of track process.
 
-2. **Forecast**: The forecasting routine is responsible for predicting the future position of the clusters. This routine is a loop that iterates over the time steps and performs two main steps:
-  - **Virtual Image**: The first step is to create a virtual image based persistence forecast of individual clusters. The virtual image is created by shifting the clusters in the current time step to the `n` time steps ahead. The extrapolation is performed by applying a mean vector displacement of the clusters based on u and v components.
-  - **Track Routing**: The second step uses a `Track Routine` to identify the clusters in the virtual image. The track routine is applied to the virtual image to identify the clusters in the future time step.  
+2. **Forecast** (Soon): The forecasting routine is responsible for predicting the future position of the clusters. This routine is a loop that iterates over the time steps and performs two main steps:
+  	- **Virtual Image**: The first step is to create a virtual image based persistence forecast of individual clusters. The virtual image is created by shifting the clusters in the current time step to the `n` time steps ahead. The extrapolation is performed by applying a mean vector displacement of the clusters based on u and v components.
+  	- **Track Routing**: The second step uses a `Track Routine` to identify the clusters in the virtual image. The track routine is applied to the virtual image to identify the clusters in the future time step.  
 
 
 Documentation
