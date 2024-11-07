@@ -12,10 +12,7 @@ pyForTraCC - Python Library for Tracking and Forecasting Clusters
 Overview
 =====================================================================
 
-`pyForTraCC` is a Python package designed to identify, track, forecast and analyze clusters moving in a time-varying field.
-It offers a modular framework that incorporates different algorithms for feature identification, tracking, and analyses.
-One of the key advantages of pyForTraCC is its versatility, as it does not depend on specific input variables or a particular grid structure.
-In its current implementation, pyForTraCC identifies individual cluster features in a 2D field by applying a specified threshold value
+`pyForTraCC` is a Python package designed to identify, track, and forecasting for several types of datasets. It offers a modular framework that incorporates different algorithms for feature identification, tracking, and forecasting. One of the key advantages of pyForTraCC is its versatility, as it usually does not depend on specific input variables or a particular grid structure.
 
 ##### Algorithm Workflow
 
@@ -65,8 +62,36 @@ Create environment using conda and install from environment.yml file:
 
 Running pyFortracc
 =====================================================================
+To use the `pyfortracc` library, first install and import it in your code. Then, create a custom file-reading function called `read_function`, which should be adjusted according to the specific format of the data you are processing. It is essential that this function returns a two-dimensional matrix, as this is the expected structure for the library. After defining the reading function, create a configuration parameter dictionary called `name_list`, containing the necessary settings for tracking, such as the input and output data paths, intensity thresholds for events, minimum cluster size, comparison operator, timestamp pattern in the files, and the time interval between frames. With the reading function and parameter dictionary configured, simply execute the tracking using `pyfortracc.track`, passing `name_list` and `read_function` as arguments to start processing the data.
 
+Here is the complete code in a single Python routine:
 
+```python
+import pyfortracc
+import xarray as xr
+
+# Custom data reading function
+def read_function(path):
+    """
+    This function reads data from the given path and returns a two-dimensional matrix.
+    """
+    data = xr.open_dataarray(path).data
+    return data
+
+# Parameter dictionary for tracking configuration
+name_list = {
+    'input_path': 'input/',  # Path to input data
+    'output_path': 'output/',  # Path to output data
+    'thresholds': [20, 30, 45],  # Intensity thresholds
+    'min_cluster_size': [10, 5, 3],  # Minimum cluster size (in number of points)
+    'operator': '>=',  # Comparison operator (>=, <=, or ==)
+    'timestamp_pattern': '%Y%m%d_%H%M%S.nc',  # Timestamp file naming pattern
+    'delta_time': 12  # Time interval between frames, in minutes
+}
+
+# Execute tracking with parameters and custom reading function
+pyfortracc.track(name_list, read_function)
+```
 
 Example Gallery
 =====================================================================
