@@ -1,5 +1,6 @@
 import glob
 import os
+import platform
 import sys
 import psutil
 import numpy as np
@@ -689,10 +690,8 @@ def check_operational_system(name_list):
     # Check if the operational system is Windows
     if os.name == 'nt' and 'output_path' in name_list and 'input_path' in name_list:
         name_list['output_path'] = name_list['output_path'].replace('/', '\\')
-    # Check if code is executed in IPython and operational system is linux set parallel to True
-    if 'IPython' in sys.modules and os.name == 'posix':
-        parallel = True
-    else: # Windows and MacOS do not support parallel processing from IPython
+    # Check if code is executed in IPython and operational system is not Linux
+    if 'IPython' in sys.modules and platform.system() != 'Linux':
         parallel = False
     return name_list, parallel
 
