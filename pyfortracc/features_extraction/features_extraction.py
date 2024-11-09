@@ -29,7 +29,7 @@ def features_extraction(name_lst, read_fnc, parallel=True):
     # Set default parameters
     name_lst = default_parameters(name_lst, read_fnc)
     # Check operational system
-    name_lst, parallel = check_operational_system(name_lst)
+    name_lst, parallel = check_operational_system(name_lst, parallel)
     # Get the input files and filestamp
     files = get_input_files(name_lst['input_path'])
     # Set the operator used to thresholding segmentation

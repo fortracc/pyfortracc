@@ -12,7 +12,7 @@ from pyfortracc.utilities.math_utils import uv2angle, uv2magn, calculate_vel_are
 
 
 def boundaries(name_list, start_time, end_time, 
-                vel_unit = 'km/h', driver='GeoJSON', mode = 'track'):
+                vel_unit = 'km/h', driver='GeoJSON', mode = 'track', parallel = True):
     """
     This function processes geospatial tracking data to extract and translate boundaries of tracked objects 
     within a specified time range, then saves the boundaries in a specified format.
@@ -37,7 +37,7 @@ def boundaries(name_list, start_time, end_time,
     None
     """
     print('Translate -> Geometry -> Boundary:')
-    name_list, parallel = check_operational_system(name_list)
+    name_list, parallel = check_operational_system(name_list, parallel)
     parquets = get_parquets(name_list)
     parquets = parquets.loc[parquets['mode'] == mode]
     parquets = parquets.loc[start_time:end_time]

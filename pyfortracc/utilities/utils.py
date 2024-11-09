@@ -686,7 +686,7 @@ def get_geotransform(name_list):
     return geotransform, geotransform_inv
 
 
-def check_operational_system(name_list):
+def check_operational_system(name_list, parallel):
     # Check if the operational system is Windows
     if os.name == 'nt' and 'output_path' in name_list and 'input_path' in name_list:
         name_list['output_path'] = name_list['output_path'].replace('/', '\\')

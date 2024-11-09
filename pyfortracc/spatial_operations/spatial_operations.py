@@ -50,7 +50,7 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
     # Set default parameters
     name_lst = default_parameters(name_lst, read_fnc)
     # Check operational system
-    name_lst, parallel = check_operational_system(name_lst)
+    name_lst, parallel = check_operational_system(name_lst, parallel)
     # Get feature files to be processed
     feat_path = name_lst['output_path'] + 'track/processing/features/'
     feat_files = get_feature_files(feat_path)

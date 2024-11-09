@@ -9,7 +9,7 @@ from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
 from pyfortracc.default_parameters import default_parameters
 
 
-def clusters(name_list, start_time, end_time, read_function, mode='track', cmp_lvl=9):
+def clusters(name_list, start_time, end_time, read_function, mode='track', cmp_lvl=9, parallel=True):
     """
     This function processes a series of parquet files containing geospatial tracking data to generate clusters.
     The processed clusters are saved to an output directory.
@@ -33,7 +33,7 @@ def clusters(name_list, start_time, end_time, read_function, mode='track', cmp_l
     """
     print('Translate -> Cluster:')
     name_list = default_parameters(name_list, read_function)
-    name_list, parallel = check_operational_system(name_list)
+    name_list, parallel = check_operational_system(name_list, parallel)
     parquets = get_parquets(name_list)
     parquets = parquets.loc[parquets['mode'] == mode]
     parquets = parquets.loc[start_time:end_time]

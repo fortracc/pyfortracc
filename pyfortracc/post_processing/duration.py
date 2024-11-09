@@ -22,7 +22,7 @@ def compute_duration(namelist, parallel=True):
     None
     """
      # Check operational system
-    namelist, parallel = check_operational_system(namelist)
+    namelist, parallel = check_operational_system(namelist, parallel)
     # Get all track files
     files = sorted(glob.glob(namelist['output_path'] + 'track/trackingtable/' + '*.parquet'))
     if len(files) == 0:
