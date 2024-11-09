@@ -38,7 +38,7 @@ def concat(name_list, mode='track', clean=True, parallel=True):
     # Set default parameters
     name_list = default_parameters(name_list)
     # Check operational system
-    name_list, parallel = check_operational_system(name_list)
+    name_list, parallel = check_operational_system(name_list, parallel)
     # Set name of the output file
     if 'concat_path' not in name_list:
         name_list['concat_path'] = name_list['output_path']

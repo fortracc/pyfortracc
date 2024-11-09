@@ -7,7 +7,7 @@ from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
                                         set_nworkers, check_operational_system,
                                         read_parquet, create_dirs)
 
-def trajectories(name_list, start_time, end_time, driver='GeoJSON', mode = 'track'):
+def trajectories(name_list, start_time, end_time, driver='GeoJSON', mode = 'track', parallel = True):
     """
     Translates and saves trajectory data from Parquet files within a specified time range.
 
@@ -29,7 +29,7 @@ def trajectories(name_list, start_time, end_time, driver='GeoJSON', mode = 'trac
     None
     """
     print('Translate -> Geometry -> Trajectory:')
-    name_list, parallel = check_operational_system(name_list)
+    name_list, parallel = check_operational_system(name_list, parallel)
     parquets = get_parquets(name_list)
     parquets = parquets.loc[parquets['mode'] == mode]
     parquets = parquets.loc[start_time:end_time]

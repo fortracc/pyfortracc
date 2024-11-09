@@ -116,7 +116,7 @@ def plot_animation(
       else:
             name_list = {}
       # Check if the operational system is Windows
-      name_list, parallel = check_operational_system(name_list)
+      name_list, parallel = check_operational_system(name_list, parallel)
       print('Generating animation...', end=' ', flush=True)
       # Get the list of frames
       if path_files is not None:

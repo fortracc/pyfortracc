@@ -8,7 +8,7 @@ from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
                                         read_parquet, create_dirs)
 
 
-def vectorfield(name_list, start_time, end_time, driver='GeoJSON', mode = 'track'):
+def vectorfield(name_list, start_time, end_time, driver='GeoJSON', mode = 'track', parallel = True):
     """
     Translates and saves vector field data from Parquet files within a specified time range.
 
@@ -30,7 +30,7 @@ def vectorfield(name_list, start_time, end_time, driver='GeoJSON', mode = 'track
     None
     """    
     print('Translate -> Geometry -> Vector Field:')
-    name_list, parallel = check_operational_system(name_list)
+    name_list, parallel = check_operational_system(name_list, parallel)
     parquets = get_parquets(name_list)
     parquets = parquets.loc[parquets['mode'] == mode]
     parquets = parquets.loc[start_time:end_time]
