@@ -3,12 +3,11 @@ import numpy as np
 import os
 import shutil
 import pandas as pd
-# import dask.dataframe as dd
-# from dask.diagnostics import ProgressBar
 import pyarrow as pa
+import pathlib
 from pyarrow.lib import Schema
 from multiprocessing import Pool
-from pyfortracc.utilities.utils import get_loading_bar, set_nworkers
+from pyfortracc.utilities.utils import get_loading_bar, set_nworkers, check_operational_system
 from pyfortracc.default_parameters import default_parameters
 
 
@@ -38,6 +37,8 @@ def concat(name_list, mode='track', clean=True, parallel=True):
     proc_path = name_list['output_path'] + mode + '/processing/'
     # Set default parameters
     name_list = default_parameters(name_list)
+    # Check operational system
+    name_list, parallel = check_operational_system(name_list)
     # Set name of the output file
     if 'concat_path' not in name_list:
         name_list['concat_path'] = name_list['output_path']
@@ -139,7 +140,7 @@ def read_files(args):
     if schema is None:
         return Schema.from_pandas(concat_df)
     # Get the name of file
-    file_name = fet_file.split('/')[-1]
+    file_name = pathlib.Path(fet_file).name
     file_name = output_path + file_name
     # Check if file exist and remove it
     if os.path.exists(file_name):

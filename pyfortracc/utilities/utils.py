@@ -151,7 +151,7 @@ def get_parquets(name_list):
                                 recursive=True))
     files_df = pd.DataFrame(files_list, columns=['file'])
     files_df['timestamp'] = files_df['file'].apply(get_featstamp)
-    files_df['mode'] = files_df['file'].apply(lambda x: x.split('/')[-3])
+    files_df['mode'] = files_df['file'].apply(lambda x: pathlib.Path(x).parts[-3])
     files_df = files_df.set_index('timestamp').sort_index()
     return files_df
 
@@ -330,16 +330,16 @@ def get_previous_file(current_file, prev_file, prev_list, nm_lst):
         Path to the previous file that is within the specified time tolerance of the current file, or `None`
         if no such file is found.
     """
-    # Get the current file timestamp
-    current_stamp = current_file.split('/')[-1].split('.')[0]
-    current_stamp = datetime.strptime(current_stamp, '%Y%m%d_%H%M')
+    # Get the current file timestamp using pathlib
+    current_stamp = str(pathlib.Path(current_file).name)
+    current_stamp = datetime.strptime(current_stamp, '%Y%m%d_%H%M.parquet')
     dt_time = nm_lst['delta_time']
     dt_tolerance = nm_lst['delta_tolerance']
     if len(prev_file) == 0:
         return None
     # Attempt 1: compare direct with the previous file
-    prev_stamp = prev_file[0].split('/')[-1].split('.')[0]
-    prev_stamp = datetime.strptime(prev_stamp, '%Y%m%d_%H%M')
+    prev_stamp = pathlib.Path(prev_file[0]).name
+    prev_stamp = datetime.strptime(prev_stamp, '%Y%m%d_%H%M.parquet')
     dt_time_calc = current_stamp - prev_stamp
     if dt_time_calc == timedelta(minutes=dt_time):
         return prev_file[0]
@@ -347,8 +347,8 @@ def get_previous_file(current_file, prev_file, prev_list, nm_lst):
         return prev_file[0]
     # Attempt 2: compare with the previous files in the list
     for prev_file in prev_list:
-        prev_stamp = prev_file.split('/')[-1].split('.')[0]
-        prev_stamp = datetime.strptime(prev_stamp, '%Y%m%d_%H%M')
+        prev_stamp = pathlib.Path(prev_file).name
+        prev_stamp = datetime.strptime(prev_stamp, '%Y%m%d_%H%M.parquet')
         dt_time_calc = current_stamp - prev_stamp
         if dt_time_calc <= timedelta(minutes=dt_time + dt_tolerance):
             return prev_file
@@ -605,6 +605,7 @@ def write_parquet(dataframe, path_file):
     -------
     None
     """
+    # print(path_file)
     dataframe.to_parquet(path_file,
                         engine='pyarrow',
                         compression='gzip')
@@ -682,6 +683,17 @@ def get_geotransform(name_list):
                         matrix_inv[1, 0], matrix_inv[1, 1],
                         matrix_inv[0, 2], matrix_inv[1, 2])
     return geotransform, geotransform_inv
+
+
+def check_operational_system(name_list):
+    # Check if the operational system is Windows
+    if os.name == 'nt' and 'output_path' in name_list and 'input_path' in name_list:
+        name_list['output_path'] = name_list['output_path'].replace('/', '\\')
+    # Check if code is executed in IPython
+    if 'ipykernel' in sys.modules:
+        parallel = False
+    return name_list, parallel
+
 
 # def calculate_pixel_area(name_list):
 #     """

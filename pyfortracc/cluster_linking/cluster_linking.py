@@ -1,9 +1,11 @@
 import pandas as pd
+import pathlib
 from pyfortracc.default_parameters import default_parameters
 from pyfortracc.utilities.utils import (get_feature_files, create_dirs, 
                                         get_loading_bar, get_featstamp,
                                         set_schema, set_outputdf,
-                                        read_parquet, write_parquet)
+                                        read_parquet, write_parquet,
+                                        check_operational_system)
 from .new_frame import new_frame
 from .max_uid import update_max_uid
 from .board_clusters import board_clusters
@@ -24,6 +26,8 @@ def cluster_linking(name_lst):
     print('Cluster linking:')
     # Set default parameters
     name_lst = default_parameters(name_lst)
+    # Check operational system
+    name_lst, _ = check_operational_system(name_lst)
     # Get feature files to be processed
     feat_path = name_lst['output_path'] + 'track/processing/spatial/'
     output_path = name_lst['output_path'] + 'track/processing/linked/'
@@ -95,7 +99,7 @@ def linking(args):
                                         'board','board_idx',
                                         'trajectory'])
     # Set output file
-    output_file = nm_lst['output_spatial'] + cur_file.split('/')[-1]
+    output_file = nm_lst['output_spatial'] + pathlib.Path(cur_file).name
     icdx += 1 # Increment cindex  
     # Check if current frame is empty
     if cur_frame.empty:

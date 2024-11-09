@@ -3,7 +3,7 @@ from .vectorfield import vectorfield
 from .trajectories import trajectories
 from .clusters import clusters
 
-def spatial_conversions(name_list = None, boundary = True, vector_field = False, trajectory = True, cluster = True,
+def spatial_conversions(name_list = None, read_function=None, boundary = True, vector_field = False, trajectory = True, cluster = True,
                         start_time = None, end_time = None, vel_unit = 'km/h', driver='GeoJSON'):
     """
     This function handles spatial data processing by invoking several sub-functions to perform different spatial conversions.
@@ -47,4 +47,4 @@ def spatial_conversions(name_list = None, boundary = True, vector_field = False,
     if trajectory:
         trajectories(name_list, start_time, end_time, driver)
     if cluster:
-        clusters(name_list, start_time, end_time)
+        clusters(name_list, start_time, end_time, read_function)
