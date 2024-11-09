@@ -27,7 +27,7 @@ def cluster_linking(name_lst):
     # Set default parameters
     name_lst = default_parameters(name_lst)
     # Check operational system
-    name_lst, _ = check_operational_system(name_lst)
+    name_lst, _ = check_operational_system(name_lst, False)
     # Get feature files to be processed
     feat_path = name_lst['output_path'] + 'track/processing/spatial/'
     output_path = name_lst['output_path'] + 'track/processing/linked/'
