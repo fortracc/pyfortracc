@@ -100,7 +100,7 @@ The development of this framework is constantly evolving, and several applicatio
 
 [![01 - Introducing Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/01_Introducing_Example/01_Introducing-pyFortraCC.ipynb) - 01 - Track Synthetic data (Introducing Example) 
 
-[![02 - Track Radar Data (GoAmazon Tracking)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Track-Radar-Data/02_Track-Radar-Dataset.ipynb) - 02 - Track Radar Data (GoAmazon Tracking)
+[![02 - Track Radar Data (GoAmazon Example)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Track-Radar-Data/02_Track-Radar-Dataset.ipynb) - 02 - Track Radar Data (GoAmazon Example)
 
 [![03 - Track Infrared (Real Time Tracking):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) - 03 - Track GOES16-IR (Real Time Tracking from CPTEC/INPE)
 
