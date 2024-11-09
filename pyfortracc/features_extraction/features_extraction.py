@@ -6,7 +6,7 @@ from .clustering import clustering
 from .statistics import geo_statistics
 from pyfortracc.utilities.utils import (get_input_files, set_operator,
                                         create_dirs, write_parquet, set_schema,
-                                        set_outputdf, set_nworkers,
+                                        set_outputdf, set_nworkers, check_operational_system,
                                         get_loading_bar, get_filestamp)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -28,6 +28,8 @@ def features_extraction(name_lst, read_fnc, parallel=True):
     print('Features Extraction:')
     # Set default parameters
     name_lst = default_parameters(name_lst, read_fnc)
+    # Check operational system
+    name_lst, parallel = check_operational_system(name_lst)
     # Get the input files and filestamp
     files = get_input_files(name_lst['input_path'])
     # Set the operator used to thresholding segmentation

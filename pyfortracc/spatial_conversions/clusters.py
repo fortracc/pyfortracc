@@ -1,13 +1,15 @@
 import numpy as np
 import xarray as xr
 import pandas as pd
+import pathlib
 from multiprocessing import Pool
 from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
-                                        set_nworkers, 
+                                        set_nworkers, check_operational_system,
                                         create_dirs, get_featstamp)
+from pyfortracc.default_parameters import default_parameters
 
 
-def clusters(name_list, start_time, end_time, mode='track', cmp_lvl=9):
+def clusters(name_list, start_time, end_time, read_function, mode='track', cmp_lvl=9):
     """
     This function processes a series of parquet files containing geospatial tracking data to generate clusters.
     The processed clusters are saved to an output directory.
@@ -30,6 +32,8 @@ def clusters(name_list, start_time, end_time, mode='track', cmp_lvl=9):
     None    
     """
     print('Translate -> Cluster:')
+    name_list = default_parameters(name_list, read_function)
+    name_list, parallel = check_operational_system(name_list)
     parquets = get_parquets(name_list)
     parquets = parquets.loc[parquets['mode'] == mode]
     parquets = parquets.loc[start_time:end_time]
@@ -38,14 +42,19 @@ def clusters(name_list, start_time, end_time, mode='track', cmp_lvl=9):
     n_workers = set_nworkers(name_list)
     out_path = name_list['output_path'] + mode + '/clusters/'
     create_dirs(out_path)
-    with Pool(n_workers) as pool:
-        for _ in pool.imap_unordered(translate_cluster,
-                                    [(out_path, parquet,
-                                    cmp_lvl, name_list)
-                                    for _, parquet in enumerate(parquets)]):
+    if parallel:
+        with Pool(n_workers) as pool:
+            for _ in pool.imap_unordered(translate_cluster,
+                                        [(out_path, parquet,
+                                        cmp_lvl, name_list)
+                                        for _, parquet in enumerate(parquets)]):
+                loading_bar.update(1)
+        pool.close()
+        pool.join()
+    else:
+        for _, parquet in enumerate(parquets):
+            translate_cluster((out_path, parquet, cmp_lvl, name_list))
             loading_bar.update(1)
-    pool.close()
-    pool.join()
     loading_bar.close()
 
 
@@ -75,10 +84,10 @@ def translate_cluster(args):
     cmp_lvl = args[2]
     n_list = args[-1]
     parquet_file = parquet['file'].unique()[0]
-    file_name = parquet_file.split('/')[-1].split('.')[0]
+    file_name = pathlib.Path(parquet_file).stem
     timestamp = get_featstamp(parquet_file)
     parquet = pd.read_parquet(parquet_file, columns=['uid', 'iuid', 'threshold_level',
-                                                        'array_y', 'array_x'])
+                                                     'array_y', 'array_x'])
     # Get shape and mount zeros array
     shape = (len(n_list['thresholds']), n_list['y_dim'], n_list['x_dim'])
     array = np.full(shape, 0, dtype=float)
@@ -112,8 +121,8 @@ def translate_cluster(args):
     data_xarray.attrs["long_name"] = "Cluster"
     data_xarray.attrs["standard_name"] = "Cluster ID"
     data_xarray.attrs["crs"] = "EPSG:4326"
-    data_xarray.attrs["description"] = "This is an output from fortracc"
+    data_xarray.attrs["description"] = "This is an output from pyfortracc"
     data_xarray.to_netcdf(output_path + file_name + '.nc',
-                        encoding={'Clusters': {'zlib': True,
-                                                'complevel': cmp_lvl}})
+                           encoding={'Clusters': {'zlib': True, 'complevel': cmp_lvl}})
+
     return

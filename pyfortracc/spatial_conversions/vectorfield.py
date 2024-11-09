@@ -1,9 +1,10 @@
 import geopandas as gpd
+import pathlib
 from shapely.wkt import loads
 from shapely.affinity import affine_transform
 from multiprocessing import Pool
 from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
-                                        set_nworkers,
+                                        set_nworkers, check_operational_system,
                                         read_parquet, create_dirs)
 
 
@@ -29,6 +30,7 @@ def vectorfield(name_list, start_time, end_time, driver='GeoJSON', mode = 'track
     None
     """    
     print('Translate -> Geometry -> Vector Field:')
+    name_list, parallel = check_operational_system(name_list)
     parquets = get_parquets(name_list)
     parquets = parquets.loc[parquets['mode'] == mode]
     parquets = parquets.loc[start_time:end_time]
@@ -37,14 +39,19 @@ def vectorfield(name_list, start_time, end_time, driver='GeoJSON', mode = 'track
     n_workers = set_nworkers(name_list)
     out_path = name_list['output_path'] + mode + '/geometry/vector_field/'
     create_dirs(out_path)
-    with Pool(n_workers) as pool:
-        for _ in pool.imap_unordered(translate_vfield,
-                                    [(out_path, driver, parquet)
-                                    for _, parquet
-                                    in enumerate(parquets)]):
+    if parallel:
+        with Pool(n_workers) as pool:
+            for _ in pool.imap_unordered(translate_vfield,
+                                        [(out_path, driver, parquet)
+                                        for _, parquet
+                                        in enumerate(parquets)]):
+                loading_bar.update(1)
+        pool.close()
+        pool.join()
+    else:
+        for _, parquet in enumerate(parquets):
+            translate_vfield((out_path, driver, parquet))
             loading_bar.update(1)
-    pool.close()
-    pool.join()
     loading_bar.close()
 
 
@@ -73,7 +80,7 @@ def translate_vfield(args):
     driver = args[1]
     parquet = args[-1][1]
     parquet_file = parquet['file'].unique()[0]
-    file_name = parquet_file.split('/')[-1].replace('.parquet', '.'+driver)
+    file_name = pathlib.Path(parquet_file).name.replace('.parquet', '.'+driver)
     # Open parquet file
     parquet = read_parquet(parquet_file, None).reset_index()
     # Set used columns for translate boundary

@@ -1,16 +1,17 @@
 import geopandas as gpd
 import pandas as pd
+import pathlib
 from shapely.wkt import loads
 from shapely.affinity import affine_transform
 from multiprocessing import Pool
 from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
-                                        set_nworkers, 
+                                        set_nworkers, check_operational_system,
                                         read_parquet, create_dirs)
 from pyfortracc.utilities.math_utils import uv2angle, uv2magn, calculate_vel_area
 
 
 
-def boundaries(name_list, start_time, end_time,
+def boundaries(name_list, start_time, end_time, 
                 vel_unit = 'km/h', driver='GeoJSON', mode = 'track'):
     """
     This function processes geospatial tracking data to extract and translate boundaries of tracked objects 
@@ -36,6 +37,7 @@ def boundaries(name_list, start_time, end_time,
     None
     """
     print('Translate -> Geometry -> Boundary:')
+    name_list, parallel = check_operational_system(name_list)
     parquets = get_parquets(name_list)
     parquets = parquets.loc[parquets['mode'] == mode]
     parquets = parquets.loc[start_time:end_time]
@@ -48,16 +50,21 @@ def boundaries(name_list, start_time, end_time,
     pixel_area, xlat, xlon = None, None, None
     delta_time = name_list['delta_time']
     create_dirs(out_path)
-    with Pool(n_workers) as pool:
-        for _ in pool.imap_unordered(translate_boundary,
-                                    [(vel_unit,
-                                    out_path, driver, parquet, 
-                                    pixel_area, xlat, xlon, delta_time)
-                                    for _, parquet
-                                    in enumerate(parquets)]):
+    if parallel:
+        with Pool(n_workers) as pool:
+            for _ in pool.imap_unordered(translate_boundary,
+                                        [(vel_unit,
+                                        out_path, driver, parquet, 
+                                        pixel_area, xlat, xlon, delta_time)
+                                        for _, parquet
+                                        in enumerate(parquets)]):
+                loading_bar.update(1)
+        pool.close()
+        pool.join()
+    else:
+        for _, parquet in enumerate(parquets):
+            translate_boundary((vel_unit, out_path, driver, parquet, pixel_area, xlat, xlon, delta_time))
             loading_bar.update(1)
-    pool.close()
-    pool.join()
     loading_bar.close()
 
 
@@ -94,7 +101,7 @@ def translate_boundary(args):
     xlon = args[6]
     delta_time = args[7]
     parquet_file = parquet['file'].unique()[0]
-    file_name = parquet_file.split('/')[-1].replace('.parquet', '.'+driver)
+    file_name = pathlib.Path(parquet_file).name.replace('.parquet', '.'+driver)
     # Open parquet file
     parquet = read_parquet(parquet_file, None).reset_index()
     # Set used columns for translate boundary

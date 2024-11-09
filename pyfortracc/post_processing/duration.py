@@ -1,8 +1,9 @@
 import glob
+import pathlib
 import duckdb
 import pandas as pd
 import multiprocessing as mp
-from pyfortracc.utilities.utils import set_nworkers, get_loading_bar
+from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system
 from pyfortracc import default_parameters
 
 def compute_duration(namelist, parallel=True):
@@ -20,13 +21,15 @@ def compute_duration(namelist, parallel=True):
     -------
     None
     """
+     # Check operational system
+    namelist, parallel = check_operational_system(namelist)
     # Get all track files
     files = sorted(glob.glob(namelist['output_path'] + 'track/trackingtable/' + '*.parquet'))
     if len(files) == 0:
         print('No track files found at ' + namelist['output_path'] + 'track/trackingtable/')
         return
     # Get timestamps from files
-    tstamps = [pd.to_datetime(file.split('/')[-1].split('.')[0], format='%Y%m%d_%H%M') for file in files]
+    tstamps = [pd.to_datetime(pathlib.Path(file).name, format='%Y%m%d_%H%M.parquet') for file in files]
     namelist = default_parameters(namelist)
     n_workers = set_nworkers(namelist)
     global df # Make df global to be used in update_parquet

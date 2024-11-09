@@ -1,5 +1,6 @@
 import glob
 import numpy as np
+import pathlib
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import animation
@@ -10,7 +11,7 @@ from io import BytesIO
 from PIL import Image
 from .plot import plot
 from pyfortracc.default_parameters import default_parameters
-from pyfortracc.utilities.utils import set_nworkers
+from pyfortracc.utilities.utils import set_nworkers, check_operational_system
 from matplotlib import rcParams
 import warnings
 warnings.filterwarnings("ignore")
@@ -112,6 +113,10 @@ def plot_animation(
       # Set default parameters
       if name_list is not None:
             name_list = default_parameters(name_list, read_function)
+      else:
+            name_list = {}
+      # Check if the operational system is Windows
+      name_list, parallel = check_operational_system(name_list)
       print('Generating animation...', end=' ', flush=True)
       # Get the list of frames
       if path_files is not None:
@@ -131,7 +136,7 @@ def plot_animation(
                         frames.append(process_frame((frame, read_function, cmap, min_val, max_val)))
       else:
             files = sorted(glob.glob(name_list['output_path'] + 'track/trackingtable/*.parquet'))
-            files = pd.to_datetime([f.split('/')[-1] for f in files], format='%Y%m%d_%H%M.parquet')
+            files = pd.to_datetime([pathlib.Path(f).name for f in files], format='%Y%m%d_%H%M.parquet')
             files = files[(files >= start_timestamp) & (files <= end_timestamp)]
             # Process each frame in parallel and store images in a list
             args = []

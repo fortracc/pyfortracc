@@ -1,6 +1,7 @@
 import pandas as pd
 import geopandas as gpd
 import numpy as np
+import pathlib
 from multiprocessing import Pool
 from shapely.geometry import LineString
 from shapely.wkt import loads
@@ -8,6 +9,7 @@ from pyfortracc.default_parameters import default_parameters
 from pyfortracc.utilities.utils import (get_feature_files, get_edges,
                                         get_loading_bar, get_previous_file,
                                         get_previous_proccessed_files,
+                                        check_operational_system,
                                         get_geotransform, set_nworkers, 
                                         create_dirs, set_schema, set_outputdf,
                                         read_parquet, write_parquet)
@@ -47,6 +49,8 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
     print('Spatial Operations:')
     # Set default parameters
     name_lst = default_parameters(name_lst, read_fnc)
+    # Check operational system
+    name_lst, parallel = check_operational_system(name_lst)
     # Get feature files to be processed
     feat_path = name_lst['output_path'] + 'track/processing/features/'
     feat_files = get_feature_files(feat_path)
@@ -145,8 +149,8 @@ def spatial_operation(args):
     (time_, cur_file, prv_file, prv_files, nm_lst, \
     l_edge, r_edg, read_fnc, schm, fct, geotrf) = args
     
-    # Get current_file name
-    current_file_name = cur_file.split('/')[-1]
+    # Get current_file name using pathlib
+    current_file_name = pathlib.Path(cur_file).name
     output_file = nm_lst['output_spatial'] + current_file_name
     thresholds = nm_lst['thresholds']
     # Set necessary columns to spatial operations
