@@ -91,7 +91,7 @@ name_list = {
 pyfortracc.track(name_list, read_function)
 ```
 
-Example Gallery
+Google Colab Example Gallery
 =====================================================================
 To use the library we have a gallery of examples that demonstrate the application of the algorithm in different situations.
 The development of this framework is constantly evolving, and several application examples can be seen in our example gallery.
