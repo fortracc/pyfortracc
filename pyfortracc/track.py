@@ -40,7 +40,7 @@ def track(name_lst={},
         raise ValueError('read_fnc object is empty')
     # Clean previous results
     if clean:
-        shutil.rmtree('results', ignore_errors=True)
+        shutil.rmtree(name_lst['output_path'], ignore_errors=True)
     # Extract features
     if feat_ext:
         features_extraction(name_lst, read_fnc, parallel=parallel)
