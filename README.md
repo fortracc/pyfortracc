@@ -7,7 +7,7 @@
 [![pypi](https://badge.fury.io/py/pyfortracc.svg)](https://pypi.python.org/pypi/pyfortracc)
 [![Documentation](https://readthedocs.org/projects/pyfortracc/badge/?version=latest)](https://pyfortracc.readthedocs.io/)
 [![Downloads](https://img.shields.io/pypi/dm/pyfortracc.svg)](https://pypi.python.org/pypi/pyfortracc)
-[![Contributors](https://img.shields.io/github/contributors/fortracc-project/pyfortracc.svg)](https://github.com/fortracc/pyfortracc/graphs/contributors)
+[![Contributors](https://img.shields.io/github/contributors/fortracc/pyfortracc.svg)](https://github.com/fortracc/pyfortracc/graphs/contributors)
 [![License](https://img.shields.io/pypi/l/pyfortracc.svg)](https://github.com/fortracc/pyfortracc/blob/main/LICENSE)
 <!-- badges: end -->
 
