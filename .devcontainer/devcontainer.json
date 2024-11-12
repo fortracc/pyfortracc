@@ -22,7 +22,7 @@
       ]
     }
   },
-	"postCreateCommand": "python -m pip install git+https://github.com/fortracc/pyfortracc.git",
+	"postCreateCommand": "python -m pip install git+https://github.com/fortracc/pyfortracc.git jupyter ipykernel && python -m ipykernel install --user --name devcontainer-python",
 	"remoteUser": "vscode",
 	"features": {
 		"azure-cli": "latest"
