@@ -1,7 +1,6 @@
 rasterio
 geopandas
-opencv-python
-opencv_contrib_python
+opencv-python-headless
 xarray
 scipy
 scikit-learn
