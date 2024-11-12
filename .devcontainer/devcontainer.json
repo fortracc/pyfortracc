@@ -13,7 +13,12 @@
         "python.linting.pylintEnabled": true,
         "jupyter.jupyterServerType": "local",
         "python.jupyterKernelSpecPath": "/usr/local/bin/python",
-        "jupyter.notebookFileRoot": "${workspaceFolder}"
+        "jupyter.notebookFileRoot": "${workspaceFolder}",
+		"workbench.startupEditor": "none",
+        "workbench.colorTheme": "Default Dark+",
+		"telemetry.enableTelemetry": false,
+    	"telemetry.telemetryLevel": "off",
+		"jupyter.kernels.filter": "/usr/local/bin/python"
       },
       "extensions": [
         "ms-python.python",
@@ -22,7 +27,7 @@
       ]
     }
   },
-	"postCreateCommand": "python -m pip install git+https://github.com/fortracc/pyfortracc.git jupyter ipykernel && python -m ipykernel install --user --name devcontainer-python",
+	"postCreateCommand": "python -m pip install jupyter ipykernel && python -m ipykernel install --name 'Python3' --display-name 'Python3 - /usr/local/bin/python'",
 	"remoteUser": "vscode",
 	"features": {
 		"azure-cli": "latest"
