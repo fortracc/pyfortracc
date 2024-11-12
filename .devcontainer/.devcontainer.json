@@ -1,9 +1,0 @@
-//.devcontainer/devcontainer.json
-{
-    "name": "Python 3",
-    // use the latest python image
-    "image": "mcr.microsoft.com/devcontainers/python",
-    // install libs after the creation of the environement 
-    // by using a simple bash command
-    "postCreateCommand": "python -m pip install -q -U git+https://github.com/fortracc/pyfortracc.git@main#egg=pyfortracc"
-  }
