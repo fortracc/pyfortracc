@@ -3,6 +3,9 @@ import os
 import xarray as xr
 import pandas as pd
 import glob
+import requests
+import zipfile
+import io
 sys.path.append('../')
 import pyfortracc
 # Set the read function
@@ -35,9 +38,10 @@ name_list['validation_scores'] = True  # Set to True to get the scores of the va
 
 if __name__ == '__main__':
     # # Download example data and unzip to input folder
-    os.system('wget -q --show-progress https://zenodo.org/api/records/10624391/files-archive -O input.zip')
-    os.system('unzip -qq -o input.zip -d input')
-    os.system('rm input.zip')
+    url = 'https://zenodo.org/api/records/10624391/files-archive'
+    response = requests.get(url)
+    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
+        zip_ref.extractall('input')
     # Run pyfortracc
     print('pyFortracc version', pyfortracc.__version__)
     pyfortracc.features_extraction(name_list, read_function, parallel=True)
