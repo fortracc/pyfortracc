@@ -91,18 +91,15 @@ name_list = {
 pyfortracc.track(name_list, read_function)
 ```
 
-Google Colab Example Gallery
+Example Gallery
 =====================================================================
 To use the library we have a gallery of examples that demonstrate the application of the algorithm in different situations.
 The development of this framework is constantly evolving, and several application examples can be seen in our example gallery.
 
-[![01 - Introducing Example:](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/01_Introducing_Example/01_Introducing-pyFortraCC.ipynb) - 01 - Track Synthetic data (Introducing Example) 
+You can run the examples in Google Colab or GitHub Codespaces by clicking on the corresponding badge.
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/fortracc/pyfortracc/?quickstart=1) - Open in GitHub Codespaces
 
-[![02 - Track Radar Data (GoAmazon Example)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Track-Radar-Data/02_Track-Radar-Dataset.ipynb) - 02 - Track Radar Data (GoAmazon Example)
-
-[![03 - Track Infrared (Real Time Tracking):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) - 03 - Track GOES16-IR (Real Time Tracking from CPTEC/INPE)
-
-[![04 - Track Global Precipitation (Milton Hurricane):](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-Global-Precipitation-EDA/04_Track-Global-Precipitation.ipynb) - 04 - Track GSMAP (Milton Hurricane)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc) - Open in Google Colab
 
 Support and Contact
 =====================================================================
