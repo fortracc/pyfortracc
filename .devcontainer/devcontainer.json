@@ -3,7 +3,7 @@
 {
 	"name": "Python 3",
 	"image": "mcr.microsoft.com/devcontainers/python",
-	"workspaceFolder": "/workspace/pyfortracc/examples",
+	"workspaceFolder": "/examples",
 	// Configure tool-specific properties.
 	"customizations": {
 		// Configure properties specific to VS Code.
