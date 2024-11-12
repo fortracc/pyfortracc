@@ -1,3 +1,4 @@
+import shutil
 from .features_extraction import features_extraction
 from .spatial_operations import spatial_operations
 from .cluster_linking import cluster_linking
@@ -12,7 +13,8 @@ def track(name_lst={},
             spat_ope=True,
             clst_lnk=True,
             concat_r=True,
-            duration=False):
+            duration=False,
+            clean=True):
     """ Track Module
     It is a module that performs the tracking clusters in time and space.
 
@@ -36,6 +38,9 @@ def track(name_lst={},
         raise ValueError('name_lst parameter is empty')
     if read_fnc is None:
         raise ValueError('read_fnc object is empty')
+    # Clean previous results
+    if clean:
+        shutil.rmtree('results', ignore_errors=True)
     # Extract features
     if feat_ext:
         features_extraction(name_lst, read_fnc, parallel=parallel)
