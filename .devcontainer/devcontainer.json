@@ -3,7 +3,8 @@
 {
 	"name": "Python 3",
 	"image": "mcr.microsoft.com/devcontainers/python",
-	"workspaceFolder": "examples",
+	"workspaceFolder": "/workspace/pyfortracc/examples",
+  	"workspaceMount": "source=${localWorkspaceFolder}/examples,target=/workspace/pyfortracc/examples,type=bind",
 	"customizations": {
 		"vscode": {
 			"settings": { 
