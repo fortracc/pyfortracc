@@ -96,14 +96,17 @@ Example Gallery
 To use the library we have a gallery of examples that demonstrate the application of the algorithm in different situations.
 The development of this framework is constantly evolving, and several application examples can be seen in our example gallery.
 
-You can run the examples in Google Colab or GitHub Codespaces by clicking on the corresponding badge.
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/fortracc/pyfortracc/?quickstart=1) - Open in GitHub Codespaces
+You can run the examples in Google Colab or GitHub Codespaces.
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc) - Open in Google Colab
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/fortracc/pyfortracc/?quickstart=1)
+
+or
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc)
+
 
 Support and Contact
 =====================================================================
-For support and contact e-mail:
 - fortracc.project@inpe.br
 - helvecio.neto@inpe.br
 - alan.calheiros@inpe.br
