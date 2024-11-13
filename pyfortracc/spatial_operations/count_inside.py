@@ -1,6 +1,6 @@
 import pandas as pd
 
-def count_inside(cur_frme, threshold):
+def count_inside(cur_frme, thd_lvl):
     """
     Counts the number of clusters inside of cur_df.
     
@@ -21,18 +21,18 @@ def count_inside(cur_frme, threshold):
         index of inside clusters
     """
     # Get index of inside clusters
-    ins_thd_idx = cur_frme[cur_frme['threshold'] > threshold].index.tolist()
+    ins_thd_idx = cur_frme[cur_frme['threshold_level'] > thd_lvl].index.tolist()
     if len(ins_thd_idx) == 0:
         return [], [], pd.DataFrame(columns=['index', 'index_inside',
                                             'inside_len'])
     # Get index of current threshold
-    cur_thd_idx = cur_frme[cur_frme['threshold'] == threshold].index.tolist()
+    cur_thd_idx = cur_frme[cur_frme['threshold_level'] == thd_lvl].index.tolist()
     # Create cur_frme threshold frame
     cur_frme_th = cur_frme.loc[cur_thd_idx]
     # Create inside frame based on index and apply a buffer to decrease the size
     # of the geometry and apply a spatial join
     inside_frme = cur_frme.loc[ins_thd_idx]
-    inside_frme.loc[:, 'geometry'] = inside_frme['geometry'].buffer(-0.01)
+    inside_frme.loc[:, 'geometry'] = inside_frme['geometry'].buffer(-0.001)
     # Spatial join (contains)
     contains = cur_frme_th[['geometry']].sjoin(inside_frme[['geometry']],
                                             predicate="contains",

@@ -173,7 +173,7 @@ def spatial_operation(args):
     # check if time is 0 and start the process or if the current frame is empty
     if time_ == 0 or cur_frame.empty:
         # Only count inside clusters and update the current frame
-        _, _, cnts = count_inside(cur_frame, thresholds[0])
+        _, _, cnts = count_inside(cur_frame, 0)
         cur_frame.loc[cnts.index, 'inside_idx'] = cnts['index_inside']
         cur_frame.loc[cnts.index, 'inside_clusters'] = cnts['inside_len']
         # Check if the cluster is on the edges
@@ -192,7 +192,7 @@ def spatial_operation(args):
     prv_file = get_previous_file(cur_file, prv_file, prv_files, nm_lst)
     if prv_file is None:
         # Only count inside clusters and update the current frame
-        _, _, cnts = count_inside(cur_frame, thresholds[0])
+        _, _, cnts = count_inside(cur_frame, 0)
         cur_frame.loc[cnts.index, 'inside_idx'] = cnts['index_inside']
         # Check if the cluster is on the edges
         if nm_lst['edges']:
@@ -272,7 +272,9 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     # First spatial operations is count inside clusters
     # For this function is necessary have all thresholds
     # in cur_frme.
-    cur_thd_idx, ins_thd_idx, cnts_ = count_inside(cur_frme, threshold)
+    # Get threshold level
+    thd_lvl = nm_lst['thresholds'].index(threshold)
+    cur_thd_idx, ins_thd_idx, cnts_ = count_inside(cur_frme, thd_lvl)
     if len(cur_thd_idx) > 0:
         cur_frme.loc[cnts_.index, 'inside_idx'] = cnts_['index_inside']
         cur_frme.loc[cnts_.index, 'inside_clusters'] = cnts_['inside_len']
