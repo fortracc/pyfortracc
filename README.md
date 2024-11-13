@@ -1,4 +1,4 @@
-# pyForTraCC - Python Library for Tracking and Forecasting Clusters
+# pyForTraCC - Python Library for Tracking and Forecasting Configurable Clusters
 
 > **Note**: `pyForTraCC` library is currently in a **release candidate** phase, meaning it is nearly finalized but may receive minor updates before the official stable release.
 
@@ -13,8 +13,7 @@
 
 ## Overview
 
-`pyForTraCC` is a Python library designed to identify and track clusters in diverse datasets, offering flexible integration based on user-defined needs. Its modular structure incorporates specialized methods for feature identification and tracking, allowing for compatibility with various input formats.
-
+`pyForTraCC` is a Python library developed for identifying, tracking, and forecasting clusters in diverse datasets. Its modular structure enables flexible integration, supporting user-defined configurations and compatibility with multiple input formats.
 
 ### Algorithm Workflow
 
