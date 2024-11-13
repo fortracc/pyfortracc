@@ -35,28 +35,40 @@ The algorithm is divided into two main modules: **Track** and **Forecast**.
 For detailed instructions and usage, refer to the [pyForTraCC Documentation](https://pyfortracc.readthedocs.io/).
 
 ## Installation
+The pyForTraCC package can be installed in two ways: Directly by via the `pip` package manager or cloning the official GitHub repository.
 
-Download the package from GitHub or clone the repository:
+#### 1. Installing with Pip (Directly)
+To install pyForTraCC directly from the Python Package Index (PyPI), use:
+
+```bash
+pip3 install pyfortracc
+```
+
+#### 2. Installing from GitHub  
+Download the package directly from the official GitHub repository by cloning it:
 
 ```bash
 git clone https://github.com/fortracc/pyfortracc/
 ```
+After downloading, you can install the package directly. It is recommended to use Python 3.12 and a virtual environment (such as Anaconda3, Miniconda, or Mamba) to avoid dependency conflicts.
 
-It is recommended to use Python 3.12 and a virtual environment (Anaconda3, Miniconda, Mamba, etc.) to avoid dependency conflicts.
+- **Installing with Conda** If you are using Conda, you can install the package dependencies as follows:
+   
+   ```bash
+   cd pyfortracc
+   conda env create -f environment.yml
+   conda activate pyfortracc
+   ```
 
-### Installing with Conda
-Create environment using conda and install from environment.yml file:
-
-```bash
-cd pyfortracc
-conda env create -f environment.yml
-conda activate pyfortracc
-```
-
-### Installing with Pip
-```bash
-pip3 install pyfortracc
-```
+- **Installing with pip** Alternatively, you can install the package with `pip`:
+   
+   ```bash
+   cd pyfortracc
+   python3 -m venv venv
+   source .venv/bin/activate  # On Linux/macOS
+   .venv\Scripts\activate  # On Windows
+   pip3 install .
+   ```
 
 Running pyFortracc
 =====================================================================
