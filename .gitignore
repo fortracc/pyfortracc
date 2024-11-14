@@ -11,6 +11,7 @@
 *.cpg
 *.tif
 *.c
+*.csv
 .DS_Store
 # Ignore examples data each have input or output path
 input/
