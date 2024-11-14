@@ -22,7 +22,7 @@ For example, the following Python code demonstrates how to read NetCDF data into
 
     # We use the ``glob`` module, which is useful for finding all files with the ``.nc`` extension.
     files = sorted(glob.glob('input/*.nc'))
-    # We applied the function ``read_functionread_function`` to first file in liist ``file``.
+    # We apply the function ``read_function`` to first file in list ``files``.
     sample_data = read_function(files[0])
 
 
