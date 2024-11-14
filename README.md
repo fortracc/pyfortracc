@@ -117,6 +117,4 @@ You can run the examples in GitHub Codespaces or Google Colab.
 Support and Contact
 =====================================================================
 - fortracc.project@inpe.br
-- helvecio.neto@inpe.br
-- alan.calheiros@inpe.br
 
