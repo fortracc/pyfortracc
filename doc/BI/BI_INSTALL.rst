@@ -99,13 +99,14 @@ ensure these packages are installed within your environment.
     - scipy
     - scikit-learn
     - pyarrow
-    - pyspark
     - netCDF4
     - cartopy
     - tqdm
     - ipython
     - ipykernel
     - psutil
+    - duckdb
+    - shapelysmooth
 
 We recommend installing the **pyForTraCC** package with Python 3.12. To simplify the installation process and avoid potential conflicts, it's advisable 
 to use a virtual environment (e.g., Anaconda3, Miniconda, Mamba) for managing dependencies.
