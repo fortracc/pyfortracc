@@ -18,6 +18,7 @@ input/
 output/
 experiments/
 doc/_build/
+pro/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
