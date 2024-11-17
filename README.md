@@ -1,4 +1,4 @@
-# pyForTraCC - Python Library for Tracking and Forecasting Configurable Clusters
+# pyForTraCC - Python Library for Forecasting and Tracking the Evolution of Configurable Clusters
 
 > **Note**: `pyForTraCC` library is currently in a **release candidate** phase, meaning it is nearly finalized but may receive minor updates before the official stable release.
 
