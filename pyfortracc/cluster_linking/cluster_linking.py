@@ -132,8 +132,8 @@ def linking(args):
     if time_ == 0 or prv_frame.empty or dt_time > max_dt:
         # Classify clusters as new clusters and check board clusprv_frameters
         cur_frame = new_frame(cur_frame, uid_iter)
-        cur_frame = board_clusters(cur_frame)
         cur_frame = refact_inside(cur_frame)
+        cur_frame = board_clusters(cur_frame)
         uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
         # Calculate lifetime
         cur_frame['lifetime'] = 0
@@ -155,10 +155,10 @@ def linking(args):
     cur_frame = merge_trajectory(cur_frame, cur_idx, prv_frame, prv_idx)
     # New frames for base threshold
     cur_frame = new_frame(cur_frame, uid_iter)
-    # Check board clusters
-    cur_frame = board_clusters(cur_frame)
     # Refact inside clusters
     cur_frame = refact_inside(cur_frame)
+    # Check board clusters
+    cur_frame = board_clusters(cur_frame)
     # Update max uid
     uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
     # Calculate lifetime, get previous lifetime and add to current lifetime
