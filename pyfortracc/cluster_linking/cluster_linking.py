@@ -132,11 +132,17 @@ def linking(args):
     if time_ == 0 or prv_frame.empty or dt_time > max_dt:
         # Classify clusters as new clusters and check board clusprv_frameters
         cur_frame = new_frame(cur_frame, uid_iter)
-        cur_frame = refact_inside(cur_frame)
-        cur_frame = board_clusters(cur_frame)
+        # Find board clusters and find new frames
+        if nm_lst['edges']:
+            cur_frame = board_clusters(cur_frame)
+            cur_frame = new_frame(cur_frame, uid_iter)
+        # Refact inside clusters
+        cur_frame = refact_inside(cur_frame, uid_iter)
+        # Update max uid
         uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
-        # Calculate lifetime
+        # Set lifetime to 0 because is the first frame
         cur_frame['lifetime'] = 0
+        # Write linked file
         write_parquet(cur_frame[linked_cols], output_file)
         return cur_frame, cur_stamp, uid_iter, cdx_range[-1]
     # Get previous indx based for conditions:
@@ -155,10 +161,12 @@ def linking(args):
     cur_frame = merge_trajectory(cur_frame, cur_idx, prv_frame, prv_idx)
     # New frames for base threshold
     cur_frame = new_frame(cur_frame, uid_iter)
-    # Refact inside clusters
-    cur_frame = refact_inside(cur_frame)
     # Check board clusters
-    cur_frame = board_clusters(cur_frame)
+    if nm_lst['edges']:
+        cur_frame = board_clusters(cur_frame)
+        cur_frame = new_frame(cur_frame, uid_iter)
+    # Refact inside clusters
+    cur_frame = refact_inside(cur_frame, uid_iter)
     # Update max uid
     uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
     # Calculate lifetime, get previous lifetime and add to current lifetime

@@ -105,11 +105,12 @@ def translate_boundary(args):
     # Open parquet file
     parquet = read_parquet(parquet_file, None).reset_index()
     # Set used columns for translate boundary
-    columns = ['cindex','timestamp','uid','status','threshold','size',
+    columns = ['timestamp','uid','status','threshold','size',
                 'mean','std','min','max','inside_clusters']
     #Check if have more then one threshold, is true add column iuid
     if len(parquet['threshold'].unique()) > 1:
         columns.append('iuid')
+        columns.insert(2, columns.pop(columns.index('iuid')))
     # Check if have region or duration columns of parquet
     if 'region' in parquet.columns:
         columns.append('region')
@@ -117,6 +118,8 @@ def translate_boundary(args):
         columns.append('duration')
     if 'expansion' in parquet.columns:
         columns.append('expansion')
+    if 'board' in parquet.columns:
+        columns.append('board')
     # Load geometry
     geometries = parquet['geometry'].apply(loads)
     centroids = geometries.apply(lambda x: x.centroid)
