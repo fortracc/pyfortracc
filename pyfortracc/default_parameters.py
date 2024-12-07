@@ -98,6 +98,8 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['eps'] = 1
     if 'delta_tolerance' not in name_lst:
         name_lst['delta_tolerance'] = 0
+    if 'pattern_position' not in name_lst:
+        name_lst['pattern_position'] = [None,None]
     if 'num_prev_skip' not in name_lst:
         name_lst['num_prev_skip'] = 0
     if 'edges' not in name_lst:
@@ -154,11 +156,13 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['validation'] = False
     if 'validation_scores' not in name_lst:
         name_lst['validation_scores'] = False
+    # TODO: add calc_dir and calc_speed
     if 'calc_dir' not in name_lst:
         name_lst['calc_dir'] = False
     if 'calc_speed' not in name_lst:
         name_lst['calc_speed'] = False
         name_lst['speed_units'] = 'm/s'
+    # TODO: add epsg
     if 'epsg' not in name_lst:
         name_lst['epsg'] = 4326
     return name_lst

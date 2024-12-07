@@ -82,7 +82,7 @@ def extract_features(args):
     # Initialize the features dataframe
     output_df = set_outputdf(schema)
     # Get the timestamp from the file
-    tstamp = get_filestamp(name_list['timestamp_pattern'], file)
+    tstamp = get_filestamp(name_list, file)
     fpattern = '%Y%m%d_%H%M'  # File pattern
     output_path = name_list['output_features']
     min_size = name_list['min_cluster_size']
