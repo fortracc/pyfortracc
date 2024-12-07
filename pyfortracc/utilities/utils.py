@@ -183,7 +183,7 @@ def get_loading_bar(files_list):
     return lding_bard
 
 
-def get_filestamp(file_pattern, path_file):
+def get_filestamp(name_list, path_file):
     """
     Extract and return the timestamp from a file name based on a specified pattern.
 
@@ -193,9 +193,9 @@ def get_filestamp(file_pattern, path_file):
 
     Parameters
     ----------
-    file_pattern : str or list of str
-        The date-time format pattern(s) used to extract the timestamp from the file name. 
-        This can be a single pattern string (e.g., '%Y%m%d_%H%M') or a list of patterns.
+    name_list : dict
+        A dictionary containing configuration parameters including the 'timestamp_pattern' which
+        specifies the date-time pattern used to extract the timestamp from the file name.
 
     path_file : str
         The full path of the file from which to extract the timestamp. The file name is used for parsing.
@@ -205,8 +205,12 @@ def get_filestamp(file_pattern, path_file):
     timestamp : datetime
         A `datetime` object representing the timestamp extracted from the file name. 
     """
+    file_pattern = name_list['timestamp_pattern']
+    pattern_pos = name_list['pattern_position']
+    # Get the file name from the path
     file_string = str(pathlib.Path(path_file).name)
-    # TODO: Add support for multiple patterns and Extract %Y%m%d%H%M%S from file_string
+    # Fit the file string to the pattern position
+    file_string = file_string[pattern_pos[0]:pattern_pos[1]]
     if isinstance(file_pattern, list):
         for pattern in file_pattern:
             try:

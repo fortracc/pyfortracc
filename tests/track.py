@@ -35,16 +35,17 @@ name_list['opt_correction'] = True # Set to True to apply the Optical Flow corre
 name_list['elp_correction'] = True # Set to True to apply the Ellipse correction
 name_list['validation'] = True # Set to True to apply the validation of corrections
 name_list['validation_scores'] = True  # Set to True to get the scores of the validation
+name_list['pattern_position'] = [0,100]
 
 if __name__ == '__main__':
-    # # Download example data and unzip to input folder
+    # Download example data and unzip to input folder
     url = 'https://zenodo.org/api/records/10624391/files-archive'
     response = requests.get(url)
     with zipfile.ZipFile(io.BytesIO(response.content)) as zip_ref:
         zip_ref.extractall('input')
     # Run pyfortracc
     print('pyFortracc version', pyfortracc.__version__)
-    pyfortracc.features_extraction(name_list, read_function, parallel=True)
+    pyfortracc.features_extraction(name_list, read_function, parallel=False)
     pyfortracc.spatial_operations(name_list, read_function, parallel=True)
     pyfortracc.cluster_linking(name_list)
     pyfortracc.concat(name_list, clean=True)
