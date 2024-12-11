@@ -308,6 +308,9 @@ def lucas_kanade(current_img, previous_img, currPts):
         # ShiTomasi corner detection
         currPts = cv2.goodFeaturesToTrack(current_img, mask=None,
                                           **feature_params)
+        # Check if currPts is None
+        if currPts is None:
+            return [], []
     # Call Lucas Kanade optical flow
     win_percent = 20 # Percent of image size to use as window size
     win_size = (current_img.shape[1] // win_percent, 
