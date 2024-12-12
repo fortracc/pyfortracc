@@ -47,12 +47,16 @@ def refact_inside(cur_frme, uid_iter):
     cur_frme.loc[insd.index, 'iuid'] = insd['iuid'].values
     # Find any uid or iuid is null
     null_uid = cur_frme.loc[cur_frme['uid'].isnull()]
-    if not null_uid.empty:
-        max_uid = cur_frme['uid'].max()
-        cur_frme.loc[null_uid.index, 'uid'] = np.arange(max_uid, max_uid + len(null_uid), 1, dtype=int)
-        iuid_str = cur_frme.loc[null_uid.index, 'uid'].astype(int).astype(str)
-        thr_lvls = cur_frme.loc[null_uid.index, thr_lvl].values - 1
-        iuid_str = iuid_str + '.' + thr_lvls.astype(str)
-        iuid_str = iuid_str.apply(lambda x: x + str(np.random.randint(1, 999))).astype(float)
-        cur_frme.loc[null_uid.index, 'iuid'] = iuid_str
+    # TODO: Check error in line 54: ValueError: arange: cannot compute length
+    try:
+        if not null_uid.empty:
+            max_uid = cur_frme['uid'].max()
+            cur_frme.loc[null_uid.index, 'uid'] = np.arange(max_uid, max_uid + len(null_uid), 1, dtype=int)
+            iuid_str = cur_frme.loc[null_uid.index, 'uid'].astype(int).astype(str)
+            thr_lvls = cur_frme.loc[null_uid.index, thr_lvl].values - 1
+            iuid_str = iuid_str + '.' + thr_lvls.astype(str)
+            iuid_str = iuid_str.apply(lambda x: x + str(np.random.randint(1, 999))).astype(float)
+            cur_frme.loc[null_uid.index, 'iuid'] = iuid_str
+    except:
+        pass
     return cur_frme
