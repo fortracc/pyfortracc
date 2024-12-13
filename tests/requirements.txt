@@ -13,3 +13,4 @@ tqdm
 ipython
 ipykernel
 psutil
+requests
