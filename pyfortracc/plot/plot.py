@@ -265,7 +265,11 @@ def plot(name_list,
     if trajectory:
         # Apply taubin_smooth into trajectory column
         if smooth_trajectory:
-            tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x: chaikin_smooth(x) if x.length > 0 else x)
+            # TODO: Check if the trajectory is a valid LineString
+            try:
+                tck_table['trajectory'] = tck_table['trajectory'].apply(lambda x: chaikin_smooth(x) if x.length > 0 else x)
+            except:
+                pass
         traject_df = tck_table.set_geometry('trajectory')
         traject_df.plot(ax=ax, color=traj_color , linewidth=traj_linewidth, alpha=traj_alpha, zorder=15)
     ##### INFO #############
