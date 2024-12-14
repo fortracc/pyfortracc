@@ -77,7 +77,17 @@ def geo_statistics(cluster_matrix, cluster_labels, values_matrix, name_list):
     # occur when use eps parameter in DBSCAN > 1, and could merge clusters
     # with distance > eps
     if name_list['cluster_method'] == 'dbscan' and name_list['eps'] > 1:
+        # Find duplicated values
         dupli_idx = output_df.duplicated(subset=['cluster_id'], keep=False)
+        if not dupli_idx.any():
+            # Check convex hull
+            if name_list['convex_hull'] and len(output_df) > 0:
+                output_df['geometry'] = output_df['geometry'].apply(lambda x: x.convex_hull)
+            # Convert geometry to wkt
+            if len(output_df) > 0: # Convert geometry to wkt
+                output_df['geometry'] = output_df['geometry'].apply(lambda x: x.wkt)
+            return output_df
+        # Group by cluster_id
         dupli_group = output_df[dupli_idx].groupby('cluster_id')
         for _, group in dupli_group:
             multi_geo = MultiPolygon(list(group['geometry'].apply(Polygon)))
