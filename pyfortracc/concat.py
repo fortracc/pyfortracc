@@ -220,7 +220,11 @@ def default_columns(name_list=None):
                 'array_x',
                 'vector_field',
                 'trajectory',
-                'geometry']
+                'geometry',
+                'prv_mrg_uids', 
+               'prv_mrg_iuids',
+               'prv_spl_uid,
+               'prv_spl_iuid]
     if len(name_list['thresholds']) > 1:
         # columns = columns + ['iuid']
         # Get position of uid column and add iuid after it
