@@ -12,31 +12,35 @@ from pyfortracc.utilities.math_utils import uv2angle, uv2magn, calculate_vel_are
 
 def convert_parquet_to_family(name_list,defaults_path = 'track', default_undef=-999.99, csv_out=True):
     
-    input_columns = ['uid', 'cluster_id', 'timestamp', 'lifetime', 'size', 'expansion', 'u_', 'v_', 'status', 'geometry']
+    input_columns = ['uid','threshold_level', 'cluster_id', 'timestamp', 'lifetime', 'size', 'expansion', 'u_', 'v_', 'status', 'geometry']
 
+    #reading the tracking table:
     tracking_files = sorted(glob.glob(name_list['output_path'] + defaults_path + '/trackingtable/*.parquet'))
     tracking_table = pd.concat(pd.read_parquet(f,columns=input_columns) for f in tracking_files)
     tracking_table = tracking_table[input_columns]
-    #find NaN, Inf, -Inf, empty strings, None, null, and replace for default_undef
+
+    #find NaN, Inf, -Inf, empty strings, None, null, and replace for default_undef:
     tracking_table.replace([np.nan, np.inf, -np.inf, '', None, 'null'], default_undef, inplace=True)
 
     # Convert the 'geometry' column from WKT string to Shapely geometry and create the GeoDataFrame
     tracking_table['geometry'] = tracking_table['geometry'].apply(wkt.loads)
     geo_tracking_table = gpd.GeoDataFrame(tracking_table, geometry='geometry')
         
-    # Group the data by 'uid' and concatenate the groups into a single DataFrame
-    family_group = geo_tracking_table.groupby('uid')
-    family_table = pd.concat([group for _, group in family_group])
+    # Group the data by 'uid' where 'threshold_level' == 0 and concatenate the groups into a single DataFrame:
+    family_table = geo_tracking_table.loc[geo_tracking_table['threshold_level'] == 0].groupby('uid', as_index=False).apply(lambda x: x).reset_index(drop=True)
+    family_table.drop('threshold_level', axis=1, inplace=True)
 
     #ALAN: ja converter no parquet
     family_table = family_table.rename(columns={'lifetime': 'time'})
-    
-    # Group by 'uid' and calculate min and max timestamps in a single step
-    duration_df = family_table.groupby('uid')['timestamp'].agg(['min', 'max']).reset_index()
-    # Calculate duration in hours
-    duration_df['duration'] = (duration_df['max'] - duration_df['min']).dt.total_seconds() / 3600
-    # Merge duration back into family_table
-    family_table = pd.merge(family_table, duration_df, on='uid')
+
+    # Ensure 'timestamp' is in datetime format
+    family_table['timestamp'] = pd.to_datetime(family_table['timestamp'], errors='coerce')
+    # Group by 'uid' and calculate the first and last timestamps
+    duration_df = family_table.groupby('uid')['timestamp'].agg(first_timestamp='min', last_timestamp='max').reset_index()
+    # Calculate the total duration in hours for each 'uid'
+    duration_df['duration'] = (duration_df['last_timestamp'] - duration_df['first_timestamp']).dt.total_seconds() / 3600
+    # Merge the calculated 'duration_hours' back into the original DataFrame
+    family_table = family_table.merge(duration_df[['uid', 'duration']], on='uid', how='left')    
 
     # Calculate centroids in a vectorized manner
     family_table['centroid'] = family_table['geometry'].centroid
