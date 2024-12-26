@@ -157,6 +157,26 @@ def linking(args):
     previous_iuids = prv_frame.loc[prv_idx]['iuid'].values
     cur_frame.loc[cur_idx, 'uid'] = previous_uids
     cur_frame.loc[cur_idx, 'iuid'] = previous_iuids
+    # merge uids and iuids
+    mrg_frame = cur_frame.loc[(~cur_frame['merge_idx'].isnull())]
+    if not mrg_frame.empty:
+        mrg_frame[['prv_mrg_uids', 'prv_mrg_iuids']] = mrg_frame.apply(
+            lambda x: pd.Series({
+                'prv_mrg_uids': prv_frame.loc[x['merge_idx'], 'uid'].to_list(),
+                'prv_mrg_iuids': prv_frame.loc[x['merge_idx'], 'iuid'].to_list()
+            }),
+            axis=1)
+        cur_frame.loc[mrg_frame.index,['prv_mrg_uids', 'prv_mrg_iuids']] = mrg_frame[['prv_mrg_uids', 'prv_mrg_iuids']]
+    # split uid and iuid
+    spl_frame = cur_frame.loc[(~cur_frame['split_pr_idx'].isnull())]
+    if not spl_frame.empty:
+        spl_frame[['prv_spl_uid', 'prv_spl_iuid']] = spl_frame.apply(
+            lambda x: pd.Series({
+                'prv_spl_uid': prv_frame.loc[x['split_pr_idx'], 'uid'],
+                'prv_spl_iuid': prv_frame.loc[x['split_pr_idx'], 'iuid']
+            }),
+            axis=1)
+        cur_frame.loc[spl_frame.index,['prv_spl_uid', 'prv_spl_iuid']] = spl_frame[['prv_spl_uid', 'prv_spl_iuid']]
     # Merge trajectories
     cur_frame = merge_trajectory(cur_frame, cur_idx, prv_frame, prv_idx)
     # New frames for base threshold
