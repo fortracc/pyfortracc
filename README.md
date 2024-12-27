@@ -106,11 +106,24 @@ Example Gallery
 =====================================================================
 To library have a gallery of examples that demonstrate the application of the algorithm in different situations.
 
-You can run the examples in GitHub Codespaces or Google Colab.
+You can run the examples in Google Colab:
+
+|                                                                                    | Example                              |
+|-------------------------------------------------------------------------------------------|----------------------------------------|
+| [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/01_Introducing_Example/01_Introducing-pyFortraCC.ipynb) | 01 - Introducing Example              |
+| [![Open in Cola](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Track-Radar-Data/02_Track-Radar-Dataset.ipynb) | 02 - Radar Data Example               |
+| [![Open in Cola](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) | 03 - Infrared Satellite Example (Realtime Track) |
+| [![Open in Cola](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-Global-Precipitation-EDA/04_Track-Global-Precipitation.ipynb) | 04 - Global Precipitation Example     |
+
+
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+ or Github Codespaces: 
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/fortracc/pyfortracc/?quickstart=1)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-[<img src="https://colab.research.google.com/assets/colab-badge.svg" width="170"/>](https://colab.research.google.com/github/fortracc/pyfortracc)
+
 
 
 
