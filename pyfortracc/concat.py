@@ -148,6 +148,7 @@ def read_files(args):
     # Save the parquet file
     save_parquet(concat_df, file_name, schema,
                 clean=False, del_files=[fet_file, spat_file, link_file])
+    
 
 def save_parquet(concat_df, output_file, schema, clean=False, del_files=[]):
     ''' 
@@ -171,10 +172,10 @@ def save_parquet(concat_df, output_file, schema, clean=False, del_files=[]):
     -------
     None
     '''
-    table = pa.Table.from_pandas(concat_df, schema=schema)
-    df_converted = table.to_pandas()
-    df_converted.to_parquet(output_file, engine='pyarrow', compression='gzip',
-                                schema=schema)
+    # table = pa.Table.from_pandas(concat_df, schema=schema)
+    # df_converted = table.to_pandas()
+    concat_df.to_parquet(output_file, engine='pyarrow', compression='gzip',
+                            )
     if clean:
         for file in del_files:
             os.remove(file)
@@ -221,6 +222,7 @@ def default_columns(name_list=None):
                 'vector_field',
                 'trajectory',
                 'geometry']
+    
     if len(name_list['thresholds']) > 1:
         # columns = columns + ['iuid']
         # Get position of uid column and add iuid after it
@@ -255,4 +257,7 @@ def default_columns(name_list=None):
         columns = columns + ['dir']
     if name_list['calc_speed']:
         columns = columns + ['speed']
+    if name_list['prv_uid']:
+        columns = columns + ['prv_mrg_uids', 'prv_mrg_iuids', 
+                             'prv_spl_uid', 'prv_spl_iuid']
     return columns
