@@ -448,6 +448,10 @@ def set_schema(module,name_list):
                 'threshold_level': int,
                 'lifetime': int,
                 'trajectory': str,
+                'prv_mrg_uids': object,
+                'prv_mrg_iuids': object,
+                'prv_spl_uid': float,
+                'prv_spl_iuid': float,
             }
         }
     # Add the methods field to spatial schema

@@ -376,7 +376,8 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
         cur_frme.loc[cur_non_null_idx,'u_'] = u_
         cur_frme.loc[cur_non_null_idx,'v_'] = v_
         # calling expansion function with current and previous clusters and delta_time
-        exp_norm = expansion(cur_trj, prev_trj, nm_lst['delta_time'])
+        exp_norm = expansion(cur_trj, prev_trj, prv_frme, 
+                             nm_lst['delta_time'], nm_lst['mrg_expansion'])
         cur_frme.loc[cur_non_null_idx,'expansion'] = exp_norm
     # Vector methods additons
     # Split method: Read instructions in split_mtd.py
