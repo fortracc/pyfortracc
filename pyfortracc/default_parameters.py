@@ -165,4 +165,8 @@ def default_parameters(name_lst=None, read_function=None):
     # TODO: add epsg
     if 'epsg' not in name_lst:
         name_lst['epsg'] = 4326
+    if 'prv_uid' not in name_lst:
+        name_lst['prv_uid'] = False
+    if 'mrg_expansion' not in name_lst:
+        name_lst['mrg_expansion'] = False
     return name_lst
