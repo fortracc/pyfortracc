@@ -19,7 +19,7 @@ jobs:
       run: docker build . --file tests/Dockerfile --tag pyfortracc:$(date +%s)
 
     - name: Tag Docker image
-      run: docker tag pyfortracc:$(date +%s) fortracc-project/pyfortracc:latest
+      run: docker tag pyfortracc:$(date +%s) fortraccproject/pyfortracc:latest
 
     - name: Push Docker image to Docker Hub
-      run: docker push fortracc-project/pyfortracc:latest
+      run: docker push fortraccproject/pyfortracc:latest
