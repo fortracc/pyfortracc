@@ -14,7 +14,7 @@ jobs:
       uses: docker/login-action@v2
       with:
         username: fortraccproject
-
+        
     - name: Build the Docker image
       run: docker build . --file tests/Dockerfile --tag pyfortracc:$(date +%s)
 
