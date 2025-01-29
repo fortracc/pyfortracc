@@ -10,11 +10,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Log in to Docker Hub (GitHub OAuth)
+    - name: Log in to Docker Hub using credentials from GitHub Secrets
       uses: docker/login-action@v2
       with:
-        username: fortraccproject
-        
+        username: ${{ secrets.DOCKER_USERNAME }}  # Use o secret para o nome de usuário
+        password: ${{ secrets.DOCKER_PASSWORD }}  # Use o secret para a senha ou token
+
     - name: Build the Docker image
       run: docker build . --file tests/Dockerfile --tag pyfortracc:$(date +%s)
 
