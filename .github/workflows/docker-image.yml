@@ -1,14 +1,25 @@
 name: Docker Image CI
 
-on: [push, pull_request]
+on:
+  [push, pull_request]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Log in to Docker Hub (GitHub OAuth)
+      uses: docker/login-action@v2
+      with:
+        username: ${{ github.actor }} 
+
     - name: Build the Docker image
       run: docker build . --file tests/Dockerfile --tag pyfortracc:$(date +%s)
+
+    - name: Tag Docker image
+      run: docker tag pyfortracc:$(date +%s) fortracc-project/pyfortracc:latest
+
+    - name: Push Docker image to Docker Hub
+      run: docker push fortracc-project/pyfortracc:latest
