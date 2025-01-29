@@ -9,9 +9,12 @@ except:
 
 from setuptools import setup, find_packages
 
-
-with open('requirements.txt') as f:
-    requirements = f.read().splitlines()
+req_file = os.path.join(os.path.dirname(__file__), "requirements.txt")
+if os.path.exists(req_file):
+    with open(req_file) as f:
+        requirements = f.read().splitlines()
+else:
+    requirements = []
 
 with open(os.path.join('pyfortracc', '_version.py')) as f:
     version_line = next(filter(lambda line: line.startswith('__version__'), f))
