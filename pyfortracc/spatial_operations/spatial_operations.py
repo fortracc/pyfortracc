@@ -351,7 +351,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     # Check if there is any intersection between mergs and splits
     # If there is any intersection, the clusters are considered 
     mergs_splits_idx = np.intersect1d(mergs_idx_1, splits_idx_1)
-    mergs_splits_idx = np.unique(mergs_splits_idx)        
+    mergs_splits_idx = np.unique(mergs_splits_idx) 
     # Update status, prev_idx, merge_idx, split_idx
     cur_frme.loc[cont_indx_1,'status'] =  'CON'
     cur_frme.loc[mergs_idx_1,'status'] =  'MRG'
@@ -359,10 +359,21 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     cur_frme.loc[nw_splt_idx,'status'] =  'NEW/SPL'
     cur_frme.loc[mergs_splits_idx,'status'] =  'MRG/SPL'
     cur_frme.loc[cont_indx_1, 'past_idx'] = cont_indx_2
+
+
+
     cur_frme.loc[mergs_idx_1,'past_idx'] =  mergs_idx_2
     cur_frme.loc[splits_idx_1,'past_idx'] =  split_prev_idx
+
+    # Continuar daqui
     cur_frme.loc[nw_splt_idx,'split_pr_idx'] =  nw_splt_prv_idx
     cur_frme.loc[mergs_idx_1,'merge_idx'] =  merge_frame['merge_ids'].values
+    # add split_idx
+    cur_frme.loc[splits_idx_1,'split_idx'] =  splits_idx_1
+
+
+    print(cur_frme.loc[cur_frme.cluster_id == 719][['timestamp','cluster_id','status','past_idx','merge_idx','split_idx']])
+
     # Mount the trajectory LineString, distance and direction
     # Select non null prev_idx is concat into a single array
     # This is necessary because the trajectory function only
