@@ -22,8 +22,8 @@ import cartopy.io.img_tiles as cimgt
 
 
 def plot(name_list,
-        read_function,
-        timestamp,
+        read_function=None,
+        timestamp='1970-01-01 00:00:00',
         ax=None,
         animate=False,
         uid_list=[],
@@ -76,14 +76,15 @@ def plot(name_list,
         info_cols=['uid'],
         save=False,
         save_path='output/img/',
-        save_name=None):
+        save_name=None,
+        read_data=True):
     """
     This function is designed to visualize tracking data on a map or a simple 2D plot. 
     The function reads in tracking data, filters it based on various criteria, and plots it using Matplotlib, 
     with optional customizations such as colorbars, boundaries, centroids, trajectories, and additional information annotations. 
     """
-        
-    if read_function is None:
+
+    if read_function is None and read_data:
         print('Please set a read function to open the files!')
         return None
     # Plot by track
@@ -134,22 +135,22 @@ def plot(name_list,
     tck_table['geometry'] = tck_table['geometry'].apply(loads)
     tck_table['trajectory'] = tck_table['trajectory'].apply(loads)
     tck_table = tck_table.set_geometry('geometry')
-    # Read data
-    data = read_function(tck_table['file'].unique()[0])
-    data = np.where(nan_operation(data, nan_value), np.nan, data)
-    # Fit min and max values
-    if min_val is not None:
-        data = np.where(data <= min_val, min_val, data)
-    else:
-        min_val = np.nanmin(data)
-    if max_val is not None:
-        data = np.where(data >= max_val, max_val, data)
-    else:
-        max_val = np.nanmax(data)
-    # Set of plot
-    cmap = plt.get_cmap(cmap)
-    colors = [cmap(i) for i in range(cmap.N)]
-    cmap = LinearSegmentedColormap.from_list('mycmap', colors, N=num_colors)
+    if read_data:
+        data = read_function(tck_table['file'].unique()[0])
+        data = np.where(nan_operation(data, nan_value), np.nan, data)
+        # Fit min and max values
+        if min_val is not None:
+            data = np.where(data <= min_val, min_val, data)
+        else:
+            min_val = np.nanmin(data)
+        if max_val is not None:
+            data = np.where(data >= max_val, max_val, data)
+        else:
+            max_val = np.nanmax(data)
+        # Set of plot
+        cmap = plt.get_cmap(cmap)
+        colors = [cmap(i) for i in range(cmap.N)]
+        cmap = LinearSegmentedColormap.from_list('mycmap', colors, N=num_colors)
     # Mount main figure
     fig = plt.figure(figsize=figsize)
     # Check if lon_min, lon_max, lat_min, lat_max are in name_list and if is not None
@@ -194,20 +195,21 @@ def plot(name_list,
             ax.yaxis.set_major_formatter(lat_formatter)
             ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
         # Set plot type
-        if plot_type == 'imshow':
-            ax.imshow(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, aspect='auto', 
-                        zorder=10)
-        elif plot_type == 'contourf':
-            ax.contourf(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, zorder=10)
-        elif plot_type == 'contour':
-            ax.contour(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, zorder=10)
-        elif plot_type == 'pcolormesh':
-            lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
-            lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
-            ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap, zorder=10)
+        if read_function:
+            if plot_type == 'imshow':
+                ax.imshow(data, cmap=cmap, origin='lower', extent=orig_extent,
+                            interpolation=interpolation, aspect='auto', 
+                            zorder=10)
+            elif plot_type == 'contourf':
+                ax.contourf(data, cmap=cmap, origin='lower', extent=orig_extent,
+                            interpolation=interpolation, zorder=10)
+            elif plot_type == 'contour':
+                ax.contour(data, cmap=cmap, origin='lower', extent=orig_extent,
+                            interpolation=interpolation, zorder=10)
+            elif plot_type == 'pcolormesh':
+                lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
+                lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
+                ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap, zorder=10)
     else:
         if ax is None: # Comming from animation
             ax = fig.add_subplot(1, 1, 1)
@@ -216,7 +218,7 @@ def plot(name_list,
     ax.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
             horizontalalignment='center', fontsize=title_fontsize,
             verticalalignment='bottom', transform=ax.transAxes, zorder=11)
-
+    # Filter only data inside the zoom region
     if len(zoom_region) == 4:
         tck_table = tck_table.cx[zoom_region[0]:zoom_region[1],
                                 zoom_region[2]:zoom_region[3]]
@@ -231,7 +233,7 @@ def plot(name_list,
             plt.close(fig)
             return fig
     # Set colorbar
-    if cbar:
+    if cbar and read_function:
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="2%", pad=pad, axes_class=plt.Axes)
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=min_val, 

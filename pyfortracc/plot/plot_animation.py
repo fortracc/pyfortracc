@@ -107,7 +107,8 @@ def plot_animation(
         save=False,
         save_path='output/',
         save_name='plot.png',
-        parallel=True):
+        parallel=True,
+        read_data=True):
       # Set the limit of the animation size
       rcParams['animation.embed_limit'] = 2**128
       # Set default parameters
@@ -197,7 +198,8 @@ def plot_animation(
                   info_cols,
                   save,
                   save_path,
-                  save_name))
+                  save_name,
+                  read_data))
             if parallel:
                   n_workers = set_nworkers(name_list)
                   with Pool(n_workers) as pool:
@@ -225,7 +227,11 @@ def plot_animation(
             img.set_data(frames[i])
             return [img]
       # Create the animation
-      ani = animation.FuncAnimation(fig, update, frames=len(frames), interval=interval, repeat=True, blit=False, repeat_delay=repeat_delay)
+      ani = animation.FuncAnimation(fig, update, frames=len(frames),
+                                    interval=interval,
+                                    repeat=True,
+                                    blit=False, 
+                                    repeat_delay=repeat_delay)
       ani_html = ani.to_jshtml()
       plt.close(fig)
       return HTML(ani_html)
