@@ -70,10 +70,10 @@ def plot_animation(
         scalebar_units='km',
         min_val=None,
         max_val=None,
-        nan_operation=np.less_equal,
+        nan_operation=None,
         nan_value=0.01,
         num_colors = 20,
-        title_fontsize=14,
+        title_fontsize=12,
         grid_deg=None,
         title='Track Plot',
         time_zone='UTC',
@@ -107,8 +107,7 @@ def plot_animation(
         save=False,
         save_path='output/',
         save_name='plot.png',
-        parallel=True,
-        read_data=True):
+        parallel=True):
       # Set the limit of the animation size
       rcParams['animation.embed_limit'] = 2**128
       # Set default parameters
@@ -198,8 +197,7 @@ def plot_animation(
                   info_cols,
                   save,
                   save_path,
-                  save_name,
-                  read_data))
+                  save_name))
             if parallel:
                   n_workers = set_nworkers(name_list)
                   with Pool(n_workers) as pool:
@@ -217,6 +215,8 @@ def plot_animation(
 
       # Set up the figure for the animation
       fig, ax = plt.subplots(figsize=figsize)
+      fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=None, hspace=None)
+      fig.set_size_inches(figsize, forward=True)
       img = ax.imshow(np.zeros((1, 1)), cmap=cmap, aspect='auto')
       ax.axis('off')
       
@@ -230,7 +230,7 @@ def plot_animation(
       ani = animation.FuncAnimation(fig, update, frames=len(frames),
                                     interval=interval,
                                     repeat=True,
-                                    blit=False, 
+                                    blit=True, 
                                     repeat_delay=repeat_delay)
       ani_html = ani.to_jshtml()
       plt.close(fig)

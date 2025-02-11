@@ -327,8 +327,6 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
                                  cur_frme, prv_frme)
     cur_frme.loc[mrg_spl_idx,'status'] =  'MRG/SPL'
     cur_frme.loc[mrg_spl_idx,'past_idx'] =  prev_past_idx
-    # if mrg_spl_idx.size > 0:
-    #         print('\n',cur_frme.loc[mrg_spl_idx][['timestamp','status','size']])
     
     # Mount the trajectory LineString, distance and direction
     # Select non null prev_idx is concat into a single array
