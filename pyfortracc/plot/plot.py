@@ -5,9 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import matplotlib.patches as patches
-from matplotlib import font_manager as mfonts
 import matplotlib.patheffects as patheffects
+import cartopy.io.img_tiles as cimgt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.colors import LinearSegmentedColormap
 from shapely.wkt import loads
@@ -18,12 +17,9 @@ from PIL import Image
 from pyfortracc.default_parameters import default_parameters
 
 
-import cartopy.io.img_tiles as cimgt
-
-
 def plot(name_list,
-        read_function,
-        timestamp,
+        read_function=None,
+        timestamp='1970-01-01 00:00:00',
         ax=None,
         animate=False,
         uid_list=[],
@@ -40,10 +36,10 @@ def plot(name_list,
         scalebar_units='km',
         min_val=None,
         max_val=None,
-        nan_operation=np.less_equal,
+        nan_operation=None,
         nan_value=0.01,
         num_colors = 20,
-        title_fontsize=14,
+        title_fontsize=12,
         grid_deg=None,
         title='Track Plot',
         time_zone='UTC',
@@ -82,10 +78,7 @@ def plot(name_list,
     The function reads in tracking data, filters it based on various criteria, and plots it using Matplotlib, 
     with optional customizations such as colorbars, boundaries, centroids, trajectories, and additional information annotations. 
     """
-        
-    if read_function is None:
-        print('Please set a read function to open the files!')
-        return None
+
     # Plot by track
     if 'output_path' not in name_list:
         print('Please set the output name for the files!')
@@ -93,6 +86,7 @@ def plot(name_list,
     elif name_list['output_path'] is None:
         print('Please set the output name for the files!')
         return None
+    # Get the tracking table
     name_list = default_parameters(name_list, read_function)
     track_files = name_list['output_path'] + 'track/trackingtable/'
     # Check if trackingtable is a directory with parquet files
@@ -113,7 +107,7 @@ def plot(name_list,
         tck_table = tck_table.loc[tck_table['uid'].isin(uid_list)]
     if len(threshold_list) > 0:
         tck_table = tck_table.loc[tck_table['threshold'].isin(threshold_list)]
-    #Check if tck_table is empty
+    #Check if tck_table is empty and plot empty plot
     if len(tck_table) == 0:
         fig = plt.figure(figsize=figsize)
         # Add title to the figure
@@ -134,22 +128,59 @@ def plot(name_list,
     tck_table['geometry'] = tck_table['geometry'].apply(loads)
     tck_table['trajectory'] = tck_table['trajectory'].apply(loads)
     tck_table = tck_table.set_geometry('geometry')
-    # Read data
-    data = read_function(tck_table['file'].unique()[0])
-    data = np.where(nan_operation(data, nan_value), np.nan, data)
-    # Fit min and max values
-    if min_val is not None:
-        data = np.where(data <= min_val, min_val, data)
+
+    # Check nan_operation
+    if nan_operation is None:
+        # Get from name_list
+        nan_operation = name_list['operator']
+        # Reverse nan operator
+        if nan_operation == '==':
+            nan_operation = np.not_equal
+        elif nan_operation == '!=':
+            nan_operation = np.equal
+        elif nan_operation == '<':
+            nan_operation = np.greater
+        elif nan_operation == '>':
+            nan_operation = np.less
+        elif nan_operation == '<=':
+            nan_operation = np.greater_equal
+        elif nan_operation == '>=':
+            nan_operation = np.less_equal
+        else:
+            nan_operation = np.not_equal
+
+    # Use read_function to get the data or get data from tck_table
+    if read_function:
+        # Read the data
+        data = read_function(tck_table['file'].unique()[0])
+        # Set min and max values
+        if min_val is None:
+            min_val = np.nanmin(data)
+        if max_val is None:
+            max_val = np.nanmax(data)
+        # Apply nan_operation
+        data = np.where((data < min_val) | (data > max_val), np.nan, data)
     else:
-        min_val = np.nanmin(data)
-    if max_val is not None:
-        data = np.where(data >= max_val, max_val, data)
-    else:
-        max_val = np.nanmax(data)
+        # Get array x, y and values
+        x = tck_table['array_x'].explode().values.astype(int)
+        y = tck_table['array_y'].explode().values.astype(int)
+        values = tck_table['array_values'].explode().values
+        # Create a nan matrix
+        data = np.full((y.max() + 1, x.max() + 1), np.nan)
+        # Fill the matrix with the values
+        data[y, x] = values
+
+        # Set min and max values
+        if min_val is None:
+            min_val = np.nanmin(data)
+        if max_val is None:
+            max_val = np.nanmax(data)
+
     # Set of plot
     cmap = plt.get_cmap(cmap)
     colors = [cmap(i) for i in range(cmap.N)]
     cmap = LinearSegmentedColormap.from_list('mycmap', colors, N=num_colors)
+
     # Mount main figure
     fig = plt.figure(figsize=figsize)
     # Check if lon_min, lon_max, lat_min, lat_max are in name_list and if is not None
@@ -178,7 +209,7 @@ def plot(name_list,
             ax.add_feature(cfeature.BORDERS, linestyle=':')
         # Set grid
         gl = ax.gridlines(crs= ccrs.PlateCarree(), draw_labels=True,
-            linewidth=1, color='gray', alpha=0.5, linestyle='--')
+            linewidth=1, color='gray', alpha=0.2, linestyle='--')
         gl.top_labels = False
         gl.right_labels = False
         if grid_deg is not None:
@@ -193,30 +224,33 @@ def plot(name_list,
             ax.xaxis.set_major_formatter(lon_formatter)
             ax.yaxis.set_major_formatter(lat_formatter)
             ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
+
         # Set plot type
         if plot_type == 'imshow':
             ax.imshow(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, aspect='auto', 
-                        zorder=10)
+                        interpolation=interpolation, aspect='auto', vmax=max_val, vmin=min_val)
         elif plot_type == 'contourf':
             ax.contourf(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, zorder=10)
+                        interpolation=interpolation, vmax=max_val, vmin=min_val)
         elif plot_type == 'contour':
             ax.contour(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, zorder=10)
+                        interpolation=interpolation, vmax=max_val, vmin=min_val)
         elif plot_type == 'pcolormesh':
             lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
             lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
-            ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap, zorder=10)
+            ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap,
+                           vmax=max_val, vmin=min_val)
     else:
         if ax is None: # Comming from animation
             ax = fig.add_subplot(1, 1, 1)
-        ax.imshow(data, cmap=cmap, origin='lower', interpolation=interpolation, zorder=10)
+        ax.imshow(data, cmap=cmap, origin='lower', interpolation=interpolation,
+                aspect='auto', vmax=max_val, vmin=min_val)
+
     # Add title to the figure
     ax.text(0.5, 1.03, title +' ' +  str(timestamp) + ' ' +  time_zone,
             horizontalalignment='center', fontsize=title_fontsize,
             verticalalignment='bottom', transform=ax.transAxes, zorder=11)
-
+    # Filter only data inside the zoom region
     if len(zoom_region) == 4:
         tck_table = tck_table.cx[zoom_region[0]:zoom_region[1],
                                 zoom_region[2]:zoom_region[3]]
