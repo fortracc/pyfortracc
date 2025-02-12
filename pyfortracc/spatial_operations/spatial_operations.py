@@ -20,9 +20,7 @@ from pyfortracc.vector_methods.opticalflow_mtd import opticalflow_mtd
 from pyfortracc.vector_methods.ellipse_mtd import ellipse_mtd
 from .count_inside import count_inside
 from .overlay import overlay_
-from .within import within_
-from .contains import contains_
-from .spatial_class import continuous, merge, split
+from .spatial_class import continuous, merge, split, merge_split
 from .expansion import expansion
 from .trajectory import trajectory
 from .edge_clusters import edge_clusters
@@ -303,71 +301,38 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     # Update current frame based on index
     cur_frme.loc[ovrp_indx,'overlap'] = ovrp_area
     # Get index based on overlays
-    cont_indx_1, cont_indx_2 = continuous(overlays)
-    mergs_idx_1, mergs_idx_2, merge_frame = merge(overlays)
-    splits_idx_1, split_prev_idx, nw_splt_idx, nw_splt_prv_idx = split(overlays)
-    # Other spatial operations
-    contains = contains_(cur_frme, prv_frme)
-    cur_frme.loc[contains['index_1'].values,'contains'] = True
-    withins = within_(cur_frme, prv_frme)
-    cur_frme.loc[withins['index_1'].values,'within'] = True
-    # Check all operations index between, overlays, contains and within
-    # This is necessary because the operations can be overlapped
-    # and the index can be duplicated
-    if len(contains) > 0:
-        cont_idx_1_c, cont_idx_2_c = continuous(contains)
-        diff_cont = np.setdiff1d(cont_idx_1_c, cont_indx_1)
-        diff_cont_pos = np.where(np.isin(cont_idx_1_c, diff_cont))[0]
-        cont_idx_1_c = cont_idx_1_c[diff_cont_pos]
-        cont_idx_2_c = cont_idx_2_c[diff_cont_pos]
-        cont_indx_1 = np.append(cont_indx_1, cont_idx_1_c)
-        cont_indx_2 = np.append(cont_indx_2, cont_idx_2_c)
-        mergs_idx_1_c, mergs_idx_2_c, merge_df_c = merge(contains)
-        diff_mergs = np.setdiff1d(mergs_idx_1_c, mergs_idx_1)
-        diff_mergs_pos = np.where(np.isin(mergs_idx_1_c, diff_mergs))[0]
-        mergs_idx_1_c = mergs_idx_1_c[diff_mergs_pos]
-        mergs_idx_2_c = mergs_idx_2_c[diff_mergs_pos]
-        mergs_idx_1 = np.append(mergs_idx_1, mergs_idx_1_c)
-        mergs_idx_2 = np.append(mergs_idx_2, mergs_idx_2_c)
-        merge_df_c = merge_df_c.loc[merge_df_c['index_1'].isin(mergs_idx_1_c)]
-        merge_frame = pd.concat([merge_frame, merge_df_c], ignore_index=True)
-    if len(withins) > 0:
-        cont_idx_1_w, cont_idx_2_w = continuous(withins)
-        diff_cont = np.setdiff1d(cont_idx_1_w, cont_indx_1)
-        diff_cont_pos = np.where(np.isin(cont_idx_1_w, diff_cont))[0]
-        cont_idx_1_w = cont_idx_1_w[diff_cont_pos]
-        cont_idx_2_w = cont_idx_2_w[diff_cont_pos]
-        cont_indx_1 = np.append(cont_indx_1, cont_idx_1_w)
-        cont_indx_2 = np.append(cont_indx_2, cont_idx_2_w)
-        spl_idx_1_w, spl_prv_idx_w, nw_spl_idx, nw_spl_prv_idx  = split(withins)
-        diff_spl = np.setdiff1d(spl_idx_1_w, splits_idx_1)
-        diff_spl_pos = np.where(np.isin(spl_idx_1_w, diff_spl))[0]
-        spl_idx_1_w = spl_idx_1_w[diff_spl_pos]
-        spl_prv_idx_w = spl_prv_idx_w[diff_spl_pos]
-        splits_idx_1 = np.append(splits_idx_1, spl_idx_1_w)
-        split_prev_idx = np.append(split_prev_idx, spl_prv_idx_w)
-        nw_splt_idx = np.append(nw_splt_idx, nw_spl_idx)
-        nw_splt_prv_idx = np.append(nw_splt_prv_idx, nw_spl_prv_idx)
-    # Check if there is any intersection between mergs and splits
-    # If there is any intersection, the clusters are considered 
-    mergs_splits_idx = np.intersect1d(mergs_idx_1, splits_idx_1)
-    mergs_splits_idx = np.unique(mergs_splits_idx)        
+    cont_indx, cont_prv_indx = continuous(overlays)
+    mergs_idx, mergs_prv_idx, merge_frame = merge(overlays)
+    splits_idx, split_prev_idx, nw_splt_idx, nw_splt_prv_idx = split(overlays) 
+
+    # Classify merge splits index
+    cur_frme.loc[nw_splt_idx,'split_pr_idx'] =  nw_splt_prv_idx # Previous split
+    cur_frme.loc[mergs_idx,'merge_idx'] =  merge_frame['merge_ids'].values # Previous merge
+    cur_frme.loc[splits_idx,'split_idx'] =  split_prev_idx # Current split
+
+    # Add past_idx, merge_idx and split_pr_idx to current frame
+    cur_frme.loc[cont_indx, 'past_idx'] = cont_prv_indx # Continuous
+    cur_frme.loc[mergs_idx,'past_idx'] =  mergs_prv_idx # Merge
+    cur_frme.loc[splits_idx,'past_idx'] =  split_prev_idx # Split
+    
     # Update status, prev_idx, merge_idx, split_idx
-    cur_frme.loc[cont_indx_1,'status'] =  'CON'
-    cur_frme.loc[mergs_idx_1,'status'] =  'MRG'
-    cur_frme.loc[splits_idx_1,'status'] =  'SPL'
-    cur_frme.loc[nw_splt_idx,'status'] =  'NEW/SPL'
-    cur_frme.loc[mergs_splits_idx,'status'] =  'MRG/SPL'
-    cur_frme.loc[cont_indx_1, 'past_idx'] = cont_indx_2
-    cur_frme.loc[mergs_idx_1,'past_idx'] =  mergs_idx_2
-    cur_frme.loc[splits_idx_1,'past_idx'] =  split_prev_idx
-    cur_frme.loc[nw_splt_idx,'split_pr_idx'] =  nw_splt_prv_idx
-    cur_frme.loc[mergs_idx_1,'merge_idx'] =  merge_frame['merge_ids'].values
+    cur_frme.loc[cont_indx,'status'] =  'CON'
+    cur_frme.loc[mergs_idx,'status'] =  'MRG'
+    cur_frme.loc[splits_idx,'status'] =  'SPL'
+    cur_frme.loc[nw_splt_idx,'status'] =  'NEW/SPL'    
+    
+    # Check if there is any intersection between mergs and splits
+    # If there is any intersection, the clusters are considered
+    mrg_spl_idx, prev_past_idx = merge_split(mergs_idx, splits_idx,
+                                 cur_frme, prv_frme)
+    cur_frme.loc[mrg_spl_idx,'status'] =  'MRG/SPL'
+    cur_frme.loc[mrg_spl_idx,'past_idx'] =  prev_past_idx
+    
     # Mount the trajectory LineString, distance and direction
     # Select non null prev_idx is concat into a single array
     # This is necessary because the trajectory function only
     # works with non null prev_idx at the current frame
-    cur_non_null_idx = np.concatenate((cont_indx_1, mergs_idx_1, splits_idx_1))
+    cur_non_null_idx = np.concatenate((cont_indx, mergs_idx, splits_idx))
     if len(cur_non_null_idx) > 0:
         cur_trj = cur_frme.loc[cur_non_null_idx]
         prev_trj = prv_frme.loc[cur_trj['past_idx'].values]
@@ -389,14 +354,14 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
         cur_frme.loc[nw_splt_idx,'u_spl'] = u_
         cur_frme.loc[nw_splt_idx,'v_spl'] = v_
     # Merge method: Read instructions in merge_mtd.py
-    if nm_lst['mrg_correction'] and len(mergs_idx_1) > 0:
-        cur_mrg = cur_frme.loc[mergs_idx_1]
-        prev_mrgs = cur_frme.loc[mergs_idx_1,'merge_idx']
+    if nm_lst['mrg_correction'] and len(mergs_idx) > 0:
+        cur_mrg = cur_frme.loc[mergs_idx]
+        prev_mrgs = cur_frme.loc[mergs_idx,'merge_idx']
         perv_mrg_idx = prev_mrgs.explode().values
         prv_mrg = prv_frme.loc[perv_mrg_idx]
-        u_, v_= merge_mtd(cur_mrg, prv_mrg, mergs_idx_1, prev_mrgs)
-        cur_frme.loc[mergs_idx_1,'u_mrg'] = u_
-        cur_frme.loc[mergs_idx_1,'v_mrg'] = v_
+        u_, v_= merge_mtd(cur_mrg, prv_mrg, mergs_idx, prev_mrgs)
+        cur_frme.loc[mergs_idx,'u_mrg'] = u_
+        cur_frme.loc[mergs_idx,'v_mrg'] = v_
     # Inner cores method: Read instructions in incores_mtd.py
     if nm_lst['inc_correction'] and len(np.intersect1d(cur_thd_idx,
                                                     cur_non_null_idx)) > 0:

@@ -129,3 +129,45 @@ def split(operation):
     new_splts_idx = np.array(new_splts_idx)
     new_splts_prev_idx = np.array(new_splts_prev_idx)
     return splits_idx, split_prev_idx, new_splts_idx, new_splts_prev_idx
+
+
+def merge_split(mergs_idx_1, splits_idx_1, cur_frame, prev_frame):
+    """ 
+    Identify and retrieve information about merging and splitting clusters.
+
+    This function takes the previous index arrays 'mergs_idx_1' and 'splits_idx_1'
+    as input, along with the current and previous frames. It identifies the
+    intersection of merging and splitting clusters and retrieves the 'index_2'
+    values for the largest cluster in the previous frame. The result is a pair
+    of NumPy arrays containing the 'index_1' and 'index_2' values for the
+    identified merging and splitting clusters.
+
+    Parameters
+    ----------
+    mergs_idx_1 : array
+        array containing 'index_1' for current frame
+    splits_idx_1 : array
+        array containing 'index_1' for current frame
+    cur_frame : DataFrame
+
+    Returns
+    ----------
+    mergs_splits_idx : array
+        array containing 'index_1' for current frame
+    past_index : array
+        array containing 'index_2' for previous frame
+    """
+
+    # Find intersection of merging and splitting clusters using set operations, find duplicated past_idx values
+    cur_mrgsplt_idx = np.intersect1d(mergs_idx_1, splits_idx_1)
+    past_index = []
+    if len(cur_mrgsplt_idx) > 0:
+        # For event in cur_mrgsplt_idx:
+        for idx in cur_mrgsplt_idx:
+            prv_idx = cur_frame.loc[idx][['split_pr_idx','merge_idx']].explode().dropna().values
+            prv_idx = np.unique(prv_idx)
+            # Get index of the largest cluster in the previous frame
+            prv_idx = prev_frame.loc[prev_frame.index.isin(prv_idx)]['size'].idxmax()
+            # Append to past_index
+            past_index.append(prv_idx)
+    return cur_mrgsplt_idx, past_index
