@@ -221,7 +221,11 @@ def default_columns(name_list=None):
                 'array_x',
                 'vector_field',
                 'trajectory',
-                'geometry']
+                'geometry',
+                'cluster_id',
+                'past_idx',
+                'merge_idx',
+                'split_pr_idx']
     
     if len(name_list['thresholds']) > 1:
         # columns = columns + ['iuid']
