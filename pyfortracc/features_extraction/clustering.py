@@ -102,9 +102,9 @@ def ndimage_clustering(data, operator, threshold, min_size, eps=None):
         matrix with the clusters
     """
     mask = operator(data, threshold)
-    structure_von_neumann = [[0, 1, 0],
-                            [1, 1, 1],
-                            [0, 1, 0]]
+    structure_von_neumann = [[1, 1, 1],
+                             [1, 1, 1],
+                             [1, 1, 1]]
     clusters, numL = ndimage.label(mask, structure_von_neumann)
     sizes = ndimage.sum(mask, clusters, range(numL + 1))
     mask_size = sizes < min_size

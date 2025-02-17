@@ -2,7 +2,7 @@ import geopandas as gpd
 import cv2
 import numpy as np
 from shapely.ops import linemerge
-from shapely.geometry import Point, LineString, MultiLineString, MultiPoint
+from shapely.geometry import Point, LineString, MultiLineString
 from pyfortracc.utilities.utils import set_operator
 from pyfortracc.utilities.math_utils import point_position, calc_mean_uv
 from .opticalflow_filters import histogram_equalization
