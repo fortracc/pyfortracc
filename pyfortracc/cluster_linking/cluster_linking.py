@@ -145,8 +145,8 @@ def linking(args):
         cur_frame = refact_inside(cur_frame, uid_iter)
         # Update max uid
         uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
-        # Set lifetime to 0 because is the first frame
-        cur_frame['lifetime'] = 0
+        # Set lifetime equals to name_lst['delta_time']
+        cur_frame['lifetime'] = nm_lst['delta_time']
         # Write linked file
         write_parquet(cur_frame[linked_cols], output_file)
         return cur_frame, cur_stamp, uid_iter, cdx_range[-1]
@@ -209,7 +209,7 @@ def linking(args):
             lifetimes = prv_frame.loc[split_idx]['lifetime']
             cur_frame.loc[split_frs.index, 'lifetime'] = lifetimes.values
     # Fill NaN values to 0
-    cur_frame['lifetime'] = cur_frame['lifetime'].fillna(0)
+    cur_frame['lifetime'] = cur_frame['lifetime'].fillna(nm_lst['delta_time'])
     # Write linked file
     write_parquet(cur_frame[linked_cols], output_file)
     return cur_frame, cur_stamp, uid_iter, cdx_range[-1]
