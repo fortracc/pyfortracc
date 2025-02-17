@@ -17,8 +17,6 @@ import warnings
 warnings.filterwarnings("ignore")
 
 
-
-
 def process_frame(args):
       """Wrapper function to enable multiprocessing of the update function."""
       frame, read_function, cmap, cbar_min, cbar_max = args
