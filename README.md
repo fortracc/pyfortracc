@@ -106,6 +106,7 @@ Example Gallery
 =====================================================================
 To library have a gallery of examples that demonstrate the application of the algorithm in different situations.
 
+
 You can run the examples in Google Colab:
 
 |                                                                                    | Example                              |
