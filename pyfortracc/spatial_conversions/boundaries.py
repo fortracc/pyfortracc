@@ -106,7 +106,7 @@ def translate_boundary(args):
     parquet = read_parquet(parquet_file, None).reset_index()
     # Set used columns for translate boundary
     columns = ['timestamp','uid','status','threshold','size',
-                'mean','std','min','max','inside_clusters']
+                'mean','std','min','max','lifetime','inside_clusters']
     #Check if have more then one threshold, is true add column iuid
     if len(parquet['threshold'].unique()) > 1:
         columns.append('iuid')
