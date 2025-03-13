@@ -40,7 +40,7 @@ The pyForTraCC package can be installed in two ways: Directly by via the `pip` p
 To install or update pyForTraCC directly from the Python Package Index (PyPI), use:
 
 ```bash
-pip3 install -U pyfortracc
+pip install -U pyfortracc
 ```
 
 #### 2. Installing from GitHub  
