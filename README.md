@@ -65,8 +65,8 @@ After downloading, you can install the package directly. It is recommended to us
    cd pyfortracc
    python3 -m venv venv
    source venv/bin/activate  # On Linux/macOS
-   .venv\Scripts\activate  # On Windows
-   pip3 install .
+   .venv\bin\activate  # On Windows
+   pip install .
    ```
 
 Running pyFortracc
