@@ -66,8 +66,8 @@ def opticalflow_mtd(cur_df, prev_df, name_list, geotrf):
         optical_flow = farneback
     else:
         optical_flow = lucas_kanade
-        raise ValueError(f"optical flow method {name_list['opt_mtd']} \
-                         not implemented, by default using lucas_kanade")
+        print(f"optical flow method {name_list['opt_mtd']} \
+                not implemented, by default using lucas_kanade")
     
 
     # Mount current image based on the current frame
