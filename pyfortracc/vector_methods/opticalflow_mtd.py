@@ -3,17 +3,15 @@ import cv2
 import numpy as np
 from shapely.ops import linemerge
 from shapely.geometry import Point, LineString, MultiLineString
-from pyfortracc.utilities.utils import set_operator
 from pyfortracc.utilities.math_utils import point_position, calc_mean_uv
-from .opticalflow_filters import histogram_equalization
+from .opticalflow_filters import histogram_equalization, apply_gaussian_blur
 from shapely.affinity import affine_transform
-
 
 # Set number of threads cv2
 cv2.setNumThreads(2)
 
 
-def opticalflow_mtd(cur_df, prev_df, read_fnc, name_list, geotrf):
+def opticalflow_mtd(cur_df, prev_df, name_list, geotrf):
     """
     Calculate optical flow between two frames using specified optical flow methods.
 
@@ -61,25 +59,44 @@ def opticalflow_mtd(cur_df, prev_df, read_fnc, name_list, geotrf):
     
     # Set output
     index, u_, v_, vector_field = [], [], [], []
-    # Set read_function parameters to use in map function
-    min_val = cur_df['threshold'].min()
-    max_val = cur_df['threshold'].max()
-    operator = set_operator(name_list['operator'])
     # Set optical flow method
     if name_list['opt_mtd'] == 'lucas-kanade':
         optical_flow = lucas_kanade
     elif name_list['opt_mtd'] == 'farneback':
         optical_flow = farneback
+    else:
+        optical_flow = lucas_kanade
+        print(f"optical flow method {name_list['opt_mtd']} \
+                         not implemented, by default using lucas_kanade")
+
+    # Mount current image based on the current frame
+    cur_y = cur_df['array_y'].explode().values.astype(int)
+    cur_x = cur_df['array_x'].explode().values.astype(int)
+    cur_v = cur_df['array_values'].explode().values
+    current_img = np.zeros((name_list['y_dim'], name_list['x_dim']), dtype=np.float32)
+    current_img[cur_y, cur_x] = cur_v
+
+    # Mount previous image based on the previous frame
+    prev_y = prev_df['array_y'].explode().values.astype(int)
+    prev_x = prev_df['array_x'].explode().values.astype(int)
+    prev_v = prev_df['array_values'].explode().values
+    previous_img = np.zeros((name_list['y_dim'], name_list['x_dim']), dtype=np.float32)
+    previous_img[prev_y, prev_x] = prev_v
+
+    # Normalize images
+    current_img = cv2.normalize(current_img, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+    previous_img = cv2.normalize(previous_img, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+
+    # Apply histogram equalization
+    current_img = histogram_equalization(current_img)
+    previous_img = histogram_equalization(previous_img)
+
+    # Add cur_img and prev_img to img_frames list
+    img_frames = [current_img, previous_img]
+    
     # Initialize empty array for current points
     currPts = np.empty((0,1,2), dtype=int)
-    # Mount img_frames list
-    img_frames = list(prev_df.file.unique()) # Get previous paths
-    img_frames.append(cur_df.file.unique()[0]) # Add current path
-    # Reverse the list to use reverse image order (t-1,t-2,t-3,...)
-    img_frames = sorted(img_frames)[::-1]
-    # Read images, segment the image based on the threshold and normalize image
-    img_frames = list(map(lambda x: read_norm(x, read_fnc, operator,
-                                            min_val, max_val), img_frames))
+
     # Save p0 points
     v_field, p0_, u_, v_ = [], [], [], []
     # Iterate over the images to calculate the optical flow
@@ -105,6 +122,7 @@ def opticalflow_mtd(cur_df, prev_df, read_fnc, name_list, geotrf):
             p0 = affine_transform(Point(point[1]), geotrf)
             p0_.append(p0)
         currPts = prevPts # Set current points
+
     # Check if no vector field was calculated
     if len(v_field) == 0:
         return [], [], [], []   
@@ -147,78 +165,6 @@ def opticalflow_mtd(cur_df, prev_df, read_fnc, name_list, geotrf):
             vector_field.append(m_lines)
     return index, u_, v_, vector_field
 
-    
-def read_norm(path,read_function, operator, min_val, max_val):
-    """
-    Read an image, segment it based on a given operator, and normalize the image.
-
-    This function reads an image from the specified path using the provided `read_function`, applies a segmentation operator
-    to filter the image based on a threshold, and then normalizes the image to a specified range.
-
-    Parameters
-    ----------
-    path : str
-        The file path of the image to be read.
-    read_function : function
-        Function used to read the image from the file path. This function should take a file path as input and return an image.
-    operator : function
-        Function used for segmenting the image. This function should take an image and a minimum threshold value as input and return a binary mask.
-    min_val : float
-        The minimum threshold value used by the 'operator' function to segment the image.
-    max_val : float
-        The maximum value for normalization. The image pixel values will be scaled to this range.
-
-    Returns
-    -------
-    np.ndarray
-        The processed image, segmented and normalized.
-
-    Notes
-    -----
-    - The 'read_function' should be capable of handling image reading operations and returning images in a format compatible with numpy operations.
-    - The 'operator' function is expected to return a boolean array or mask where the condition is met based on 'min_val'. Pixels not meeting the condition will be set to NaN.
-    - Normalization is performed using the 'norm_img' function, which scales the image pixel values to a range defined by 'min_val' and 'max_val'.
-    """
-    img = read_function(path)
-    img = np.where(operator(img, min_val), img, np.nan)
-    img = norm_img(img, min_value=min_val, max_value=max_val)
-    return img
-
-def norm_img(matrix, min_value=None, max_value=None):
-    """
-    Normalize the image matrix to the range of 0 to 255 and apply histogram equalization.
-
-    This function first replaces NaN values in the image matrix with 0. Then it normalizes the pixel values of the matrix 
-    to the range of 0 to 255 using the `cv2.normalize` function. After normalization, it applies histogram equalization to enhance
-    the contrast of the image.
-
-    Parameters
-    ----------
-    matrix : np.ndarray
-        The image matrix to be normalized. It can be any numerical matrix where NaN values are replaced by 0, and pixel values 
-        are scaled to the 0-255 range.
-    min_value : float, optional
-        The minimum value for normalization. Not used in this implementation.
-    max_value : float, optional
-        The maximum value for normalization. Not used in this implementation.
-
-    Returns
-    -------
-    np.ndarray
-        The normalized and histogram-equalized image matrix.
-
-    Notes
-    -----
-    - NaN values in the matrix are replaced with 0 using `np.nan_to_num`.
-    - The `cv2.normalize` function scales the matrix values to the 0-255 range.
-    - Histogram equalization is applied to enhance the contrast of the image.
-    """
-    matrix = np.nan_to_num(matrix, nan=0.0) # Replace nan values to 0
-    # Normalize matrix between 0 and 255
-    matrix = cv2.normalize(matrix, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
-    # Apply histogram equalization
-    matrix = histogram_equalization(matrix)
-    return matrix
     
 def lucas_kanade(current_img, previous_img, currPts):
     """ 

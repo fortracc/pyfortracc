@@ -32,6 +32,7 @@ name_list['spl_correction'] = True # Set to True to apply the Split correction
 name_list['mrg_correction'] = True # Set to True to apply the Merge correction
 name_list['inc_correction'] = True # Set to True to apply the Inner Cores correction
 name_list['opt_correction'] = True # Set to True to apply the Optical Flow correction
+name_list['opt_mtd'] = 'farneback' # 'farnerback' or 'lucas_kanade'
 name_list['elp_correction'] = True # Set to True to apply the Ellipse correction
 name_list['validation'] = True # Set to True to apply the validation of corrections
 name_list['validation_scores'] = True  # Set to True to get the scores of the validation
@@ -45,11 +46,11 @@ if __name__ == '__main__':
         zip_ref.extractall('input')
     # Run pyfortracc
     print('pyFortracc version', pyfortracc.__version__)
-    pyfortracc.features_extraction(name_list, read_function, parallel=False)
+    pyfortracc.features_extraction(name_list, read_function, parallel=True)
     pyfortracc.spatial_operations(name_list, read_function, parallel=True)
     pyfortracc.cluster_linking(name_list)
     pyfortracc.concat(name_list, clean=True)
-    pyfortracc.post_processing.compute_duration(name_list, parallel=False)
+    pyfortracc.post_processing.compute_duration(name_list, parallel=True)
     pyfortracc.spatial_conversions(name_list, boundary=True, trajectory=True, vector_field=True,
                                    cluster=True, vel_unit='m/s', driver='GeoJSON')
     pyfortracc.plot(name_list=name_list, timestamp='2014-02-12 11:00:00',
