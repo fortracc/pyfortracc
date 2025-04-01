@@ -221,7 +221,6 @@ def spatial_operation(args):
     if nm_lst['opt_correction']:
         opt_idx, u_, v_, v_field = opticalflow_mtd(cur_frame,
                                                    prv_frame,
-                                                   read_fnc,
                                                    nm_lst,
                                                    geotrf)
         # Update current frame based on index
