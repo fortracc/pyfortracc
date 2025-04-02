@@ -79,7 +79,11 @@ def translate_trajectory(args):
     # Open parquet file
     parquet = read_parquet(parquet_file, None).reset_index()
     # Set used columns for translate boundary
-    columns = ['cindex','timestamp', 'uid', 'iuid', 'status', 'threshold']
+    columns = ['cindex','timestamp', 'uid', 'status', 'threshold']
+    #Check if have more then one threshold, is true add column iuid
+    if len(parquet['threshold'].unique()) > 1:
+        columns.append('iuid')
+        columns.insert(2, columns.pop(columns.index('iuid')))
     trajectories_ = parquet['trajectory']
     # Load geometry
     trajectories_ = trajectories_.apply(loads)
