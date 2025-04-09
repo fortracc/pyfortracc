@@ -44,7 +44,7 @@ The tracking table serves as the primary output of the algorithm, containing det
   * SPL: Cluster resulting from a split
   * MRG: Cluster resulting from a merge
   * MRG/SPL: Cluster involved in both merge and split simultaneously
-- `u_`, `v_` (float64): Displacement vector components. These components always originate from the centroid of the cluster (central point), and the angular direction of the components is based on the direction in which the cluster moves. The units depend on the namelist configuration. If lat_min, lat_max, lon_min, and lon_max keys are present, the units will be based on the spatiotemporal dimensions of the data. For example, if pixel dimensions are in degrees and temporal resolution is in minutes, the components will be in degrees/min.
+- `u_`, `v_` (float64): Displacement vector components of the cluster.
 - `inside_clusters` (object): Identifiers of clusters contained within this cluster.
 - `inside_idx` (object): Indices of clusters contained within this cluster.
 - `size` (int64): Cluster size in number of pixels.
@@ -57,6 +57,18 @@ The tracking table serves as the primary output of the algorithm, containing det
 - `geometry` (object): Geometric representation of the cluster's boundary (Polygon).
 - `lifetime` (int64): Accumulated lifetime of the cluster in minutes.
 - `expansion` (float64): Normalized expansion rate of the cluster's area (in 10⁻⁶ s⁻¹). Calculated using the average area between two consecutive timesteps and the difference in size over time. This metric helps quantify the growth or shrinkage of clusters.
+
+
+.. note::
+
+  The `u_`, `v_` components represent the displacement vector components originating from the centroid of the cluster (central point), as illustrated in the figure below. These components indicate the direction and magnitude of the cluster's movement. It is important to note that the angular direction of these components is determined by the movement direction of the cluster, and their units depend on the namelist configuration. 
+
+  If the `lat_min`, `lat_max`, `lon_min`, and `lon_max` keys are present in the namelist, the units will correspond to the spatiotemporal dimensions of the data. For instance, if the pixel dimensions are in degrees and the temporal resolution is in minutes, the components will be expressed in degrees per minute. Users should ensure that the configuration aligns with their data's spatial and temporal resolution to interpret the results accurately.
+
+.. figure:: image/vector_componentes_uv.jpeg
+  :align: center
+  :alt: Displacement vector components illustration
+
 
 Due to the nature of the overlap-centroid-based tracking approach employed in pyForTraCC, vector component extraction can be compromised by cluster deformities. This is a typical issue when dealing with non-rigid objects, such as meteorological phenomena, where shape changes between consecutive timesteps can lead to inaccurate displacement vectors. To address this challenge, the algorithm implements various vector correction methods:
 
