@@ -48,12 +48,14 @@ Here is an example of how to read the tracking table using Pandas:
 
 **Tracking Table Columns:**
 
+- `cindex` (int[64]): Index that counts the number of lines for all .parquet files.
 - `timestamp` (datetime64[us]): Temporal information of the cluster.
 - `uid` (float64): Global unique identifier of the cluster.
 - `iuid` (float64): Internal unique identifier used for cluster relationships.
 - `threshold_level` (int64): Index of the threshold level in the thresholds list.
 - `threshold` (float64): Numerical value of the threshold.
 - `status` (object): Status of the cluster (NEW, CON, SPL, MRG, MRG/SPL).
+
   * NEW: New cluster with no predecessors
   * CON: Continuation of a cluster from previous timestep
   * SPL: Cluster resulting from a split
@@ -81,9 +83,9 @@ Here is an example of how to read the tracking table using Pandas:
   If the `lat_min`, `lat_max`, `lon_min`, and `lon_max` keys are present in the namelist, the units will correspond to the spatiotemporal dimensions of the data. For instance, if the pixel dimensions are in degrees and the temporal resolution is in minutes, the components will be expressed in degrees per minute. Users should ensure that the configuration aligns with their data's spatial and temporal resolution to interpret the results accurately.
 
 .. figure:: image/vector_componentes_uv.jpeg
-  :align: center
-  :alt: Displacement vector components illustration
-  :scale: 75%
+   :align: center
+   :alt: Displacement vector components illustration
+   :width: 400px
 
 
 Due to the nature of the overlap-centroid-based tracking approach employed in pyForTraCC, vector component extraction can be compromised by cluster deformities. This is a typical issue when dealing with non-rigid objects, such as meteorological phenomena, where shape changes between consecutive timesteps can lead to inaccurate displacement vectors. To address this challenge, the algorithm implements various vector correction methods:
