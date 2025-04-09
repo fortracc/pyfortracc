@@ -44,7 +44,7 @@ The tracking table serves as the primary output of the algorithm, containing det
   * SPL: Cluster resulting from a split
   * MRG: Cluster resulting from a merge
   * MRG/SPL: Cluster involved in both merge and split simultaneously
-- `u_`, `v_` (float64): Displacement vector components. The units depend on the namelist configuration. If lat_min, lat_max, lon_min, and lon_max keys are present, the units will be based on the spatiotemporal dimensions of the data. For example, if pixel dimensions are in degrees and temporal resolution is in minutes, the components will be in degrees/min.
+- `u_`, `v_` (float64): Displacement vector components. These components always originate from the centroid of the cluster (central point), and the angular direction of the components is based on the direction in which the cluster moves. The units depend on the namelist configuration. If lat_min, lat_max, lon_min, and lon_max keys are present, the units will be based on the spatiotemporal dimensions of the data. For example, if pixel dimensions are in degrees and temporal resolution is in minutes, the components will be in degrees/min.
 - `inside_clusters` (object): Identifiers of clusters contained within this cluster.
 - `inside_idx` (object): Indices of clusters contained within this cluster.
 - `size` (int64): Cluster size in number of pixels.
@@ -56,13 +56,21 @@ The tracking table serves as the primary output of the algorithm, containing det
 - `trajectory` (object): Representation of the cluster's trajectory as a LineString object.
 - `geometry` (object): Geometric representation of the cluster's boundary (Polygon).
 - `lifetime` (int64): Accumulated lifetime of the cluster in minutes.
+- `expansion` (float64): Normalized expansion rate of the cluster's area (in 10⁻⁶ s⁻¹). Calculated using the average area between two consecutive timesteps and the difference in size over time. This metric helps quantify the growth or shrinkage of clusters.
 
 Due to the nature of the overlap-centroid-based tracking approach employed in pyForTraCC, vector component extraction can be compromised by cluster deformities. This is a typical issue when dealing with non-rigid objects, such as meteorological phenomena, where shape changes between consecutive timesteps can lead to inaccurate displacement vectors. To address this challenge, the algorithm implements various vector correction methods:
 
-- **Split/merge correction**: Adjusts vectors when clusters undergo splitting or merging events
-- **Inner core correction**: Uses internal structures of clusters for more stable tracking
-- **Optical flow correction**: Applies computer vision techniques (Lucas-Kanade and Farneback methods) to estimate motion fields
-- **Ellipse fitting correction**: Approximates clusters with ellipses to normalize shape changes during tracking
+- **Split/merge correction**: Adjusts vectors when clusters undergo splitting or merging events.
+- **Inner core correction**: Uses internal structures of clusters for more stable tracking.
+- **Optical flow correction**: Applies computer vision techniques (Lucas-Kanade and Farneback methods) to estimate motion fields.
+- **Ellipse fitting correction**: Approximates clusters with ellipses to normalize shape changes during tracking.
+
+For each correction method, new columns are created in the tracking table to store the corrected displacement vector components. These columns are named as follows:
+- `u_spl`, `v_spl`: Corrected displacement components for split events.
+- `u_mrg`, `v_mrg`: Corrected displacement components for merge events.
+- `u_inc`, `v_inc`: Corrected displacement components for inner core corrections.
+- `u_opt`, `v_opt`: Corrected displacement components for optical flow corrections.
+- `u_elp`, `v_elp`: Corrected displacement components for ellipse fitting corrections.
 
 These correction methods significantly attenuate errors in displacement vector composition, improving trajectory accuracy and overall tracking performance. For more detailed information about vector correction methods, please refer to the dedicated documentation in `doc/CF/CORRECTION.rst` and the published article: https://doi.org/10.3390/rs14215408.
 
