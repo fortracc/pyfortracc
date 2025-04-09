@@ -9,12 +9,14 @@
 import os
 import sys
 import sphinx_bootstrap_theme
+import time
 
 sys.path.insert(0, os.path.abspath('../'))
 
 project = 'pyForTraCC'
-copyright = '2024, COPDT/CGIP/INPE (Brazil)'
-author = 'Helvecio Neto, Alan Calheiros'
+current_year = time.strftime("%Y")
+copyright = f'{current_year}, COPDT/CGIP/INPE (Brazil)'
+author = 'Helvecio B. L. Neto, Alan J. P. Calheiros, Adriano P. Almeida, Arturo Sanchez, and Milton B. Silva'
 release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
