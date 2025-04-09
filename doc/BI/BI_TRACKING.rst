@@ -4,7 +4,7 @@ Tracking
 Tracking Routine
 --------------------------------------------------------
 
-The tracking module represents the core of the pyForTraCC algorithm, responsible for identifying and tracking clusters in time-varying two-dimensional data fields. The entire tracking routine is based on parameters configured in the name_list as described in "doc/BI/BI_NAMELIST.rst", and all tracking outputs are generated according to user configurations. This module utilizes tracking parameters and a custom data reading function, enabling adaptation to various input data types. The output of this process is stored as a series of Parquet files in the `trackingtable` directory, forming the complete tracking table.
+The tracking module represents the core of the pyForTraCC algorithm, responsible for identifying and tracking clusters in time-varying two-dimensional data fields. The entire tracking routine is based on parameters configured in the name_list as described in `NAME_LIST <https://pyfortracc.readthedocs.io/en/latest/BI/BI_NAMELIST.html>`_, and all tracking outputs are generated according to user configurations. This module utilizes tracking parameters and a custom data reading function, enabling adaptation to various input data types. The output of this process is stored as a series of Parquet files in the `trackingtable` directory, forming the complete tracking table.
 
 The tracking process comprises four primary modules:
 
@@ -29,7 +29,7 @@ Here is the Python code for tracking:
 Tracking Table
 --------------------------------------------------------
 
-The tracking table serves as the primary output of the algorithm, containing detailed information about each identified cluster over time. It consists of a collection of Parquet files located in the output directory (`output_path/trackingtable`). The information is stored in a tabular format organized chronologically, providing comprehensive data about clusters at each threshold level.
+The tracking table serves as the primary output of the algorithm, containing detailed information about each identified cluster over time. It consists of a collection of Parquet files located in the output directory (output_path + `/track/trackingtable`). The information is stored in a tabular format organized chronologically, providing comprehensive data about clusters at each threshold level.
 
 **Tracking Table Columns:**
 
@@ -66,12 +66,13 @@ Due to the nature of the overlap-centroid-based tracking approach employed in py
 - **Ellipse fitting correction**: Approximates clusters with ellipses to normalize shape changes during tracking.
 
 For each correction method, new columns are created in the tracking table to store the corrected displacement vector components. These columns are named as follows:
+
 - `u_spl`, `v_spl`: Corrected displacement components for split events.
 - `u_mrg`, `v_mrg`: Corrected displacement components for merge events.
 - `u_inc`, `v_inc`: Corrected displacement components for inner core corrections.
 - `u_opt`, `v_opt`: Corrected displacement components for optical flow corrections.
 - `u_elp`, `v_elp`: Corrected displacement components for ellipse fitting corrections.
 
-These correction methods significantly attenuate errors in displacement vector composition, improving trajectory accuracy and overall tracking performance. For more detailed information about vector correction methods, please refer to the dedicated documentation in `doc/CF/CORRECTION.rst` and the published article: https://doi.org/10.3390/rs14215408.
+These correction methods significantly attenuate errors in displacement vector composition, improving trajectory accuracy and overall tracking performance. For more detailed information about vector correction methods, please refer to the dedicated documentation in `CORRECTION <https://pyfortracc.readthedocs.io/en/latest/CF/CORRECTION.html>`_ and the published article: `https://doi.org/10.3390/rs14215408 <https://doi.org/10.3390/rs14215408>`_.
 
 For more information and detailed examples, please refer to the examples section.
