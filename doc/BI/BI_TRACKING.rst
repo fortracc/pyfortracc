@@ -42,7 +42,7 @@ Here is an example of how to read the tracking table using Pandas:
   tracking_table = pd.concat(pd.read_parquet(f) for f in tracking_files)
   tracking_table.head()
 
-.. figure:: image/tracking_table.jpg
+.. figure:: image/tracking_table.png
   :align: center
   :alt: Tracking table illustration
 
@@ -83,6 +83,7 @@ Here is an example of how to read the tracking table using Pandas:
 .. figure:: image/vector_componentes_uv.jpeg
   :align: center
   :alt: Displacement vector components illustration
+  :scale: 75%
 
 
 Due to the nature of the overlap-centroid-based tracking approach employed in pyForTraCC, vector component extraction can be compromised by cluster deformities. This is a typical issue when dealing with non-rigid objects, such as meteorological phenomena, where shape changes between consecutive timesteps can lead to inaccurate displacement vectors. To address this challenge, the algorithm implements various vector correction methods:
