@@ -73,7 +73,7 @@ Here is an example of how to read the tracking table using Pandas:
 - `trajectory` (object): Representation of the cluster's trajectory as a LineString object.
 - `geometry` (object): Geometric representation of the cluster's boundary (Polygon).
 - `lifetime` (int64): Accumulated lifetime of the cluster in minutes.
-- `expansion` (float64): Normalized expansion rate of the cluster's area (in 10⁻⁶ s⁻¹). Calculated using the average area between two consecutive timesteps and the difference in size over time. This metric helps quantify the growth or shrinkage of clusters.
+- `expansion` (float64): Normalized expansion rate of the cluster’s area (in 10⁻⁶ s⁻¹). Calculated using the average area between two consecutive timesteps and the difference in size over time. This metric helps quantify the growth or shrinkage of clusters (e.g. the divergence/convergence of clouds for infrared satellite tracking).
 
 
 .. note::
