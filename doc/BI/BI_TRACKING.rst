@@ -31,6 +31,21 @@ Tracking Table
 
 The tracking table serves as the primary output of the algorithm, containing detailed information about each identified cluster over time. It consists of a collection of Parquet files located in the output directory (output_path + `/track/trackingtable`). The information is stored in a tabular format organized chronologically, providing comprehensive data about clusters at each threshold level.
 
+Here is an example of how to read the tracking table using Pandas:
+
+.. code-block:: python
+
+  import pandas as pd
+  import glob
+
+  tracking_files = sorted(glob.glob(name_list['output_path'] + '/track/trackingtable/*.parquet'))
+  tracking_table = pd.concat(pd.read_parquet(f) for f in tracking_files)
+  tracking_table.head()
+
+.. figure:: image/tracking_table.jpg
+  :align: center
+  :alt: Tracking table illustration
+
 **Tracking Table Columns:**
 
 - `timestamp` (datetime64[us]): Temporal information of the cluster.
