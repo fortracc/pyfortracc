@@ -1,0 +1,33 @@
+name: Feedback / Comentário
+description: Leave feedback about your experience / Deixe um comentário sobre sua experiência
+title: "[Feedback] "
+labels: [feedback]
+body:
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language / Idioma
+      description: Select your preferred language / Selecione seu idioma preferido
+      options:
+        - English
+        - Português
+  - type: markdown
+    attributes:
+      value: |
+        ### English
+        Please fill the form below if you selected **English** above.
+  - type: textarea
+    id: english_feedback
+    attributes:
+      label: What did you think of the code?
+      placeholder: Share your thoughts or suggestions here
+  - type: markdown
+    attributes:
+      value: |
+        ### Português
+        Por favor, preencha o formulário abaixo se você selecionou **Português** acima.
+  - type: textarea
+    id: portuguese_feedback
+    attributes:
+      label: O que você achou do código?
+      placeholder: Compartilhe sua opinião ou sugestões aqui
