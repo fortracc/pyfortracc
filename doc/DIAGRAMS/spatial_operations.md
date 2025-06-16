@@ -9,18 +9,14 @@ classDiagram
         +name_lst: dict
         +read_fnc: function
         +parallel: bool
+        +current_frame: GeoDataFrame
+        +previous_frame: GeoDataFrame
+        +threshold: float
         --
         +spatial_operations()
         +initialize_parameters()
         +load_feature_files()
         +setup_edges_and_geotransform()
-    }
-
-    class Operations {
-        +current_frame: GeoDataFrame
-        +previous_frame: GeoDataFrame
-        +threshold: float
-        --
         +operations()
         +process_frame_pair()
     }
@@ -34,13 +30,9 @@ classDiagram
     class SpatialClassification {
         --
         +continuous()
-        +merge()
+        +merge() 
         +split()
         +merge_split()
-    }
-
-    class TrajectoryAnalysis {
-        --
         +trajectory()
         +expansion()
         +count_inside()
@@ -59,13 +51,12 @@ classDiagram
     class Validation {
         --
         +validation()
-        +select_best_far()
+        +quality_control()
     }
 
-    SpatialOperations --> Operations : executa
-    Operations --> OverlayAnalysis : usa
-    Operations --> SpatialClassification : usa
-    Operations --> TrajectoryAnalysis : usa
-    Operations --> VectorMethods : aplica
-    Operations --> Validation : valida
+    SpatialOperations --> OverlayAnalysis : usa
+    SpatialOperations --> SpatialClassification : usa
+    SpatialOperations --> VectorMethods : aplica
+    Validation --> VectorMethods : valida
+    %% Validation --> SpatialOperations : retorna
 ```
