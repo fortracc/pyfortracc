@@ -16,6 +16,8 @@ from pyfortracc.cluster_linking import linking
 from pyfortracc.concat import read_files as concat_files
 from pyfortracc.concat import default_columns
 
+from pyfortracc.spatial_conversions.boundaries import translate_boundary
+
 def forecast(name_list, read_function):
     """
     Generate a forecast based on the input tracking data and save the forecast images.
@@ -114,7 +116,6 @@ def forecast(name_list, read_function):
             # Update name_list with timestamp pattern for numpy
             name_list['timestamp_pattern'] = '%Y%m%d_%H%M%S.npy'
 
-
         # 2 - Second Step of the forecast is extract features from the forecast image
         print(f"- Extracting features from forecast image lead time +{ftsmp + 1}: {forecast_times[ftsmp]}")
   
@@ -145,6 +146,7 @@ def forecast(name_list, read_function):
         cur_file = name_list['output_features'] + f"{forecast_times[ftsmp].strftime('%Y%m%d_%H%M')}.parquet"
         prv_file = tracked_files[-1] # Use the last tracked file as previous file
         prv_files = tracked_files[-1:]  # Use the last tracked file as previous files
+
         # Perform spatial operations
         spatial_operation((
                           -1, 
@@ -211,19 +213,26 @@ def forecast(name_list, read_function):
         # Concatenate the forecast files
         concat_files(concat_args)
 
-        
-
         # Update tracked files with the new forecast file
         tracked_files.append(forecast_table + forecast_times[ftsmp].strftime('%Y%m%d_%H%M') + '.parquet')
 
-        # Remove old tracked files
-        tracked_files = tracked_files[1:]  # Keep only the last forecast file
+        # Pop first tracked file
+        tracked_files.pop(0)
 
-        print(tracked_files)
+        parquet = pd.DataFrame({'file': [forecast_table + forecast_times[ftsmp].strftime('%Y%m%d_%H%M') + '.parquet']})
+        parquets = parquet.groupby(parquet.index)
 
-        print(pd.read_parquet(tracked_files))
-   
-        # # Read the concatenated file
-        # print(pd.read_parquet(forecast_table + forecast_times[ftsmp].strftime('%Y%m%d_%H%M') + '.parquet'))
+        pathlib.Path(name_list['output_path'] + 'geometry/boundary/').mkdir(parents=True, exist_ok=True)
 
-        # exit()
+        for _, parquet in enumerate(parquets):
+            translate_boundary((
+                'km/h',
+                name_list['output_path'] + 'geometry/boundary/',
+                'GeoJSON',
+                parquet,
+                None,  # pixel_area not used in forecast
+                None,  # xlat not used in forecast
+                None,  # xlon not used in forecast
+                None
+            ))
+        

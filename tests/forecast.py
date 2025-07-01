@@ -35,7 +35,7 @@ name_list['min_overlap'] = 20 # Minimum overlap between clusters in percentage
 
 # Not mandatory parameters, if not set, the algorithm will use the default values
 # name_list['track_start'] = '2014-08-16 11:00:00' # Start time of the tracking in UTC
-name_list['track_end'] = '2014-08-16 22:00:00' # End time of the tracking in UTC
+# name_list['track_end'] = '2014-08-16 22:00:00' # End time of the tracking in UTC
 
 # Optional parameters, if not set, the algorithm will not use geospatial information
 name_list['lon_min'] = -62.1475 # Min longitude of data in degrees
@@ -44,8 +44,8 @@ name_list['lat_min'] = -5.3048 # Min latitude of data in degrees
 name_list['lat_max'] = -0.9912 # Max latitude of data in degrees
 
 name_list['forecast_time'] = '2014-08-16 14:00:00'
-name_list['observation_window'] = 10 # in minutes
-name_list['lead_time'] = 2
+name_list['observation_window'] = 3 # Files
+name_list['lead_time'] = 3
 
 name_list['edges'] = True # If True, the edges of the clusters will be considered in the tracking
 

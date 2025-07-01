@@ -46,6 +46,10 @@ def persistence(tracked_files, name_list):
     # Filter track_df to only include the latest timestamp based on the latest clusters but keep the values of other timestamps
     track_df = track_df[track_df[cluster_columns].apply(tuple, axis=1).isin(track_df.loc[latest_clusters, cluster_columns].apply(tuple, axis=1))]
 
+    # print(tracked_files)
+    # print(track_df)
+    # input()
+
     # Check if name_list have lat_min, lat_max, lon_min, lon_max is different from None
     if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
         # Convert u_ and v_ unints are in degrees to pixels

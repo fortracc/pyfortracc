@@ -100,13 +100,16 @@ def get_files_interval(files_list, files_pattern, name_list):
         forecast_stamps = [datetime.strptime(pathlib.Path(file).name, files_pattern) for file in files_list]
         # Convert forecast_time to datetime object
         forecast_time = datetime.strptime(name_list['forecast_time'], '%Y-%m-%d %H:%M:%S')
-        # Get forecast window
-        observation_window = timedelta(minutes=name_list['observation_window'])
-        # filter files based on the forecast time and backward observation window
+        # Get forecast window is a number of files before the forecast time
+        num_obs_files = name_list['observation_window']
+        # Get the forecast window files based in position of forecast_time and num_obs files, exemple: get last 5 files before forecast_time in files_list
+        # Not use any temporal argument
         files_list = [
             file for file, stamp in zip(files_list, forecast_stamps)
-            if forecast_time - observation_window <= stamp <= forecast_time
+            if stamp <= forecast_time
         ]
+        # Get the last num_obs_files files before the forecast time
+        files_list = files_list[-num_obs_files:]
 
     return files_list
 
