@@ -28,7 +28,8 @@ def persistence_mean(track_df):
 def persistence(tracked_files, name_list):
 
     # Read the tracked files
-    track_df = pd.read_parquet(tracked_files)
+    dfs = [pd.read_parquet(f) for f in tracked_files]
+    track_df = pd.concat(dfs, ignore_index=True)
 
     # Define colunas de agrupamento
     if len(name_list['thresholds']) > 1:
@@ -45,10 +46,6 @@ def persistence(tracked_files, name_list):
     latest_clusters = track_df.loc[latest_clusters].dropna(subset=['u_', 'v_']).index
     # Filter track_df to only include the latest timestamp based on the latest clusters but keep the values of other timestamps
     track_df = track_df[track_df[cluster_columns].apply(tuple, axis=1).isin(track_df.loc[latest_clusters, cluster_columns].apply(tuple, axis=1))]
-
-    # print(tracked_files)
-    # print(track_df)
-    # input()
 
     # Check if name_list have lat_min, lat_max, lon_min, lon_max is different from None
     if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
