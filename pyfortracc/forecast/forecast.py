@@ -96,11 +96,10 @@ def save_forecast_image(forecast_image, forecast_output_path,
 import pandas as pd
 import pathlib
 import glob
-
 from pyfortracc.default_parameters import default_parameters
 from pyfortracc.utilities.utils import get_feature_files
 
-def forecast(name_list):
+def forecast(name_list, read_function):
     """
     Generate a forecast based on the input tracking data and save the forecast images.
 
@@ -121,17 +120,57 @@ def forecast(name_list):
     None
     """
 
+    # Verify if have necessary parameters for forecasting, with is forecast_time, observation_window and lead_time
+    if 'forecast_time' not in name_list or \
+       'observation_window' not in name_list or \
+       'lead_time' not in name_list:
+        print("Missing parameters for forecasting. Please provide 'forecast_time', 'observation_window', and 'lead_time'.")
+        return
+
     # Set default parameters if not provided
-    name_list = default_parameters(name_lst=name_list)
+    name_list = default_parameters(name_lst=name_list, 
+                                   read_function=read_function)
     
     # Get track files from the output path
     output_path = name_list['output_path']
     tracked_files = get_feature_files(output_path + 'track/trackingtable/',
                                       name_list=name_list)
+    # Set forecast parameters
+    last_timestamp = pd.to_datetime(name_list['forecast_time'])
+    delta_time = pd.to_timedelta(name_list['delta_time'], unit='m')
+    forecast_times = pd.date_range(start=last_timestamp + delta_time,
+                                   periods=name_list['lead_time'],
+                                   freq=delta_time)
+    # Get forecast mode function
+    if name_list['forecast_mode'] == 'persistence':
+        # import persistence_forecast as mode
+        from pyfortracc.forecast.persistence import persistence as forecast_function
+    else:
+        print(f"Forecast mode {name_list['forecast_mode']} not implemented yet.")
+        return
+    
+    # Loop through forecast times to create forecast output path
+    for forecast_timestamp in forecast_times:
+        print(f"Forecasting..\n"
+              f"Observation timestamp: {last_timestamp}\n"
+              f"Forecast timestamp: {forecast_timestamp}\n")
+        
 
-    print(tracked_files)
+        # Read the tracked files
+        track_df = pd.read_parquet(tracked_files)
+        
+        # Call forecast_function to generate forecast image
+        forecast_function(track_df, name_list, forecast_timestamp)
 
-    exit()
+        # Create forecast output path
+        # forecast_output_path = f"{output_path}forecast/{forecast_timestamp.strftime('%Y%m%d_%H%M')}/"
+        # pathlib.Path(forecast_output_path).mkdir(parents=True, exist_ok=True)
+
+
+        last_timestamp = forecast_timestamp
+        
+
+        exit()
 
     # output_path = name_list['output_path']
     # previous_time = name_list['previous_time']

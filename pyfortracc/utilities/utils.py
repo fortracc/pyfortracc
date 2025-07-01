@@ -47,7 +47,24 @@ def get_input_files(input_path):
     return files_list
 
 def get_files_interval(files_list, files_pattern, name_list):
-    
+    """Filter files based on a specified time interval.
+    This function filters a list of files based on a specified time interval defined by
+    `track_start` and `track_end` in the `name_list`. It uses the provided `files_pattern`
+    to extract timestamps from the file names and retains only those files whose timestamps
+    fall within the specified interval.
+    Parameters
+    ----------
+    - `files_list` : list
+        The list of files to filter.
+    - `files_pattern` : str
+        The pattern to use for extracting timestamps from file names.
+    - `name_list` : dict
+        The dictionary containing the time interval information.
+    Returns
+    -------
+    list
+        A filtered list of files that fall within the specified time interval.
+    """
 
     # For track files, use timestamp_pattern and for forecast use files_pattern
     if name_list['track_start'] is not None or name_list['track_end'] is not None:

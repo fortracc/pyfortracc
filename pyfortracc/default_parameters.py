@@ -96,6 +96,8 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['track_end'] = None
     if 'forecast_time' not in name_lst:
         name_lst['forecast_time'] = None
+    if 'forecast_mode' not in name_lst:
+        name_lst['forecast_mode'] = 'persistence'
     if 'observation_window' not in name_lst:
         name_lst['observation_window'] = None
     if 'lead_time' not in name_lst:
