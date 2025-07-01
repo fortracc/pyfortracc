@@ -8,9 +8,13 @@ from pyfortracc.utilities.utils import get_feature_files, \
                                         set_operator, \
                                         set_schema, \
                                         get_edges, \
-                                        get_geotransform
+                                        get_geotransform, \
+                                        write_parquet
 from pyfortracc.features_extraction import extract_features
 from pyfortracc.spatial_operations import spatial_operation
+from pyfortracc.cluster_linking import linking
+from pyfortracc.concat import read_files as concat_files
+from pyfortracc.concat import default_columns
 
 def forecast(name_list, read_function):
     """
@@ -117,7 +121,7 @@ def forecast(name_list, read_function):
         # Update name_list with forecast information
         name_list['input_path'] = frcst_out
         name_list['output_path'] = forecast_output + f"{last_timestamp.strftime('%Y%m%d_%H%M')}/"
-        name_list['output_features'] = f"{name_list['output_path']}features/"
+        name_list['output_features'] = f"{name_list['output_path']}processing/features/"
         pathlib.Path(name_list['output_features']).mkdir(parents=True, exist_ok=True)
  
         # Extract features
@@ -126,12 +130,15 @@ def forecast(name_list, read_function):
                           operator, 
                           frcst_read_func, 
                           f_schema))
+        
+        # Set fet_file
+        fet_file = name_list['output_features'] + f"{forecast_times[ftsmp].strftime('%Y%m%d_%H%M')}.parquet"
 
         # 3 - Third Step of the forecast is perform spatial operations on the forecasted data
         print(f"- Performing spatial operations on forecast image lead time +{ftsmp + 1}: {forecast_times[ftsmp]}")
 
         # Update name_list with forecast information
-        name_list['output_spatial'] = f"{name_list['output_path']}spatial/"
+        name_list['output_spatial'] = f"{name_list['output_path']}processing/spatial/"
         pathlib.Path(name_list['output_spatial']).mkdir(parents=True, exist_ok=True)
 
         # Get the current forecast file
@@ -152,28 +159,71 @@ def forecast(name_list, read_function):
                           True,
                           geo_transf
                           ))
-        exit()
+        
+        # Set spat_file
+        spat_file = name_list['output_spatial'] + f"{forecast_times[ftsmp].strftime('%Y%m%d_%H%M')}.parquet"
+        
+        # 4 - Fourth Step of the forecast is linking clusters
+        print(f"- Linking clusters in forecast image lead time +{ftsmp + 1}: {forecast_times[ftsmp]}")
+        # Update name_list with forecast information
+        name_list['output_linked'] = f"{name_list['output_path']}processing/linked/"
+        pathlib.Path(name_list['output_linked']).mkdir(parents=True, exist_ok=True)
+        # Update cur_file to spatial output file
+        cur_file = name_list['output_spatial'] + f"{forecast_times[ftsmp].strftime('%Y%m%d_%H%M')}.parquet"
+        prv_frame = pd.read_parquet(prv_file)
+        cdx_range = prv_frame.index.max() if not prv_frame.empty else 0
+        uid_iter = prv_frame['uid'].max() + 1 if not prv_frame.empty else 0
 
-    # output_path = name_list['output_path']
-    # previous_time = name_list['previous_time']
-    # forecast_time = name_list['forecast_time']
-    # forecast_output_path = f"{output_path}forecast"
-    # forecast_timestamp = pd.to_datetime(name_list['forecast_timestamp'])
-    # time_delta = pd.to_timedelta(name_list['delta_time'], unit='m')
-    
-    # operator = set_operator(name_list['operator'])
-    # f_schema = set_schema('features', name_list)
-    # s_schema = set_schema('spatial', name_list)
-    # l_schema = set_schema('linked', name_list)
-    
+        _, _, uid_iter, cdx_range = linking((-1,
+                cur_file,
+                prv_frame.reset_index(drop=True),
+                pd.to_datetime(name_list['forecast_time']),
+                name_list,
+                uid_iter,
+                pd.to_timedelta(name_list['delta_time'], unit='m'),
+                l_schema,
+                cdx_range)
+        )
 
-    # # Checking if the output path exists
-    # if not pathlib.Path(output_path):
-    #     print('Output path does not exist')
-    #     return
-    
-    # track_files = sorted(glob.glob(f"{output_path}track/trackingtable/*.parquet"))
-    # print(track_files)
-    # exit()
+        # Get the linked file name
+        linked_file = name_list['output_linked'] + f"{forecast_times[ftsmp].strftime('%Y%m%d_%H%M')}.parquet"
+ 
+        # 5 - Fifth Step of the forecast is concatenate all forecast files
+        print(f"- Concatenating forecast files")
+        def_cols = default_columns(name_list)
+        # Get schema from last tracked file
+        schema = pd.read_parquet(tracked_files[-1])
 
-    
+        # Set forecast table path
+        forecast_table = name_list['output_path'] + 'forecasttable/'
+        pathlib.Path(forecast_table).mkdir(parents=True, exist_ok=True)
+
+        # The arguments for the concat function
+        concat_args = (
+            fet_file,
+            spat_file,
+            linked_file,
+            def_cols,
+            forecast_table,
+            schema,
+            True
+        )
+        # Concatenate the forecast files
+        concat_files(concat_args)
+
+        
+
+        # Update tracked files with the new forecast file
+        tracked_files.append(forecast_table + forecast_times[ftsmp].strftime('%Y%m%d_%H%M') + '.parquet')
+
+        # Remove old tracked files
+        tracked_files = tracked_files[1:]  # Keep only the last forecast file
+
+        print(tracked_files)
+
+        print(pd.read_parquet(tracked_files))
+   
+        # # Read the concatenated file
+        # print(pd.read_parquet(forecast_table + forecast_times[ftsmp].strftime('%Y%m%d_%H%M') + '.parquet'))
+
+        # exit()
