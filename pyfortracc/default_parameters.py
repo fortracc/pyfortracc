@@ -90,6 +90,16 @@ def default_parameters(name_lst=None, read_function=None):
         Dictionary with the parameters to be used.
     '''
     # Set default parameters
+    if 'track_start' not in name_lst:
+        name_lst['track_start'] = None
+    if 'track_end' not in name_lst:
+        name_lst['track_end'] = None
+    if 'forecast_time' not in name_lst:
+        name_lst['forecast_time'] = None
+    if 'observation_window' not in name_lst:
+        name_lst['observation_window'] = None
+    if 'lead_time' not in name_lst:
+        name_lst['lead_time'] = None
     if 'mean_dbz' not in name_lst:
         name_lst['mean_dbz'] = False
     if 'cluster_method' not in name_lst:

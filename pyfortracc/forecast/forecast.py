@@ -1,17 +1,17 @@
-import numpy as np
-from pyfortracc.default_parameters import default_parameters
-from pyfortracc.utilities.utils import (get_loading_bar, 
-                                        set_operator, 
-                                        set_schema,
-                                        get_edges)
-from pyfortracc.features_extraction import extract_features
-from pyfortracc.spatial_operations import spatial_operation
-import glob
-import pandas as pd
-import pathlib
+# import numpy as np
+# from pyfortracc.default_parameters import default_parameters
+# from pyfortracc.utilities.utils import (get_loading_bar, 
+#                                         set_operator, 
+#                                         set_schema,
+#                                         get_edges)
+# from pyfortracc.features_extraction import extract_features
+# from pyfortracc.spatial_operations import spatial_operation
+# # import glob
+# import pandas as pd
+# import pathlib
 # import matplotlib.pyplot as plt
 # import matplotlib
-import xarray as xr
+# import xarray as xr
 
 
 # setting the backend to avoid issues with the display
@@ -93,7 +93,14 @@ def save_forecast_image(forecast_image, forecast_output_path,
     return forecast_filename
 
 
-def forecast(name_list, read_function):
+import pandas as pd
+import pathlib
+import glob
+
+from pyfortracc.default_parameters import default_parameters
+from pyfortracc.utilities.utils import get_feature_files
+
+def forecast(name_list):
     """
     Generate a forecast based on the input tracking data and save the forecast images.
 
@@ -102,9 +109,6 @@ def forecast(name_list, read_function):
     name_list : dict
         A dictionary containing various parameters and configurations needed for forecasting.
         
-    read_function : function
-        Function used to read the image data from the tracking files.
-
     Steps
     -----
     1. Set up default parameters and paths for output.
@@ -116,26 +120,40 @@ def forecast(name_list, read_function):
     -------
     None
     """
+
+    # Set default parameters if not provided
     name_list = default_parameters(name_lst=name_list)
-    output_path = name_list['output_path']
-    previous_time = name_list['previous_time']
-    forecast_time = name_list['forecast_time']
-    forecast_output_path = f"{output_path}forecast"
-    forecast_timestamp = pd.to_datetime(name_list['forecast_timestamp'])
-    time_delta = pd.to_timedelta(name_list['delta_time'], unit='m')
     
-    operator = set_operator(name_list['operator'])
-    f_schema = set_schema('features', name_list)
-    s_schema = set_schema('spatial', name_list)
-    l_schema = set_schema('linked', name_list)
+    # Get track files from the output path
+    output_path = name_list['output_path']
+    tracked_files = get_feature_files(output_path + 'track/trackingtable/',
+                                      name_list=name_list)
+
+    print(tracked_files)
+
+    exit()
+
+    # output_path = name_list['output_path']
+    # previous_time = name_list['previous_time']
+    # forecast_time = name_list['forecast_time']
+    # forecast_output_path = f"{output_path}forecast"
+    # forecast_timestamp = pd.to_datetime(name_list['forecast_timestamp'])
+    # time_delta = pd.to_timedelta(name_list['delta_time'], unit='m')
+    
+    # operator = set_operator(name_list['operator'])
+    # f_schema = set_schema('features', name_list)
+    # s_schema = set_schema('spatial', name_list)
+    # l_schema = set_schema('linked', name_list)
     
 
-    # Checking if the output path exists
-    if not pathlib.Path(output_path):
-        print('Output path does not exist')
-        return
+    # # Checking if the output path exists
+    # if not pathlib.Path(output_path):
+    #     print('Output path does not exist')
+    #     return
     
-    track_files = sorted(glob.glob(f"{output_path}track/trackingtable/*.parquet"))
+    # track_files = sorted(glob.glob(f"{output_path}track/trackingtable/*.parquet"))
+    # print(track_files)
+    # exit()
 
     for i, file in enumerate(track_files):
         file = file.split('/')[-1]
