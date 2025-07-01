@@ -44,8 +44,8 @@ name_list['lat_min'] = -5.3048 # Min latitude of data in degrees
 name_list['lat_max'] = -0.9912 # Max latitude of data in degrees
 
 name_list['forecast_time'] = '2014-08-16 14:00:00'
-name_list['observation_window'] = 30 # in minutes
-name_list['lead_time'] = 5
+name_list['observation_window'] = 10 # in minutes
+name_list['lead_time'] = 2
 
 name_list['edges'] = True # If True, the edges of the clusters will be considered in the tracking
 
