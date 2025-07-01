@@ -46,8 +46,53 @@ def get_input_files(input_path):
         sys.exit()
     return files_list
 
+def get_files_interval(files_list, files_pattern, name_list):
+    
 
-def get_feature_files(features_path):
+    # For track files, use timestamp_pattern and for forecast use files_pattern
+    if name_list['track_start'] is not None or name_list['track_end'] is not None:
+        # Get file timestamps from the file names
+        track_stamps = [get_featstamp(file) for file in files_list]
+        track_start = None
+        track_end = None
+
+        if name_list['track_start'] is not None:
+            # Convert track_start to datetime object
+            track_start = datetime.strptime(name_list['track_start'], '%Y-%m-%d %H:%M:%S')
+
+        if name_list['track_end'] is not None:
+            # Convert track_end to datetime object
+            track_end = datetime.strptime(name_list['track_end'], '%Y-%m-%d %H:%M:%S')
+        
+        # Check if track_start and track_end are defined
+        if track_start is None:
+            track_start = datetime.min  # Default to min datetime if track_start is not provided
+        if track_end is None:
+            track_end = datetime.max  # Default to max datetime if track_end is not provided
+
+        # filter files based on the track start and end
+        files_list = [
+            file for file, stamp in zip(files_list, track_stamps)
+            if track_start <= stamp <= track_end
+        ]
+
+    # For forecast files use files_pattern
+    if name_list['forecast_time'] is not None:
+        # Get file timestamps from the file names
+        forecast_stamps = [datetime.strptime(pathlib.Path(file).name, files_pattern) for file in files_list]
+        # Convert forecast_time to datetime object
+        forecast_time = datetime.strptime(name_list['forecast_time'], '%Y-%m-%d %H:%M:%S')
+        # Get forecast window
+        observation_window = timedelta(minutes=name_list['observation_window'])
+        # filter files based on the forecast time and backward observation window
+        files_list = [
+            file for file, stamp in zip(files_list, forecast_stamps)
+            if forecast_time - observation_window <= stamp <= forecast_time
+        ]
+
+    return files_list
+
+def get_feature_files(features_path, name_list=None):
     """
     Retrieve a list of `.parquet` files from the specified directory.
 
@@ -75,6 +120,15 @@ def get_feature_files(features_path):
     files_list = sorted(glob.glob(features_path +'/*.parquet'))
     if not files_list:
         print('Input path is empty', features_path)
+        sys.exit()
+
+    if name_list is not None:
+        file_pattern = '%Y%m%d_%H%M.parquet'
+        files_list = get_files_interval(files_list, file_pattern, name_list)
+
+
+    if len(files_list) == 0:
+        print('No feature files found in the specified path:', features_path)
         sys.exit()
     return files_list
 
