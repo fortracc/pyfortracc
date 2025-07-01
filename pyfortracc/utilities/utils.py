@@ -9,6 +9,7 @@ import geopandas as gpd
 import pathlib
 import multiprocessing as mp
 import inspect
+import xarray as xr
 from tqdm import tqdm
 from datetime import datetime, timedelta
 from shapely.geometry import LineString
@@ -773,6 +774,57 @@ def check_operational_system(name_list, parallel):
     if 'IPython' in sys.modules and platform.system() != 'Linux':
         parallel = False
     return name_list, parallel
+
+
+def save_netcdf(data, name_list, output_file):
+    """
+    Save data to a NetCDF file.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        The data to be saved in the NetCDF file.
+        It should be a 2D array with dimensions (lat, lon).
+    name_list : dict
+        Dictionary containing configuration parameters including 'lat_min', 'lat_max', 'lon_min', 'lon_max',
+        'x_dim', and 'y_dim' which define the spatial extent and resolution of the data.
+    output_path : str
+        The path where the NetCDF file will be saved. The file name will be constructed using the current date and time.
+    """
+
+    # Create longitude and latitude array
+    LON_MIN = name_list['lon_min']
+    LON_MAX = name_list['lon_max']
+    LAT_MIN = name_list['lat_min']
+    LAT_MAX = name_list['lat_max']
+    lon = np.linspace(LON_MIN, LON_MAX, data.shape[-1])
+    lat = np.linspace(LAT_MIN, LAT_MAX, data.shape[-2])
+
+    # If data contains only two dimensions, expand it to three dimensions
+    if data.ndim == 2:
+        data = data[np.newaxis, :, :]
+
+    # Create a DataArray with the data with dimensions (depth, lat, lon)
+    da = xr.DataArray(data, dims=['threshold_level', 'lat', 'lon'], 
+                      coords={'lat': lat, 'lon': lon})
+    # Create a Dataset
+    ds = xr.Dataset({'data': da})
+    # Set attributes for the dataset
+    ds.attrs['description'] = 'This is a NetCDF file containing data for the specified lat/lon grid from pyfortracc.'
+    ds.attrs['created_by'] = 'pyfortracc'
+    ds.attrs['created_on'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    ds.attrs['lon_min'] = LON_MIN
+    ds.attrs['lon_max'] = LON_MAX
+    ds.attrs['lat_min'] = LAT_MIN
+    ds.attrs['lat_max'] = LAT_MAX
+    ds.attrs['x_dim'] = data.shape[-1]
+    ds.attrs['y_dim'] = data.shape[-2]
+    # Save the dataset to a NetCDF file
+    # Replace file if it already exists
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    ds.to_netcdf(output_file, mode='w', format='NETCDF4',
+                 encoding={'data': {'zlib': True, 'complevel': 5}})
 
 
 # def calculate_pixel_area(name_list):
