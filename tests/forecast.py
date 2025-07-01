@@ -15,10 +15,10 @@ import numpy as np
 
 def read_function(path):
     variable = "DBZc"
-    z_level = 5 # Elevation level 2.5 km
+    z_level = 0 # Elevation level 2.5 km
     with gzip.open(path) as gz:
         with netCDF4.Dataset("dummy", mode="r", memory=gz.read()) as nc:
-            data = nc.variables[variable][:].data[0,z_level, :, :][::-1, :]
+            data = nc.variables[variable][:].data[0,z_level, :, :]
             data[data == -9999] = np.nan
     gz.close()
     return data
@@ -63,5 +63,9 @@ if __name__ == '__main__':
     # os.remove('input.zip')
 
     # pyfortracc.track(name_list, read_function, parallel=True)
+
+    # pyfortracc.spatial_conversions(name_list, read_function=read_function,
+    #                                boundary=True, trajectory=True, vector_field=True,
+    #                                cluster=True, vel_unit='m/s', driver='GeoJSON')
 
     pyfortracc.forecast(name_list, read_function)

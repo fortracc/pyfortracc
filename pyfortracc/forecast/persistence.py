@@ -1,6 +1,34 @@
+import pandas as pd
 import numpy as np
 
-def persistence(track_df, name_list, forecast_timestamp):
+def persistence_mean(track_df):
+    """    Calculate the mean vector for each cluster in the track dataframe.
+    This function computes the mean of the 'u_' and 'v_' components for each cluster
+    identified by 'threshold_level' and 'uid'. It returns a DataFrame with the mean
+    vectors.
+    Parameters
+    ----------
+    track_df : pd.DataFrame
+        The input track DataFrame containing 'u_' and 'v_' components.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame with the mean vectors for each cluster.
+    """
+
+    # Calculate the mean vector for each cluster
+    mean_vector = track_df.groupby(['threshold_level', 'uid']).agg(
+        u_mean=('u_', lambda x: x.mean(skipna=True)),
+        v_mean=('v_', lambda x: x.mean(skipna=True))
+    ).reset_index()
+
+    return mean_vector
+
+def persistence(tracked_files, name_list):
+
+    # Read the tracked files
+    track_df = pd.read_parquet(tracked_files)
 
     # Define colunas de agrupamento
     if len(name_list['thresholds']) > 1:
@@ -18,23 +46,20 @@ def persistence(track_df, name_list, forecast_timestamp):
     # Filter track_df to only include the latest timestamp based on the latest clusters but keep the values of other timestamps
     track_df = track_df[track_df[cluster_columns].apply(tuple, axis=1).isin(track_df.loc[latest_clusters, cluster_columns].apply(tuple, axis=1))]
 
-    # Check if name_list have lat_min, lat_max, lon_min, lon_max
-    if 'lat_min' in name_list and 'lat_max' in name_list and 'lon_min' in name_list and 'lon_max' in name_list:
+    # Check if name_list have lat_min, lat_max, lon_min, lon_max is different from None
+    if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
         # Convert u_ and v_ unints are in degrees to pixels
         track_df['u_'] = track_df['u_'] / name_list['y_res']
         track_df['v_'] = track_df['v_'] / name_list['x_res']
 
-    # Calculate the mean vector for each cluster
-    mean_vector = track_df.groupby(['threshold_level', 'uid']).agg(
-        u_mean=('u_', lambda x: x.mean(skipna=True)),
-        v_mean=('v_', lambda x: x.mean(skipna=True))
-    ).reset_index()
+    # Get vectors to be used in the forecast
+    forecast_vectors = persistence_mean(track_df)
 
     # Get only latest timestamp dataframe
     track_last = track_df[track_df['timestamp'] == last_timestamp]
 
     # Merge the mean vector with the latest timestamp dataframe
-    track_last = track_last.merge(mean_vector, on=['threshold_level', 'uid'], how='left')
+    track_last = track_last.merge(forecast_vectors, on=['threshold_level', 'uid'], how='left')
 
     # Apply the mean vector to the array_y and array_x columns
     track_last['array_y'] = track_last['array_y'] + track_last['u_mean']
@@ -79,3 +104,6 @@ def persistence(track_df, name_list, forecast_timestamp):
 
     # Convert back to 2D image
     forecast_image = mean_image_flat.reshape((h, w))
+
+    return forecast_image
+ 
