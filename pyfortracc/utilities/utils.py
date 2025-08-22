@@ -9,6 +9,7 @@ import geopandas as gpd
 import pathlib
 import multiprocessing as mp
 import inspect
+import xarray as xr
 from tqdm import tqdm
 from datetime import datetime, timedelta
 from shapely.geometry import LineString
@@ -46,8 +47,73 @@ def get_input_files(input_path):
         sys.exit()
     return files_list
 
+def get_files_interval(files_list, files_pattern, name_list):
+    """Filter files based on a specified time interval.
+    This function filters a list of files based on a specified time interval defined by
+    `track_start` and `track_end` in the `name_list`. It uses the provided `files_pattern`
+    to extract timestamps from the file names and retains only those files whose timestamps
+    fall within the specified interval.
+    Parameters
+    ----------
+    - `files_list` : list
+        The list of files to filter.
+    - `files_pattern` : str
+        The pattern to use for extracting timestamps from file names.
+    - `name_list` : dict
+        The dictionary containing the time interval information.
+    Returns
+    -------
+    list
+        A filtered list of files that fall within the specified time interval.
+    """
 
-def get_feature_files(features_path):
+    # For track files, use timestamp_pattern and for forecast use files_pattern
+    if name_list['track_start'] is not None or name_list['track_end'] is not None:
+        # Get file timestamps from the file names
+        track_stamps = [get_featstamp(file) for file in files_list]
+        track_start = None
+        track_end = None
+
+        if name_list['track_start'] is not None:
+            # Convert track_start to datetime object
+            track_start = datetime.strptime(name_list['track_start'], '%Y-%m-%d %H:%M:%S')
+
+        if name_list['track_end'] is not None:
+            # Convert track_end to datetime object
+            track_end = datetime.strptime(name_list['track_end'], '%Y-%m-%d %H:%M:%S')
+        
+        # Check if track_start and track_end are defined
+        if track_start is None:
+            track_start = datetime.min  # Default to min datetime if track_start is not provided
+        if track_end is None:
+            track_end = datetime.max  # Default to max datetime if track_end is not provided
+
+        # filter files based on the track start and end
+        files_list = [
+            file for file, stamp in zip(files_list, track_stamps)
+            if track_start <= stamp <= track_end
+        ]
+
+    # For forecast files use files_pattern
+    if name_list['forecast_time'] is not None:
+        # Get file timestamps from the file names
+        forecast_stamps = [datetime.strptime(pathlib.Path(file).name, files_pattern) for file in files_list]
+        # Convert forecast_time to datetime object
+        forecast_time = datetime.strptime(name_list['forecast_time'], '%Y-%m-%d %H:%M:%S')
+        # Get forecast window is a number of files before the forecast time
+        num_obs_files = name_list['observation_window']
+        # Get the forecast window files based in position of forecast_time and num_obs files, exemple: get last 5 files before forecast_time in files_list
+        # Not use any temporal argument
+        files_list = [
+            file for file, stamp in zip(files_list, forecast_stamps)
+            if stamp <= forecast_time
+        ]
+        # Get the last num_obs_files files before the forecast time
+        files_list = files_list[-num_obs_files:]
+
+    return files_list
+
+def get_feature_files(features_path, name_list=None):
     """
     Retrieve a list of `.parquet` files from the specified directory.
 
@@ -75,6 +141,15 @@ def get_feature_files(features_path):
     files_list = sorted(glob.glob(features_path +'/*.parquet'))
     if not files_list:
         print('Input path is empty', features_path)
+        sys.exit()
+
+    if name_list is not None:
+        file_pattern = '%Y%m%d_%H%M.parquet'
+        files_list = get_files_interval(files_list, file_pattern, name_list)
+
+
+    if len(files_list) == 0:
+        print('No feature files found in the specified path:', features_path)
         sys.exit()
     return files_list
 
@@ -702,6 +777,57 @@ def check_operational_system(name_list, parallel):
     if 'IPython' in sys.modules and platform.system() != 'Linux':
         parallel = False
     return name_list, parallel
+
+
+def save_netcdf(data, name_list, output_file):
+    """
+    Save data to a NetCDF file.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        The data to be saved in the NetCDF file.
+        It should be a 2D array with dimensions (lat, lon).
+    name_list : dict
+        Dictionary containing configuration parameters including 'lat_min', 'lat_max', 'lon_min', 'lon_max',
+        'x_dim', and 'y_dim' which define the spatial extent and resolution of the data.
+    output_path : str
+        The path where the NetCDF file will be saved. The file name will be constructed using the current date and time.
+    """
+
+    # Create longitude and latitude array
+    LON_MIN = name_list['lon_min']
+    LON_MAX = name_list['lon_max']
+    LAT_MIN = name_list['lat_min']
+    LAT_MAX = name_list['lat_max']
+    lon = np.linspace(LON_MIN, LON_MAX, data.shape[-1])
+    lat = np.linspace(LAT_MIN, LAT_MAX, data.shape[-2])
+
+    # If data contains only two dimensions, expand it to three dimensions
+    if data.ndim == 2:
+        data = data[np.newaxis, :, :]
+
+    # Create a DataArray with the data with dimensions (depth, lat, lon)
+    da = xr.DataArray(data, dims=['threshold_level', 'lat', 'lon'], 
+                      coords={'lat': lat, 'lon': lon})
+    # Create a Dataset
+    ds = xr.Dataset({'data': da})
+    # Set attributes for the dataset
+    ds.attrs['description'] = 'This is a NetCDF file containing data for the specified lat/lon grid from pyfortracc.'
+    ds.attrs['created_by'] = 'pyfortracc'
+    ds.attrs['created_on'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    ds.attrs['lon_min'] = LON_MIN
+    ds.attrs['lon_max'] = LON_MAX
+    ds.attrs['lat_min'] = LAT_MIN
+    ds.attrs['lat_max'] = LAT_MAX
+    ds.attrs['x_dim'] = data.shape[-1]
+    ds.attrs['y_dim'] = data.shape[-2]
+    # Save the dataset to a NetCDF file
+    # Replace file if it already exists
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    ds.to_netcdf(output_file, mode='w', format='NETCDF4',
+                 encoding={'data': {'zlib': True, 'complevel': 5}})
 
 
 # def calculate_pixel_area(name_list):

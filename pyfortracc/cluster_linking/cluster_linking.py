@@ -100,6 +100,8 @@ def linking(args):
                                         'trajectory'])
     # Set output file
     output_file = nm_lst['output_spatial'] + pathlib.Path(cur_file).name
+    # Replace any /spatial/ in the output file path with /linked/
+    output_file = output_file.replace('/spatial/', '/linked/')
     icdx += 1 # Increment cindex 
     #create columns 
     cur_frame['prv_mrg_uids'] = [None]*len(cur_frame)
