@@ -25,7 +25,7 @@ The algorithm is divided into two main modules: **Track** and **Forecast**.
    - **Cluster Linkage**: Links features across time steps by indexing current features with those from the previous time step, generating unique cluster identifiers, tracking trajectories, and recording the cluster lifetime.
    - **Concatenation**: Combines all identified features and trajectories into a single Parquet file, forming a consolidated tracking table with complete tracking data.
 
-2. **Forecast** (Upcoming): This module will predict future cluster positions through:
+2. **Forecast**: This module will predict future cluster positions through:
    - **Virtual Image**: A persistence-based forecast of cluster positions by shifting clusters in the current time step to a specified future position based on average vector displacement.
    - **Track Routine**: Applies the tracking routine to the virtual image, projecting cluster identification to the anticipated time step.
 
