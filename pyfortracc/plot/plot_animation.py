@@ -19,10 +19,10 @@ warnings.filterwarnings("ignore")
 
 def process_frame(args):
       """Wrapper function to enable multiprocessing of the update function."""
-      frame, read_function, cmap, cbar_min, cbar_max = args
+      frame, read_function, cmap, cbar_min, cbar_max, origin = args
       fig, ax = plt.subplots(figsize=(5, 5))
       data = read_function(frame)
-      fi = ax.imshow(data, cmap=cmap, origin='lower', interpolation='nearest', aspect='auto',
+      fi = ax.imshow(data, cmap=cmap, interpolation='nearest', aspect='auto', origin=origin,
                   vmin=cbar_min, vmax=cbar_max)
       
       # Add simple colorbar
@@ -47,7 +47,7 @@ def plot_wrapper(args):
 
 def plot_animation(
         path_files=None,
-        num_frames=10,
+        num_frames=50,
         name_list=None,
         read_function=None,
         start_timestamp='2020-01-01 00:00:00',
@@ -56,12 +56,13 @@ def plot_animation(
         animate=True,
         uid_list=[],
         threshold_list=[],
-        figsize=(5,5),
+        figsize=(6,4),
         background='default',
         scalebar=False,
         scalebar_metric=100,
         scalebar_location=(1.5, 0.05),
         plot_type='imshow',
+        origin='lower',
         interpolation='nearest',
         ticks_fontsize=10,
         scalebar_linewidth=3,
@@ -125,7 +126,7 @@ def plot_animation(
                   with Pool() as pool:
                         frames = list(pool.imap(process_frame,
                                                           [(frame, read_function,
-                                                            cmap, min_val, max_val
+                                                            cmap, min_val, max_val, origin
                                                             ) for frame in files]))
                   pool.close()
             else:
@@ -195,7 +196,8 @@ def plot_animation(
                   info_cols,
                   save,
                   save_path,
-                  save_name))
+                  save_name,
+                  origin))
             if parallel:
                   n_workers = set_nworkers(name_list)
                   with Pool(n_workers) as pool:
@@ -215,7 +217,7 @@ def plot_animation(
       fig, ax = plt.subplots(figsize=figsize)
       fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=None, hspace=None)
       fig.set_size_inches(figsize, forward=True)
-      img = ax.imshow(np.zeros((1, 1)), cmap=cmap, aspect='auto')
+      img = ax.imshow(np.zeros((1, 1)), cmap=cmap, aspect='auto', origin='upper')
       ax.axis('off')
       
       interval = 1000  # Interval between frames in milliseconds

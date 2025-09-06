@@ -40,8 +40,8 @@ def geo_statistics(cluster_matrix, cluster_labels, values_matrix, name_list):
         lat_min = name_list['lat_min']
         lon_min = name_list['lon_min']
     else:
-        lat_min = 0
-        lon_min = 0
+        lat_min = -0.5
+        lon_min = -0.5
     # Loop over the generator to get the statistics for each cluster
     for geo in features.shapes(cluster_matrix,
                             mask,

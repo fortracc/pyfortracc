@@ -72,7 +72,8 @@ def plot(name_list,
         info_cols=['uid'],
         save=False,
         save_path='output/img/',
-        save_name=None):
+        save_name=None,
+        origin='lower'):
     """
     This function is designed to visualize tracking data on a map or a simple 2D plot. 
     The function reads in tracking data, filters it based on various criteria, and plots it using Matplotlib, 
@@ -194,7 +195,8 @@ def plot(name_list,
         if len(zoom_region) == 4:
             extent = [zoom_region[0], zoom_region[1], zoom_region[2], zoom_region[3]]
         ax.set_extent(extent, crs= ccrs.PlateCarree())
-        # Set background
+        
+        # Set background FIRST (before plotting data)
         if background == 'stock':
             ax.stock_img()            
         elif background =='satellite':
@@ -207,7 +209,25 @@ def plot(name_list,
             ax.add_feature(cfeature.LAND, edgecolor='black', alpha=0.5)
             ax.add_feature(cfeature.OCEAN)
             ax.add_feature(cfeature.BORDERS, linestyle=':')
-        # Set grid
+        
+        # Set plot type AFTER background
+        if plot_type == 'imshow':
+            im = ax.imshow(data, cmap=cmap, extent=orig_extent, origin=origin,
+                        interpolation=interpolation, aspect='auto', vmax=max_val, vmin=min_val,
+                        alpha=0.7, zorder=5)  # Add alpha and zorder
+        elif plot_type == 'contourf':
+            im = ax.contourf(data, cmap=cmap, extent=orig_extent, origin=origin,
+                        interpolation=interpolation, vmax=max_val, vmin=min_val, zorder=5)
+        elif plot_type == 'contour':
+            im = ax.contour(data, cmap=cmap, extent=orig_extent, origin=origin,
+                        interpolation=interpolation, vmax=max_val, vmin=min_val, zorder=5)
+        elif plot_type == 'pcolormesh':
+            lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
+            lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
+            im = ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap,
+                           vmax=max_val, vmin=min_val, alpha=0.7, zorder=5)
+        
+        # Set grid AFTER plotting data
         gl = ax.gridlines(crs= ccrs.PlateCarree(), draw_labels=True,
             linewidth=1, color='gray', alpha=0.2, linestyle='--')
         gl.top_labels = False
@@ -225,25 +245,10 @@ def plot(name_list,
             ax.yaxis.set_major_formatter(lat_formatter)
             ax.tick_params(axis='both', which='major', labelsize=ticks_fontsize)
 
-        # Set plot type
-        if plot_type == 'imshow':
-            ax.imshow(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, aspect='auto', vmax=max_val, vmin=min_val)
-        elif plot_type == 'contourf':
-            ax.contourf(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, vmax=max_val, vmin=min_val)
-        elif plot_type == 'contour':
-            ax.contour(data, cmap=cmap, origin='lower', extent=orig_extent,
-                        interpolation=interpolation, vmax=max_val, vmin=min_val)
-        elif plot_type == 'pcolormesh':
-            lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
-            lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
-            ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap,
-                           vmax=max_val, vmin=min_val)
     else:
         if ax is None: # Comming from animation
             ax = fig.add_subplot(1, 1, 1)
-        ax.imshow(data, cmap=cmap, origin='lower', interpolation=interpolation,
+        ax.imshow(data, cmap=cmap, interpolation=interpolation, origin=origin,
                 aspect='auto', vmax=max_val, vmin=min_val)
 
     # Add title to the figure
@@ -309,7 +314,7 @@ def plot(name_list,
     ##### INFO #############
     if info:
         buffer = [patheffects.withStroke(linewidth=2, foreground="w")]
-        props = dict(boxstyle='round', facecolor='wheat', alpha=0.8)
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.4)
         if 'area' in info_cols:
             # Calculate area of the bound_df
             bound_df['area'] = bound_df['geometry'].set_crs(epsg=4326).to_crs(epsg=6933).area / 10**6
