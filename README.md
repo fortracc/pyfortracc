@@ -102,6 +102,16 @@ name_list = {
 pyfortracc.track(name_list, read_function)
 ```
 
+### WORCAP Minicourse (Portuguese)
+
+Educational tutorial series developed for the [WORCAP](https://www.gov.br/inpe/pt-br/eventos/worcap-2025) (Workshop on Research Computing and Applications for Latin America), providing step-by-step introduction to pyForTraCC concepts and applications in Portuguese:
+
+|                                                                                    | Minicurso                              |
+|-------------------------------------------------------------------------------------------|----------------------------------------|
+| [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/WORCAP-Minicourse/1_Basic_Tracking/1_Basic_Tracking.ipynb) | 1 - Exemplo Introdutório (Basic Tracking) |
+| [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/WORCAP-Minicourse/2_RealTime_Tracking/2_RealTime_Tracking.ipynb) | 2 - Rastreamento em Tempo Real (Real-Time Tracking) |
+
+
 Example Gallery
 =====================================================================
 To library have a gallery of examples that demonstrate the application of the algorithm in different situations.
@@ -115,16 +125,6 @@ You can run the examples in Google Colab:
 | [![Open in Cola](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/02_Track-Radar-Data/02_Track-Radar-Dataset.ipynb) | 02 - Radar Data Example               |
 | [![Open in Cola](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) | 03 - Infrared Satellite Example (Realtime Track) |
 | [![Open in Cola](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-Global-Precipitation-EDA/04_Track-Global-Precipitation.ipynb) | 04 - Global Precipitation Example     |
-
-### WORCAP Minicourse (Portuguese)
-
-Educational tutorial series developed for the [WORCAP](https://www.gov.br/inpe/pt-br/eventos/worcap-2025) (Workshop on Research Computing and Applications for Latin America), providing step-by-step introduction to pyForTraCC concepts and applications in Portuguese:
-
-|                                                                                    | Minicurso                              |
-|-------------------------------------------------------------------------------------------|----------------------------------------|
-| [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/WORCAP-Minicourse/1_Basic_Tracking/1_Basic_Tracking.ipynb) | 1 - Exemplo Introdutório (Basic Tracking) |
-| [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/WORCAP-Minicourse/2_RealTime_Tracking/2_RealTime_Tracking.ipynb) | 2 - Rastreamento em Tempo Real (Real-Time Tracking) |
-
 
 
 
