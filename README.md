@@ -116,16 +116,61 @@ You can run the examples in Google Colab:
 | [![Open in Cola](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/03_Track-Infrared-Dataset/03_Track-Infrared-Dataset.ipynb) | 03 - Infrared Satellite Example (Realtime Track) |
 | [![Open in Cola](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/04_Track-Global-Precipitation-EDA/04_Track-Global-Precipitation.ipynb) | 04 - Global Precipitation Example     |
 
+### WORCAP Minicourse (Portuguese)
+
+Educational tutorial series developed for the [WORCAP](https://worcap.inpe.br/) (Workshop on Research Computing and Applications for Latin America), providing step-by-step introduction to pyForTraCC concepts and applications in Portuguese:
+
+|                                                                                    | Minicurso                              |
+|-------------------------------------------------------------------------------------------|----------------------------------------|
+| [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/WORCAP-Minicourse/1_Basic_Tracking/1_Basic_Tracking.ipynb) | 1 - Exemplo Introdutório (Basic Tracking) |
+| [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/WORCAP-Minicourse/2_RealTime_Tracking/2_RealTime_Tracking.ipynb) | 2 - Rastreamento em Tempo Real (Real-Time Tracking) |
 
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
- or Github Codespaces: 
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/fortracc/pyfortracc/?quickstart=1)
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
 
+Citation
+=====================================================================
+
+If you use pyForTraCC in your research, please cite the following reference:
+
+**LEAL, Helvecio B. et al. Impact of Multi-Thresholds and Vector Correction for Tracking Precipitating Systems over the Amazon Basin. Remote Sensing, v. 14, n. 21, p. 5408, 2022.**
+
+### BibTeX
+```bibtex
+@article{leal2022impact,
+  title={Impact of Multi-Thresholds and Vector Correction for Tracking Precipitating Systems over the Amazon Basin},
+  author={Leal, Helvecio B and Calheiros, Alan JP and Barbosa, Henrique MJ and Almeida, Adriano P and Sanchez, Arturo and Vila, Daniel A and Garcia, S{\^a}mia R and Macau, Elbert EN},
+  journal={Remote Sensing},
+  volume={14},
+  number={21},
+  pages={5408},
+  year={2022},
+  publisher={MDPI}
+}
+```
+
+Related Works
+=====================================================================
+
+The following publications demonstrate various applications and developments of pyForTraCC:
+
+- **Calheiros, A., Neto, H. L., Kubota, T., Vila, D., Garcia, S., Ushio, T., & Hirose, H. (2025)**. Tracking a Decade of GSMaP-Derived Precipitating Systems with pyForTraCC (No. EMS2025-292). Copernicus Meetings.  
+  [📄 View Paper](https://meetingorganizer.copernicus.org/EMS2025/EMS2025-292.html)
+
+- **Helvecio, B. L. N., & James, P. C. A. (2022)**. Application of the DBSCAN algorithm for identifying morphological features of atmospheric systems over the amazon basin. Authorea Preprints.  
+  [📄 View Paper](https://essopenarchive.org/doi/full/10.1002/essoar.10512488.1)
+
+- **Neto, H. B. L., e Milton, A. J. P. C., & da Silva, B.** TRACKING PRECIPITATION SYSTEMS OVER BRAZIL: ANALYSIS OF DENSITY, INTENSITY, DURATION AND SIZE OVER TWO DECADES.  
+  [📄 View Paper](http://marte2.sid.inpe.br/attachment.cgi/sid.inpe.br/marte2/2025/08.16.16.54.21/doc/@individualPDF.pdf)
+
+- **SILVA, Milton Borges da et al. (2025)**. AVALIAÇÃO DAS ESTIMATIVAS DE CHUVA DA MISSÃO GPM SOBRE MATO GROSSO DO SUL. In: ANAIS DO XXI SIMPÓSIO BRASILEIRO DE SENSORIAMENTO REMOTO, Salvador. Anais eletrônicos..., Galoá.  
+  [📄 View Paper](https://proceedings.science/sbsr-2025/trabalhos/avaliacao-das-estimativas-de-chuva-da-missao-gpm-sobre-mato-grosso-do-sul?lang=pt-br)
+
+- **Neto, H. B. L., Almeida, A. P., & Calheiros, A. J. (2020)**. As dificuldades no rastreio de tempestades com uso de refletividade radar a partir de técnicas de geoprocessamento: Um estudo de caso sobre a região Amazônica. In GEOINFO (pp. 240-245).  
+  [📄 View Paper](http://mtc-m16c.sid.inpe.br/col/sid.inpe.br/mtc-m16c/2020/12.15.12.54/doc/s14.pdf)
+
+- **LEAL NETO, H. B. (2021)**. Rastreio e previsão de sistemas precipitantes e convectivos na Bacia Amazônica utilizando aprendizado de máquina não-supervisionado. Dissertação (Mestrado em Computação Aplicada) - Instituto Nacional de Pesquisas Espaciais (INPE), São José dos Campos. 142 p.  
+  [📄 View Thesis](http://urlib.net/ibi/8JMKD3MGP3W34R/44HGF8E)
 
 
 Support and Contact
