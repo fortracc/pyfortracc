@@ -118,7 +118,7 @@ You can run the examples in Google Colab:
 
 ### WORCAP Minicourse (Portuguese)
 
-Educational tutorial series developed for the [WORCAP](https://worcap.inpe.br/) (Workshop on Research Computing and Applications for Latin America), providing step-by-step introduction to pyForTraCC concepts and applications in Portuguese:
+Educational tutorial series developed for the [WORCAP](https://www.gov.br/inpe/pt-br/eventos/worcap-2025) (Workshop on Research Computing and Applications for Latin America), providing step-by-step introduction to pyForTraCC concepts and applications in Portuguese:
 
 |                                                                                    | Minicurso                              |
 |-------------------------------------------------------------------------------------------|----------------------------------------|
