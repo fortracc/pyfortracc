@@ -1,7 +1,5 @@
 # pyForTraCC - Python library for Forecasting and Tracking the Evolution of Configurable Clusters
 
-> **Note**: `pyForTraCC` library is currently in a **release candidate** phase, meaning it is nearly finalized but may receive minor updates before the official stable release.
-
 <!-- badges: start -->
 [![stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://pyfortracc.readthedocs.io)
 [![pypi](https://badge.fury.io/py/pyfortracc.svg)](https://pypi.python.org/pypi/pyfortracc)
@@ -112,7 +110,7 @@ Educational tutorial series developed for the [WORCAP](https://www.gov.br/inpe/p
 | [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/fortracc/pyfortracc/blob/main/examples/WORCAP-Minicourse/2_RealTime_Tracking/2_RealTime_Tracking.ipynb) | 2 - Rastreamento em Tempo Real (Real-Time Tracking) |
 
 
-Example Gallery
+### Example Gallery
 =====================================================================
 To library have a gallery of examples that demonstrate the application of the algorithm in different situations.
 
@@ -128,7 +126,7 @@ You can run the examples in Google Colab:
 
 
 
-Citation
+### Citation
 =====================================================================
 
 If you use pyForTraCC in your research, please cite the following reference:
@@ -149,7 +147,7 @@ If you use pyForTraCC in your research, please cite the following reference:
 }
 ```
 
-Related Works
+#### Related Works
 =====================================================================
 
 The following publications demonstrate various applications and developments of pyForTraCC:
