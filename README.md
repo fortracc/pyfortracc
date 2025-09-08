@@ -102,7 +102,7 @@ pyfortracc.track(name_list, read_function)
 
 ### WORCAP Minicourse (Portuguese)
 
-Educational tutorial series developed for the [WORCAP](https://www.gov.br/inpe/pt-br/eventos/worcap-2025) (Workshop on Research Computing and Applications for Latin America), providing step-by-step introduction to pyForTraCC concepts and applications in Portuguese:
+Educational tutorial series developed for the [WORCAP 2025](https://www.gov.br/inpe/pt-br/eventos/worcap-2025) (Workshop on Applied Computing at INPE 2025), providing step-by-step introduction to pyForTraCC concepts and applications in Portuguese:
 
 |                                                                                    | Minicurso                              |
 |-------------------------------------------------------------------------------------------|----------------------------------------|
