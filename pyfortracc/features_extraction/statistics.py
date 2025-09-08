@@ -47,9 +47,19 @@ def geo_statistics(cluster_matrix, cluster_labels, values_matrix, name_list):
                             mask,
                             connectivity=8,
                             transform=(x_res, 0, lon_min, 0, y_res, lat_min)):
-        # Get the boundary of the cluster and the cluster id
-        boundary = Polygon(geo[0]['coordinates'][0])
+        # Get the cluster id
         cluster_id = int(geo[-1])
+        
+        # Create polygon with holes support
+        coordinates = geo[0]['coordinates']
+        if len(coordinates) > 1:
+            # First coordinate set is exterior, rest are holes
+            exterior = coordinates[0]
+            holes = coordinates[1:] if len(coordinates) > 1 else None
+            boundary = Polygon(exterior, holes)
+        else:
+            # No holes, just exterior
+            boundary = Polygon(coordinates[0])
         # Get array of coordinates for the cluster
         # array_y, array_x = np.where(cluster_matrix == cluster_id)
         cluster_indices = np.argwhere(labels == cluster_id).ravel()
