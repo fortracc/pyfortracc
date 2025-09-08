@@ -34,14 +34,14 @@ For detailed instructions and usage, refer to the [pyForTraCC Documentation](htt
 ## Installation
 The pyForTraCC package can be installed in two ways: Directly by via the `pip` package manager or cloning the official GitHub repository.
 
-#### 1. Installing with Pip (Directly)
+#### Installing with Pip (Directly)
 To install or update pyForTraCC directly from the Python Package Index (PyPI), use:
 
 ```bash
 pip install -U pyfortracc
 ```
 
-#### 2. Installing from GitHub  
+#### Installing from GitHub  
 Download the package directly from the official GitHub repository by cloning it:
 
 ```bash
@@ -113,9 +113,8 @@ Educational tutorial series developed for the [WORCAP](https://www.gov.br/inpe/p
 
 ### Example Gallery
 =====================================================================
-To library have a gallery of examples that demonstrate the application of the algorithm in different situations.
 
-
+Library have a gallery of examples that demonstrate the application of the algorithm in different situations.<br>
 You can run the examples in Google Colab:
 
 |                                                                                    | Example                              |
@@ -134,7 +133,7 @@ If you use pyForTraCC in your research, please cite the following reference:
 
 **LEAL, Helvecio B. et al. Impact of Multi-Thresholds and Vector Correction for Tracking Precipitating Systems over the Amazon Basin. Remote Sensing, v. 14, n. 21, p. 5408, 2022.**
 
-### BibTeX
+#### BibTeX
 ```bibtex
 @article{leal2022impact,
   title={Impact of Multi-Thresholds and Vector Correction for Tracking Precipitating Systems over the Amazon Basin},
@@ -156,20 +155,20 @@ The following publications demonstrate various applications and developments of 
 - **Calheiros, A., Neto, H. L., Kubota, T., Vila, D., Garcia, S., Ushio, T., & Hirose, H. (2025)**. Tracking a Decade of GSMaP-Derived Precipitating Systems with pyForTraCC (No. EMS2025-292). Copernicus Meetings.  
   [📄 View Paper](https://meetingorganizer.copernicus.org/EMS2025/EMS2025-292.html)
 
-- **Helvecio, B. L. N., & James, P. C. A. (2022)**. Application of the DBSCAN algorithm for identifying morphological features of atmospheric systems over the amazon basin. Authorea Preprints.  
-  [📄 View Paper](https://essopenarchive.org/doi/full/10.1002/essoar.10512488.1)
-
-- **Neto, H. B. L., e Milton, A. J. P. C., & da Silva, B.** TRACKING PRECIPITATION SYSTEMS OVER BRAZIL: ANALYSIS OF DENSITY, INTENSITY, DURATION AND SIZE OVER TWO DECADES.  
+  - **Neto, H. B. L., e Milton, A. J. P. C., & da Silva, B. (2025)** TRACKING PRECIPITATION SYSTEMS OVER BRAZIL: ANALYSIS OF DENSITY, INTENSITY, DURATION AND SIZE OVER TWO DECADES. In: ANAIS DO XXI SIMPÓSIO BRASILEIRO DE SENSORIAMENTO REMOTO, Salvador. Anais eletrônicos..., Galoá.  
   [📄 View Paper](http://marte2.sid.inpe.br/attachment.cgi/sid.inpe.br/marte2/2025/08.16.16.54.21/doc/@individualPDF.pdf)
 
 - **SILVA, Milton Borges da et al. (2025)**. AVALIAÇÃO DAS ESTIMATIVAS DE CHUVA DA MISSÃO GPM SOBRE MATO GROSSO DO SUL. In: ANAIS DO XXI SIMPÓSIO BRASILEIRO DE SENSORIAMENTO REMOTO, Salvador. Anais eletrônicos..., Galoá.  
   [📄 View Paper](https://proceedings.science/sbsr-2025/trabalhos/avaliacao-das-estimativas-de-chuva-da-missao-gpm-sobre-mato-grosso-do-sul?lang=pt-br)
 
+- **Helvecio, B. L. N., & James, P. C. A. (2022)**. Application of the DBSCAN algorithm for identifying morphological features of atmospheric systems over the amazon basin. Authorea Preprints.  
+  [📄 View Paper](https://essopenarchive.org/doi/full/10.1002/essoar.10512488.1)
+
+  - **LEAL NETO, H. B. (2021)**. Rastreio e previsão de sistemas precipitantes e convectivos na Bacia Amazônica utilizando aprendizado de máquina não-supervisionado. Dissertação (Mestrado em Computação Aplicada) - Instituto Nacional de Pesquisas Espaciais (INPE), São José dos Campos. 142 p.  
+  [📄 View Thesis](http://urlib.net/ibi/8JMKD3MGP3W34R/44HGF8E)
+
 - **Neto, H. B. L., Almeida, A. P., & Calheiros, A. J. (2020)**. As dificuldades no rastreio de tempestades com uso de refletividade radar a partir de técnicas de geoprocessamento: Um estudo de caso sobre a região Amazônica. In GEOINFO (pp. 240-245).  
   [📄 View Paper](http://mtc-m16c.sid.inpe.br/col/sid.inpe.br/mtc-m16c/2020/12.15.12.54/doc/s14.pdf)
-
-- **LEAL NETO, H. B. (2021)**. Rastreio e previsão de sistemas precipitantes e convectivos na Bacia Amazônica utilizando aprendizado de máquina não-supervisionado. Dissertação (Mestrado em Computação Aplicada) - Instituto Nacional de Pesquisas Espaciais (INPE), São José dos Campos. 142 p.  
-  [📄 View Thesis](http://urlib.net/ibi/8JMKD3MGP3W34R/44HGF8E)
 
 
 Support and Contact
