@@ -22,7 +22,7 @@ with open(os.path.join('pyfortracc', '_version.py')) as f:
 
 setup(
     name="pyfortracc",
-    version=__version__.strip().strip('"'),
+    version="1.2.2",
     author="Helvecio B. L. Neto, Alan J. P. Calheiros",
     author_email="fortracc.project@inpe.br",
     description="A Python package for track and forecasting configurable clusters.",
