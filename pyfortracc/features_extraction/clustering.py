@@ -59,6 +59,12 @@ def dbscan_clustering(data, operator, threshold, min_size, eps=1):
     """
     # Segment the data based on the threshold
     points = np.argwhere(operator(data, threshold))
+    # Check if have points after filtering based on operator
+    if points.size == 0:
+        # Return empty clusters and labels
+        clusters = np.zeros(data.shape, dtype=np.int32)
+        labels = np.empty((0, 3), dtype=np.int32)
+        return clusters, labels
     # Set the dbscan object
     dbscan = DBSCAN(algorithm='kd_tree', metric='chebyshev',
                     eps=eps, min_samples=3)
