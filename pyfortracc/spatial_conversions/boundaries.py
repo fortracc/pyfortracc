@@ -120,6 +120,24 @@ def translate_boundary(args):
         columns.append('expansion')
     if 'board' in parquet.columns:
         columns.append('board')
+    if 'u_' in parquet.columns and 'v_' in parquet.columns:
+        columns.append('u_')
+        columns.append('v_')
+    if 'u_opt' in parquet.columns and 'v_opt' in parquet.columns:
+        columns.append('u_opt')
+        columns.append('v_opt')
+    if 'u_elp' in parquet.columns and 'v_elp' in parquet.columns:
+        columns.append('u_elp')
+        columns.append('v_elp')
+    if 'u_inc' in parquet.columns and 'v_inc' in parquet.columns:
+        columns.append('u_inc')
+        columns.append('v_inc')
+    if 'u_spl' in parquet.columns and 'v_spl' in parquet.columns:
+        columns.append('u_spl')
+        columns.append('v_spl')
+    if 'u_mrg' in parquet.columns and 'v_mrg' in parquet.columns:
+        columns.append('u_mrg')
+        columns.append('v_mrg')
     # Load geometry
     geometries = parquet['geometry'].apply(loads)
     centroids = geometries.apply(lambda x: x.centroid)

@@ -86,8 +86,7 @@ def translate_cluster(args):
     parquet_file = parquet['file'].unique()[0]
     file_name = pathlib.Path(parquet_file).stem
     timestamp = get_featstamp(parquet_file)
-    parquet = pd.read_parquet(parquet_file, columns=['uid', 'iuid', 'threshold_level',
-                                                     'array_y', 'array_x'])
+    parquet = pd.read_parquet(parquet_file)
     # Get shape and mount zeros array
     shape = (len(n_list['thresholds']), n_list['y_dim'], n_list['x_dim'])
     array = np.full(shape, 0, dtype=float)

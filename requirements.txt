@@ -13,3 +13,5 @@ tqdm==4.67.1
 ipython==7.34.0
 psutil==5.9.5
 requests==2.32.4
+gdown==5.2.0
+geocube==0.7.1

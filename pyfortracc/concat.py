@@ -227,35 +227,42 @@ def default_columns(name_list=None):
                 'split_pr_idx']
     
     if len(name_list['thresholds']) > 1:
-        # columns = columns + ['iuid']
         # Get position of uid column and add iuid after it
         uid_pos = columns.index('uid')
         columns = columns[:uid_pos + 1] + ['iuid'] + columns[uid_pos + 1:]
+
     if name_list['validation']:
         columns = columns + ['far', 'method']
     if name_list['validation_scores']:
         columns = columns + ['u_noc','v_noc',
                             'far_', 'hit_', 'false-alarm_']
+    
     if name_list['spl_correction']:
         columns = columns + ['u_spl'] + ['v_spl']
         if name_list['validation_scores']:
             columns = columns + ['far_spl','hit_spl', 'false-alarm_spl']
-    if name_list['mrg_correction']:
-        columns = columns + ['u_mrg'] + ['v_mrg']
-        if name_list['validation_scores']:
-            columns = columns + ['far_mrg','hit_mrg', 'false-alarm_mrg']
-    if name_list['validation_scores']:
-        columns = columns + ['u_inc'] + ['v_inc']
-        if name_list['validation_scores']:
-            columns = columns + ['far_inc', 'hit_inc', 'false-alarm_inc']
+
     if name_list['opt_correction']:
         columns = columns + ['u_opt'] + ['v_opt'] + ['opt_field']
         if name_list['validation_scores']:
             columns = columns + ['far_opt', 'hit_opt', 'false-alarm_opt']
+
+
+    if name_list['mrg_correction']:
+        columns = columns + ['u_mrg'] + ['v_mrg']
+        if name_list['validation_scores']:
+            columns = columns + ['far_mrg','hit_mrg', 'false-alarm_mrg']
+
+    if name_list['inc_correction']:
+        columns = columns + ['u_inc'] + ['v_inc']
+        if name_list['validation_scores']:
+            columns = columns + ['far_inc', 'hit_inc', 'false-alarm_inc']
+    
     if name_list['elp_correction']:
         columns = columns + ['u_elp'] + ['v_elp']
         if name_list['validation_scores']:
             columns = columns + ['far_elp', 'hit_elp', 'false-alarm_elp']
+
     if name_list['calc_dir']:
         columns = columns + ['dir']
     if name_list['calc_speed']:
