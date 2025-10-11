@@ -83,18 +83,21 @@ def translate_vfield(args):
     file_name = pathlib.Path(parquet_file).name.replace('.parquet', '.'+driver)
     # Open parquet file
     parquet = read_parquet(parquet_file, None).reset_index()
+    # check if contains opt_field column
+    if 'opt_field' not in parquet.columns:
+        return
     # Set used columns for translate boundary
     columns = ['cindex','timestamp','uid','iuid','status','threshold']
     # Load geometry
-    parquet['vector_field'] = parquet['vector_field'].apply(loads)
+    parquet['opt_field'] = parquet['opt_field'].apply(loads)
     # Select columns
-    parquet = parquet[columns + ['vector_field']]
+    parquet = parquet[columns + ['opt_field']]
     if 'timestamp' in parquet.columns:
         parquet['timestamp'] = parquet['timestamp'].astype(str)
     if 'lifetime' in parquet.columns:
         parquet['lifetime'] = parquet['lifetime'].astype(str)
     parquet = gpd.GeoDataFrame(parquet)
-    parquet['geometry'] = parquet['vector_field']
+    parquet['geometry'] = parquet['opt_field']
     parquet.to_file(output_path + file_name, driver=driver)
     return
 

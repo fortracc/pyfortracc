@@ -34,16 +34,17 @@ name_list['delta_time'] = 12 # in minutes
 name_list['min_overlap'] = 20 # Minimum overlap between clusters in percentage
 
 # Clustering method
-#name_list['cluster_method'] = 'dbscan' # DBSCAN Clustering method
-#name_list['eps'] = 3 # in pixels
+name_list['cluster_method'] = 'dbscan' # DBSCAN Clustering method
+name_list['eps'] = 3 # in pixels
 
 # Vector correction methods
-# name_list['spl_correction'] = True # Perform the Splitting events
-# name_list['mrg_correction'] = True # Perform the Merging events
-# name_list['inc_correction'] = True # Perform the Inner Core vectors
+name_list['spl_correction'] = True # Perform the Splitting events
+name_list['mrg_correction'] = True # Perform the Merging events
+name_list['inc_correction'] = True # Perform the Inner Core vectors
 name_list['opt_correction'] = True # Perform the Optical Flow method (New Method)
-# name_list['elp_correction'] = True # Perform the Ellipse method (New Method)
-# name_list['validation'] = True # Perform the validation of the best correction between times (t-1 and t)
+name_list['elp_correction'] = True # Perform the Ellipse method (New Method)
+name_list['validation'] = True # Perform the validation of the best correction between times (t-1 and t)
+name_list['validation_scores'] = True
 
 # Optional parameters, if not set, the algorithm will not use geospatial information
 name_list['lon_min'] = -62.1475 # Min longitude of data in degrees
@@ -55,34 +56,35 @@ name_list['mrg_expansion'] = True # Perform the expansion correction for the mer
 name_list['prv_uid'] = True #save previous uids from merge and split
 
 if __name__ == '__main__':
-    # # Remove the existing input files
-    # shutil.rmtree('input', ignore_errors=True)
+    # Remove the existing input files
+    shutil.rmtree('input', ignore_errors=True)
 
-    # # Download the input files
-    # url = 'https://drive.google.com/uc?id=1UVVsLCNnsmk7_wOzVrv4H7WHW0sz8spg'
-    # gdown.download(url, 'input.zip', quiet=False)
-    # with zipfile.ZipFile('input.zip', 'r') as zip_ref:
-    #     for member in zip_ref.namelist():
-    #         zip_ref.extract(member)
-    # os.remove('input.zip')
+    # Download the input files
+    url = 'https://drive.google.com/uc?id=1UVVsLCNnsmk7_wOzVrv4H7WHW0sz8spg'
+    gdown.download(url, 'input.zip', quiet=False)
+    with zipfile.ZipFile('input.zip', 'r') as zip_ref:
+        for member in zip_ref.namelist():
+            zip_ref.extract(member)
+    os.remove('input.zip')
 
-    # pyfortracc.features_extraction(name_list, read_function, parallel=True)
-    # pyfortracc.spatial_operations(name_list, read_function, parallel=True)
-    # pyfortracc.cluster_linking(name_list)
-    # pyfortracc.concat(name_list, clean=False, parallel=True)
-    # pyfortracc.post_processing.compute_duration(name_list, parallel=True)
-    # pyfortracc.spatial_conversions(name_list, boundary=True, trajectory=True, vector_field=True,
-    #                                cluster=True, vel_unit='m/s', driver='GeoJSON')
-    # pyfortracc.plot(name_list=name_list, timestamp='2014-08-16 10:36:00',
-    #                 read_function=read_function, cmap='viridis', num_colors=10, figsize=(10,10),
-    #                 boundary=True, centroid=True, trajectory=True, threshold_list=[20,35,40],
-    #                 vector=True, info=True, info_col_name=True, smooth_trajectory=True,
-    #                 bound_color='red', bound_linewidth=1, centr_color='black', centr_size=1,
-    #                 x_scale=0.1, y_scale=0.1, traj_color='blue', traj_linewidth=1, traj_alpha=0.8,
-    #                 vector_scale=20, vector_color='black', info_cols=['uid','status', 'lifetime'],
-    #                 save=True, save_path='output/', save_name='plot.png')
+    pyfortracc.features_extraction(name_list, read_function, parallel=True)
+    pyfortracc.spatial_operations(name_list, read_function, parallel=True)
+    pyfortracc.cluster_linking(name_list)
+    pyfortracc.concat(name_list, clean=False, parallel=True)
+    pyfortracc.post_processing.compute_duration(name_list, parallel=True)
+    pyfortracc.spatial_conversions(name_list, read_function=read_function, 
+                                   boundary=True, trajectory=True, vector_field=True,
+                                   cluster=True, vel_unit='m/s', driver='GeoJSON')
+    pyfortracc.post_processing.spatial_vectors(name_list, read_function, parallel=False)
+    pyfortracc.plot(name_list=name_list, timestamp='2014-08-16 10:36:00',
+                    read_function=read_function, cmap='viridis', num_colors=10, figsize=(10,10),
+                    boundary=True, centroid=True, trajectory=True, threshold_list=[20,35,40],
+                    vector=True, info=True, info_col_name=True, smooth_trajectory=True,
+                    bound_color='red', bound_linewidth=1, centr_color='black', centr_size=1,
+                    x_scale=0.1, y_scale=0.1, traj_color='blue', traj_linewidth=1, traj_alpha=0.8,
+                    vector_scale=20, vector_color='black', info_cols=['uid','status', 'lifetime'],
+                    save=True, save_path='output/', save_name='plot.png')
     tracking_files = sorted(glob.glob(name_list['output_path'] + '/track/trackingtable/*.parquet'))
     tracking_table = pd.concat(pd.read_parquet(f) for f in tracking_files)
-    print(tracking_table)
-    # tracking_table.to_csv(name_list['output_path'] + '/track/tracking_table.csv')
+    tracking_table.to_csv(name_list['output_path'] + '/track/tracking_table.csv')
 
