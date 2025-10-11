@@ -513,7 +513,6 @@ def set_schema(module,name_list):
                 'u_': float,
                 'v_': float,
                 'trajectory': str,
-                'vector_field': str,
                 'expansion': float,
             },
         'linked': {
@@ -542,6 +541,7 @@ def set_schema(module,name_list):
     if name_list['opt_correction']:
         s_dict['spatial']['u_opt'] = float
         s_dict['spatial']['v_opt'] = float
+        s_dict['spatial']['opt_field'] = str
     if name_list['elp_correction']:
         s_dict['spatial']['u_elp'] = float
         s_dict['spatial']['v_elp'] = float

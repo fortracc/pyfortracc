@@ -135,7 +135,7 @@ def opticalflow_mtd(cur_df, prev_df, name_list, geotrf):
         elif isinstance(v_field, MultiLineString):
             v_field = list(v_field.geoms)
     # Create GeoDataFrame with p0 points p0_x and p0_y
-    vec_field = gpd.GeoDataFrame({'vector_field': v_field,
+    vec_field = gpd.GeoDataFrame({'opt_field': v_field,
                                 'geometry': p0_,
                                 'u': u_vec,
                                 'v': v_vec})
@@ -144,7 +144,7 @@ def opticalflow_mtd(cur_df, prev_df, name_list, geotrf):
     ccur_df = cur_df.copy()
     buffer_size = (name_list['x_res'] + name_list['y_res']) / 2
     ccur_df['geometry'] = ccur_df['geometry'].buffer(buffer_size)
-    # Spatial join to associate vector_field with current frame
+    # Spatial join to associate opt_field with current frame
     within = gpd.sjoin(vec_field, ccur_df, how='inner', predicate='within', 
                     lsuffix='l', rsuffix='r').reset_index()
     # Sort by threshold_level in descending order
@@ -160,9 +160,9 @@ def opticalflow_mtd(cur_df, prev_df, name_list, geotrf):
         u_.append(mean_uv[0])
         v_.append(mean_uv[1])
         if len(group) == 1: # If only one LineString
-            vector_field.append(group['vector_field_l'].values[0])
+            vector_field.append(group['opt_field_l'].values[0])
         else: # If more than one LineString Convert to MultiLineString
-            m_lines = MultiLineString(group['vector_field_l'].values.tolist())
+            m_lines = MultiLineString(group['opt_field_l'].values.tolist())
             vector_field.append(m_lines)
     return index, u_, v_, vector_field
 
