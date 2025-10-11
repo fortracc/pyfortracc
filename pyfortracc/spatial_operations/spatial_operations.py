@@ -161,7 +161,8 @@ def spatial_operation(args):
     # Initialize cur_frame with all status as NEW
     cur_frame['status'] = 'NEW'
     cur_frame['trajectory'] = LineString().wkt
-    cur_frame['vector_field'] = LineString().wkt
+    if nm_lst['opt_correction']:
+        cur_frame['opt_field'] = LineString().wkt
     # Convert to shapely geometry
     cur_frame['geometry'] = cur_frame['geometry'].apply(loads)
     # cur_frame['centroid'] = cur_frame['geometry'].centroid 
@@ -226,8 +227,8 @@ def spatial_operation(args):
         # Update current frame based on index
         cur_frame.loc[opt_idx,'u_opt'] = u_
         cur_frame.loc[opt_idx,'v_opt'] = v_
-        cur_frame.loc[opt_idx,'vector_field'] = v_field
-        cur_frame['vector_field'] = cur_frame['vector_field'].astype(str)
+        cur_frame.loc[opt_idx,'opt_field'] = v_field
+        cur_frame['opt_field'] = cur_frame['opt_field'].astype(str)
     # Save the result
     cur_frame['trajectory'] = cur_frame['trajectory'].astype(str)
     # Calculate best method if validation is True

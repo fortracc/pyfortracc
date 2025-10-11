@@ -219,7 +219,6 @@ def default_columns(name_list=None):
                 'array_values',
                 'array_y',
                 'array_x',
-                'vector_field',
                 'trajectory',
                 'geometry',
                 'cluster_id',
@@ -250,7 +249,7 @@ def default_columns(name_list=None):
         if name_list['validation_scores']:
             columns = columns + ['far_inc', 'hit_inc', 'false-alarm_inc']
     if name_list['opt_correction']:
-        columns = columns + ['u_opt'] + ['v_opt']      
+        columns = columns + ['u_opt'] + ['v_opt'] + ['opt_field']
         if name_list['validation_scores']:
             columns = columns + ['far_opt', 'hit_opt', 'false-alarm_opt']
     if name_list['elp_correction']:
