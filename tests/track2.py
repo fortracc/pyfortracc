@@ -12,6 +12,10 @@ import pyfortracc
 import gzip
 import netCDF4
 import numpy as np
+import pathlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
+import subprocess
 
 def read_function(path):
     variable = "DBZc"
@@ -22,6 +26,39 @@ def read_function(path):
             data[data == -9999] = np.nan
     gz.close()
     return data
+
+def download_mapbiomas(url_template: str, bbox: str, start_year: int, end_year: int, max_workers: int = 4):
+    # Cria o diretório de saída se não existir
+    pathlib.Path('mapbiomas').mkdir(parents=True, exist_ok=True)
+    # Função interna para baixar e processar um único ano
+    def _download(year: int):
+        url = url_template.format(year)
+        out_file = f"mapbiomas/{year}.tif"
+        gdal_command = [
+            "gdal_translate",
+            f"/vsicurl/{url}",
+            out_file,
+            "-b", "1",
+            "-projwin", *bbox.split(),
+            "-of", "GTiff",
+            "-outsize", "1024", "1024",
+        ]
+        subprocess.run(gdal_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        return year
+    # Lista de anos a serem processados
+    years = list(range(start_year, end_year + 1))
+    # Uso de ThreadPoolExecutor para downloads paralelos
+    with tqdm(total=len(years), desc="Downloading & Processing") as pbar:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_download, y): y for y in years}
+            for future in as_completed(futures):
+                try:
+                    _ = future.result()
+                except Exception as e:
+                    print(f"Erro no ano {futures[future]}: {e}")
+                pbar.update(1)
+
+
 # Set the parameters
 name_list = {}
 name_list['input_path'] = 'input/' # path to the input data
@@ -67,6 +104,11 @@ if __name__ == '__main__':
             zip_ref.extract(member)
     os.remove('input.zip')
 
+    url = "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_8/lclu/coverage/brasil_coverage_{}.tif"
+    bbox = "-62.1475 -0.9912 -57.8461 -5.3048"  # xmin, ymin, xmax, ymax
+    download_mapbiomas(url, bbox, 2014, 2014, max_workers=1)
+
+
     pyfortracc.features_extraction(name_list, read_function, parallel=True)
     pyfortracc.spatial_operations(name_list, read_function, parallel=True)
     pyfortracc.cluster_linking(name_list)
@@ -75,7 +117,18 @@ if __name__ == '__main__':
     pyfortracc.spatial_conversions(name_list, read_function=read_function, 
                                    boundary=True, trajectory=True, vector_field=True,
                                    cluster=True, vel_unit='m/s', driver='GeoJSON')
-    pyfortracc.post_processing.spatial_vectors(name_list, read_function, parallel=False)
+
+    # Compute spatial vectors
+    pyfortracc.post_processing.spatial_vectors(name_list, read_function, parallel=True)
+
+    ## Add raster data
+    def raster_function(raster_path):
+        import rioxarray
+        raster = rioxarray.open_rasterio(raster_path, masked=True).squeeze()
+        raster = raster.rename({'x': 'lon', 'y': 'lat'})
+        return raster
+    pyfortracc.post_processing.add_raster_data(name_list, raster_function=raster_function, raster_path='mapbiomas/*.tif', raster_file_pattern='%Y.tif', column_name='land_use', parallel=False, merge_mode='nearest', time_tolerance=None)
+
     pyfortracc.plot(name_list=name_list, timestamp='2014-08-16 10:36:00',
                     read_function=read_function, cmap='viridis', num_colors=10, figsize=(10,10),
                     boundary=True, centroid=True, trajectory=True, threshold_list=[20,35,40],
