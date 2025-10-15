@@ -4,6 +4,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import multiprocessing as mp
+from scipy import stats as scipy_stats
 from rasterstats import zonal_stats
 from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system
 
@@ -12,9 +13,9 @@ def add_raster_data(
     raster_function=None,
     raster_path=None,
     raster_file_pattern=None,
-    column_name=None,
     merge_mode="nearest",
     time_tolerance=None,
+    statistics=None,
     parallel=True
 ):
     """
@@ -28,8 +29,6 @@ def add_raster_data(
         Path to raster data folder or files.
     raster_file_pattern : str
         Datetime pattern in raster filenames (e.g. '%Y.tif', '%Y%m%d_%H%M.nc').
-    column_name : str
-        Column name to store the raster-derived variable.
     merge_mode : str, default='nearest'
         Defines how to match rasters to tracks. Options:
             - 'nearest'  : Select raster closest in time to each track timestamp.
@@ -37,6 +36,19 @@ def add_raster_data(
             - 'tolerance': Match rasters only if within `time_tolerance`.
     time_tolerance : str or pd.Timedelta, optional
         Maximum allowed time difference (e.g. '3H', '1D') for tolerance mode.
+    statistics : list or str, default=None
+        Which statistics to extract from raster. Options:
+            - None or 'pixels': Extract all pixel values as a list (default).
+            - 'values': Extract all pixel values as a list (same as 'pixels').
+            - 'mean': Extract mean value.
+            - 'median': Extract median value.
+            - 'std': Extract standard deviation.
+            - 'min': Extract minimum value.
+            - 'max': Extract maximum value.
+            - 'mode': Extract mode (most frequent value).
+            - 'count': Extract count of pixels.
+            - 'percentile_X': Extract X-th percentile (e.g., 'percentile_25', 'percentile_75').
+            - list: e.g., ['values', 'mean', 'std', 'mode', 'percentile_25', 'percentile_75'].
     parallel : bool, default=True
         Whether to enable parallel processing.
     """
@@ -123,6 +135,21 @@ def add_raster_data(
     if not hasattr(sample_data, 'rio') or sample_data.rio.crs is None:
         raise ValueError("Raster data must contain CRS information.")
     
+    # Check for 2D variables
+    if hasattr(sample_data, 'data_vars'):
+        # É um Dataset
+        var_2d = [var for var in sample_data.data_vars 
+                  if set(sample_data[var].dims) == {'lat', 'lon'}]
+    else:
+        # Is a DataArray, use the name of the DataArray
+        if set(sample_data.dims) == {'lat', 'lon'}:
+            var_2d = [sample_data.name if sample_data.name else 'raster_data']
+        else:
+            var_2d = []
+    if not var_2d:
+        print("No 2D variables found in raster data.")
+        return
+    
     # --- Process files ---
     n_workers = set_nworkers(name_list)
     # Loading bar
@@ -130,7 +157,7 @@ def add_raster_data(
 
     # Transform merged_df to tuples for easier processing
     merged_list = merged_df[['path_x', 'path_y']].itertuples(index=False, name=None)
-    args_list = [(row[0], row[1], column_name, raster_function) for row in merged_list]
+    args_list = [(row[0], row[1], var_2d, raster_function, statistics) for row in merged_list]
 
     # Execução paralela
     if parallel and n_workers > 1:
@@ -146,8 +173,11 @@ def add_raster_data(
 
 
 def process_file(args):
-    """Função executada para cada linha"""
-    track_file, raster_file, column_name, raster_function = args
+    """
+    Function executed for each line of track and raster file pair.
+    """
+
+    track_file, raster_file, var_2d, raster_function, statistics = args
 
     # Load track data
     track_data = gpd.GeoDataFrame(
@@ -159,25 +189,116 @@ def process_file(args):
     # Load raster data
     raster_data = raster_function(raster_file)
 
-    # Compute zonal statistics
-    stats = zonal_stats(
-        track_data.geometry,
-        raster_data.values,
-        affine=raster_data.rio.transform() if hasattr(raster_data, 'rio') else None,
-        nodata=raster_data.rio.nodata if hasattr(raster_data, 'rio') else None,
-        all_touched=True,
-        raster_out=True
-    )
+    # Normalize statistics parameter
+    if statistics is None or statistics == 'pixels':
+        stats_to_extract = None  # Extract all pixel values
+    elif isinstance(statistics, str):
+        stats_to_extract = [statistics]
+    else:
+        stats_to_extract = statistics
 
-    # Extract pixel values from results
-    pixel_values_list = [
-        res['mini_raster_array'].compressed().tolist() if res and res.get('mini_raster_array') is not None else []
-        for res in stats
-    ]
-    # Add pixel values to GeoDataFrame
-    track_data[column_name] = pixel_values_list
-    # If no values were found, fill with NaN
-    track_data[column_name] = track_data[column_name].apply(lambda x: x if len(x) > 0 else np.nan)
+    # Process each 2D variable
+    for var_name in var_2d:
+        # If it's a DataArray, access directly; if it's a Dataset, use the variable name
+        if hasattr(raster_data, 'data_vars'):
+            # It's a Dataset
+            var_data = raster_data[var_name]
+        else:
+            # It's a DataArray
+            var_data = raster_data
+        
+        # Compute zonal statistics
+        stats = zonal_stats(
+            track_data.geometry,
+            var_data.values,
+            affine=var_data.rio.transform() if hasattr(var_data, 'rio') else None,
+            nodata=var_data.rio.nodata if hasattr(var_data, 'rio') else None,
+            all_touched=True,
+            raster_out=True
+        )
+
+        # Extract values based on statistics parameter
+        if stats_to_extract is None:
+            # Extract all pixel values (default behavior)
+            pixel_values_list = [
+                res['mini_raster_array'].compressed().tolist() if res and res.get('mini_raster_array') is not None else []
+                for res in stats
+            ]
+            track_data[var_name] = pixel_values_list
+            track_data[var_name] = track_data[var_name].apply(lambda x: x if len(x) > 0 else np.nan)
+        elif stats_to_extract is not None:
+            # Extract specific statistics - ONLY when stats_to_extract is not None
+            for stat_name in stats_to_extract:
+                if stat_name == 'values':
+                    # Extract all pixel values
+                    col_name = f"{var_name}_values"
+                    pixel_values_list = [
+                        res['mini_raster_array'].compressed().tolist() if res and res.get('mini_raster_array') is not None else []
+                        for res in stats
+                    ]
+                    values = [vals if len(vals) > 0 else np.nan for vals in pixel_values_list]
+                    track_data[col_name] = values
+                elif stat_name == 'mean':
+                    col_name = f"{var_name}_{stat_name}"
+                    values = [res.get('mean', np.nan) if res else np.nan for res in stats]
+                    track_data[col_name] = values
+                elif stat_name == 'median':
+                    col_name = f"{var_name}_{stat_name}"
+                    values = [np.median(res['mini_raster_array'].compressed()) if res and res.get('mini_raster_array') is not None else np.nan for res in stats]
+                    track_data[col_name] = values
+                elif stat_name == 'std':
+                    col_name = f"{var_name}_{stat_name}"
+                    values = [res.get('std', np.nan) if res else np.nan for res in stats]
+                    track_data[col_name] = values
+                elif stat_name == 'min':
+                    col_name = f"{var_name}_{stat_name}"
+                    values = [res.get('min', np.nan) if res else np.nan for res in stats]
+                    track_data[col_name] = values
+                elif stat_name == 'max':
+                    col_name = f"{var_name}_{stat_name}"
+                    values = [res.get('max', np.nan) if res else np.nan for res in stats]
+                    track_data[col_name] = values
+                elif stat_name == 'mode':
+                    col_name = f"{var_name}_{stat_name}"
+                    values = []
+                    for res in stats:
+                        if res and res.get('mini_raster_array') is not None:
+                            compressed_array = res['mini_raster_array'].compressed()
+                            if len(compressed_array) > 0:
+                                mode_result = scipy_stats.mode(compressed_array, keepdims=True)
+                                values.append(mode_result.mode[0])
+                            else:
+                                values.append(np.nan)
+                        else:
+                            values.append(np.nan)
+                    track_data[col_name] = values
+                elif stat_name == 'count':
+                    col_name = f"{var_name}_{stat_name}"
+                    values = [res.get('count', np.nan) if res else np.nan for res in stats]
+                    track_data[col_name] = values
+                elif stat_name.startswith('percentile_'):
+                    # Extract percentile (e.g., 'percentile_25', 'percentile_75')
+                    try:
+                        percentile_value = float(stat_name.split('_')[1])
+                        if not 0 <= percentile_value <= 100:
+                            raise ValueError(f"Percentile must be between 0 and 100, got {percentile_value}")
+                        col_name = f"{var_name}_{stat_name}"
+                        values = []
+                        for res in stats:
+                            if res and res.get('mini_raster_array') is not None:
+                                compressed_array = res['mini_raster_array'].compressed()
+                                if len(compressed_array) > 0:
+                                    values.append(np.percentile(compressed_array, percentile_value))
+                                else:
+                                    values.append(np.nan)
+                            else:
+                                values.append(np.nan)
+                        track_data[col_name] = values
+                    except (ValueError, IndexError) as e:
+                        raise ValueError(f"Invalid percentile format: {stat_name}. Use 'percentile_X' where X is 0-100. Error: {e}")
+                else:
+                    raise ValueError(f"Unknown statistic: {stat_name}. Options are: values, mean, median, std, min, max, mode, count, percentile_X (e.g., percentile_25, percentile_75)")
+    
     # Return geometry column to WKT for saving in parquet
     track_data['geometry'] = track_data['geometry'].apply(lambda geom: geom.wkt)
     

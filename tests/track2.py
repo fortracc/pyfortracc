@@ -127,7 +127,7 @@ if __name__ == '__main__':
         raster = rioxarray.open_rasterio(raster_path, masked=True).squeeze()
         raster = raster.rename({'x': 'lon', 'y': 'lat'})
         return raster
-    pyfortracc.post_processing.add_raster_data(name_list, raster_function=raster_function, raster_path='mapbiomas/*.tif', raster_file_pattern='%Y.tif', column_name='land_use', parallel=False, merge_mode='nearest', time_tolerance=None)
+    pyfortracc.post_processing.add_raster_data(name_list, raster_function=raster_function, raster_path='mapbiomas/*.tif', raster_file_pattern='%Y.tif', parallel=True, merge_mode='nearest', time_tolerance=None, statistics=['values', 'mean', 'std', 'min', 'max', 'mode', 'percentile_25', 'percentile_90'])
 
     pyfortracc.plot(name_list=name_list, timestamp='2014-08-16 10:36:00',
                     read_function=read_function, cmap='viridis', num_colors=10, figsize=(10,10),
