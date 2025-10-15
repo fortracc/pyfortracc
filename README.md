@@ -152,19 +152,19 @@ If you use pyForTraCC in your research, please cite the following reference:
 
 The following publications demonstrate various applications and developments of pyForTraCC:
 
-- **Neto, H. B. L., e Milton, A. J. P. C., & da Silva, B. (2025)** TRACKING PRECIPITATION SYSTEMS OVER BRAZIL: ANALYSIS OF DENSITY, INTENSITY, DURATION AND SIZE OVER TWO DECADES. In: ANAIS DO XXI SIMPÓSIO BRASILEIRO DE SENSORIAMENTO REMOTO, Salvador. Anais eletrônicos..., Galoá.  
+- **LEAL NETO, H. B., e Milton, A. J. P. C., & da Silva, B. (2025)** TRACKING PRECIPITATION SYSTEMS OVER BRAZIL: ANALYSIS OF DENSITY, INTENSITY, DURATION AND SIZE OVER TWO DECADES. In: ANAIS DO XXI SIMPÓSIO BRASILEIRO DE SENSORIAMENTO REMOTO, Salvador. Anais eletrônicos..., Galoá.  
   [📄 View Paper](http://marte2.sid.inpe.br/attachment.cgi/sid.inpe.br/marte2/2025/08.16.16.54.21/doc/@individualPDF.pdf)
 
 - **SILVA, Milton Borges da et al. (2025)**. AVALIAÇÃO DAS ESTIMATIVAS DE CHUVA DA MISSÃO GPM SOBRE MATO GROSSO DO SUL. In: ANAIS DO XXI SIMPÓSIO BRASILEIRO DE SENSORIAMENTO REMOTO, Salvador. Anais eletrônicos..., Galoá.  
   [📄 View Paper](https://proceedings.science/sbsr-2025/trabalhos/avaliacao-das-estimativas-de-chuva-da-missao-gpm-sobre-mato-grosso-do-sul?lang=pt-br)
 
-- **Helvecio, B. L. N., & James, P. C. A. (2022)**. Application of the DBSCAN algorithm for identifying morphological features of atmospheric systems over the amazon basin. Authorea Preprints.  
+- **LEAL NETO, H. B., & James, P. C. A. (2022)**. Application of the DBSCAN algorithm for identifying morphological features of atmospheric systems over the amazon basin. Authorea Preprints.  
   [📄 View Paper](https://essopenarchive.org/doi/full/10.1002/essoar.10512488.1)
 
 - **LEAL NETO, H. B. (2021)**. Rastreio e previsão de sistemas precipitantes e convectivos na Bacia Amazônica utilizando aprendizado de máquina não-supervisionado. Dissertação (Mestrado em Computação Aplicada) - Instituto Nacional de Pesquisas Espaciais (INPE), São José dos Campos. 142 p.  
   [📄 View Thesis](http://urlib.net/ibi/8JMKD3MGP3W34R/44HGF8E)
 
-- **Neto, H. B. L., Almeida, A. P., & Calheiros, A. J. (2020)**. As dificuldades no rastreio de tempestades com uso de refletividade radar a partir de técnicas de geoprocessamento: Um estudo de caso sobre a região Amazônica. In GEOINFO (pp. 240-245).  
+- **LEAL NETO, H. B., Almeida, A. P., & Calheiros, A. J. (2020)**. As dificuldades no rastreio de tempestades com uso de refletividade radar a partir de técnicas de geoprocessamento: Um estudo de caso sobre a região Amazônica. In GEOINFO (pp. 240-245).  
   [📄 View Paper](http://mtc-m16c.sid.inpe.br/col/sid.inpe.br/mtc-m16c/2020/12.15.12.54/doc/s14.pdf)
 
 
