@@ -22,9 +22,12 @@ pro/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
+.__pycache__
 *.py[cod]
 *$py.class
 *.py.*
+._.gitignore
+.___pycache__
 
 # C extensions
 *.so
