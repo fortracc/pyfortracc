@@ -6,6 +6,7 @@ import numpy as np
 import multiprocessing as mp
 from scipy import stats as scipy_stats
 from rasterstats import zonal_stats
+from rasterio.transform import from_bounds
 from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system
 
 def add_raster_data(
@@ -207,15 +208,54 @@ def process_file(args):
             # It's a DataArray
             var_data = raster_data
         
+        # Ensure proper dimension order (lat, lon)
+        if 'lat' in var_data.dims and 'lon' in var_data.dims:
+            var_data = var_data.transpose('lat', 'lon', ...)
+        
+        # Get raster array
+        raster_array = var_data.values
+    
+        # Check if array has valid dimensions
+        if raster_array.ndim < 2 or min(raster_array.shape[:2]) == 0:
+            raise ValueError(f"Invalid raster dimensions: {raster_array.shape}. Must be at least 2D with both dimensions > 0")
+        
         # Compute zonal statistics
-        stats = zonal_stats(
-            track_data.geometry,
-            var_data.values,
-            affine=var_data.rio.transform() if hasattr(var_data, 'rio') else None,
-            nodata=var_data.rio.nodata if hasattr(var_data, 'rio') else None,
-            all_touched=True,
-            raster_out=True
-        )
+        # Always calculate affine transform from coordinates for reliability
+        if 'lon' in var_data.coords and 'lat' in var_data.coords:
+            lon = var_data.coords['lon'].values
+            lat = var_data.coords['lat'].values
+            
+            # Ensure we have valid coordinate arrays
+            if len(lon) == 0 or len(lat) == 0:
+                raise ValueError(f"Invalid coordinate dimensions: lon={len(lon)}, lat={len(lat)}")
+            
+            # Calculate pixel size
+            # Note: from_bounds expects (west, south, east, north, width, height)
+            # width corresponds to number of columns (longitude dimension)
+            # height corresponds to number of rows (latitude dimension)
+            # The array shape should be (height, width) = (lat, lon)
+            height, width = raster_array.shape[:2]
+            affine_transform = from_bounds(
+                lon.min(), lat.min(), lon.max(), lat.max(),
+                width=width, height=height
+            )
+        else:
+            raise ValueError("Cannot determine affine transform from raster data")
+        
+        # Get nodata value from rio if available, otherwise None
+        nodata_value = var_data.rio.nodata if (hasattr(var_data, 'rio') and var_data.rio.crs is not None) else None
+        
+        try:
+            stats = zonal_stats(
+                track_data.geometry,
+                raster_array,
+                affine=affine_transform,
+                nodata=nodata_value,
+                all_touched=True,
+                raster_out=True
+            )
+        except ValueError as e:
+            raise ValueError(f"Zonal statistics calculation failed: {e}")
 
         # Extract values based on statistics parameter
         if stats_to_extract is None:
