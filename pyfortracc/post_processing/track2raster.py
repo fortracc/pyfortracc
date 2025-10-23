@@ -66,6 +66,10 @@ def process_file(args):
     # Sort by threshold_level to ensure lower thresholds are processed first
     df_original = df_original.sort_values('threshold_level').reset_index(drop=True)
     
+    # Get unique threshold levels (already sorted) - ensure it's a numpy array
+    threshold_levels = np.array(sorted(df_original['threshold_level'].unique()))
+    n_levels = len(threshold_levels)
+    
     # Determine which columns to process
     if columns is None:
         # Default behavior: get all u_ and v_ columns
@@ -88,8 +92,12 @@ def process_file(args):
     # Get timestamp
     timestamp = pd.to_datetime(df_original['timestamp'].unique()[0])
     
+    # Check if using lat/lon coordinates
+    use_latlon = all(key in name_list and name_list[key] is not None 
+                     for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max'])
+    
     # Calculate resolution and grid parameters based on lat/lon if available
-    if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
+    if use_latlon:
         res_lat = abs(name_list['lat_max'] - name_list['lat_min']) / name_list['y_dim']
         res_lon = abs(name_list['lon_max'] - name_list['lon_min']) / name_list['x_dim']
         resolution = (res_lon, res_lat)
@@ -98,118 +106,198 @@ def process_file(args):
         lons = np.linspace(name_list['lon_min'], name_list['lon_max'], name_list['x_dim'], dtype=np.float32)
         lats = np.linspace(name_list['lat_max'], name_list['lat_min'], name_list['y_dim'], dtype=np.float32)
         
-        # Create dataset with predefined coordinates
-        ds = xr.Dataset(coords={'time': [timestamp], 'lat': lats, 'lon': lons})
-        ds['lat'].attrs = {'units': 'degrees_north', 'long_name': 'latitude', 'standard_name': 'latitude'}
-        ds['lon'].attrs = {'units': 'degrees_east', 'long_name': 'longitude', 'standard_name': 'longitude'}
+        # Create coordinates dictionary with threshold_level
+        coords = {
+            'time': [timestamp],
+            'threshold_level': threshold_levels,
+            'lat': lats,
+            'lon': lons
+        }
+        spatial_dims = ('time', 'threshold_level', 'lat', 'lon')
     else:
         resolution = (1, 1)
-        # Create dataset without predefined spatial coordinates
-        ds = xr.Dataset(coords={'time': [timestamp]})
+        # Create coordinates dictionary without lat/lon but with threshold_level
+        coords = {
+            'time': [timestamp],
+            'threshold_level': threshold_levels,
+            'y': np.arange(name_list['y_dim'], dtype=np.int32),
+            'x': np.arange(name_list['x_dim'], dtype=np.int32)
+        }
+        spatial_dims = ('time', 'threshold_level', 'y', 'x')
+    
+    # Dictionary to store all data variables
+    data_vars = {}
     # Process each column
     for col in columns_to_process:
+        # Create arrays to store data for all threshold levels
+        # Dimensions: (threshold_level, y, x) or (threshold_level, lat, lon)
+        col_all_levels = np.full((n_levels, name_list['y_dim'], name_list['x_dim']), np.nan, dtype=np.float32)
+        
         # Special handling for opt_field (LineString/MultiLineString geometries)
         if col == 'opt_field':
-            df_col = df_original[['geometry', col]].copy()
-            df_col = df_col.dropna(subset=[col]).reset_index(drop=True)
+            # Need to process u and v components separately for each threshold level
+            u_all_levels = np.full((n_levels, name_list['y_dim'], name_list['x_dim']), np.nan, dtype=np.float32)
+            v_all_levels = np.full((n_levels, name_list['y_dim'], name_list['x_dim']), np.nan, dtype=np.float32)
+            
+            # Loop over each threshold level
+            for level_idx, threshold_level in enumerate(threshold_levels):
+                # Filter data for this specific threshold level
+                df_level = df_original[df_original['threshold_level'] == threshold_level]
+                df_col = df_level[['geometry', col]].copy()
+                df_col = df_col.dropna(subset=[col])
+                
+                if df_col.empty:
+                    continue
+                
+                # Create lists to store point geometries and vectors
+                from shapely.geometry import Point
+                point_geoms = []
+                opt_field_u = []
+                opt_field_v = []
+                
+                # Process each row - extract start points of vectors
+                for idx, row in df_col.iterrows():
+                    opt_geom = loads(row[col])
+                    
+                    if opt_geom.is_empty:
+                        continue
+                    
+                    # Extract u/v and start point from LineString/MultiLineString
+                    if opt_geom.geom_type == 'MultiLineString':
+                        for line in opt_geom.geoms:
+                            point_geoms.append(Point(line.coords[0]))
+                            opt_field_u.append(line.coords[-1][0] - line.coords[0][0])
+                            opt_field_v.append(line.coords[-1][1] - line.coords[0][1])
+                    elif opt_geom.geom_type == 'LineString':
+                        point_geoms.append(Point(opt_geom.coords[0]))
+                        opt_field_u.append(opt_geom.coords[-1][0] - opt_geom.coords[0][0])
+                        opt_field_v.append(opt_geom.coords[-1][1] - opt_geom.coords[0][1])
+                
+                if len(point_geoms) > 0:
+                    # Create GeoDataFrame with point geometries
+                    gdf = gpd.GeoDataFrame({
+                        'u_opt_field': opt_field_u,
+                        'v_opt_field': opt_field_v
+                    }, geometry=point_geoms, crs='EPSG:4326')
+                    
+                    # Create cube
+                    cube = make_geocube(
+                        vector_data=gdf,
+                        measurements=['u_opt_field', 'v_opt_field'],
+                        resolution=resolution,
+                        fill=np.nan
+                    )
+                    
+                    # Extract data and interpolate to target grid
+                    if use_latlon:
+                        # Rename and interpolate
+                        lats_target = coords['lat']
+                        lons_target = coords['lon']
+                        cube_renamed = cube.rename({'y': 'lat', 'x': 'lon'})
+                        cube_interp = cube_renamed.interp(lat=lats_target, lon=lons_target, method='nearest')
+                        
+                        u_all_levels[level_idx, :, :] = cube_interp['u_opt_field'].values
+                        v_all_levels[level_idx, :, :] = cube_interp['v_opt_field'].values
+                    else:
+                        # Direct indexing for pixel coordinates
+                        u_data = cube['u_opt_field'].data
+                        v_data = cube['v_opt_field'].data
+                        # Clip to target dimensions
+                        y_size = min(u_data.shape[0], name_list['y_dim'])
+                        x_size = min(u_data.shape[1], name_list['x_dim'])
+                        u_all_levels[level_idx, :y_size, :x_size] = u_data[:y_size, :x_size]
+                        v_all_levels[level_idx, :y_size, :x_size] = v_data[:y_size, :x_size]
+            
+            # Add to data_vars with DataArrays
+            data_vars['u_opt_field'] = xr.DataArray(
+                u_all_levels[np.newaxis, :, :, :],
+                dims=spatial_dims,
+                coords=coords
+            )
+            data_vars['v_opt_field'] = xr.DataArray(
+                v_all_levels[np.newaxis, :, :, :],
+                dims=spatial_dims,
+                coords=coords
+            )
+            
+            continue
+        
+        # Standard processing for all other columns - loop over threshold levels
+        for level_idx, threshold_level in enumerate(threshold_levels):
+            # Filter data for this specific threshold level
+            df_level = df_original[df_original['threshold_level'] == threshold_level]
+            df_col = df_level[['geometry', col]].copy()
+            df_col = df_col.dropna(subset=[col])
             
             if df_col.empty:
                 continue
             
-            # Create lists to store point geometries and vectors
-            from shapely.geometry import Point
-            point_geoms = []
-            opt_field_u = []
-            opt_field_v = []
+            # Get geometries and create GeoDataFrame
+            geometries = gpd.GeoSeries(df_col['geometry'].apply(loads))
+            gdf = gpd.GeoDataFrame(df_col[[col]], geometry=geometries, crs='EPSG:4326')
             
-            # Process each row - extract start points of vectors
-            for idx, row in df_col.iterrows():
-                opt_geom = loads(row[col])
-                
-                if opt_geom.is_empty:
-                    continue
-                
-                # Extract u/v and start point from LineString/MultiLineString
-                if opt_geom.geom_type == 'MultiLineString':
-                    for line in opt_geom.geoms:
-                        # Use start point as the location
-                        point_geoms.append(Point(line.coords[0]))
-                        opt_field_u.append(line.coords[-1][0] - line.coords[0][0])
-                        opt_field_v.append(line.coords[-1][1] - line.coords[0][1])
-                elif opt_geom.geom_type == 'LineString':
-                    point_geoms.append(Point(opt_geom.coords[0]))
-                    opt_field_u.append(opt_geom.coords[-1][0] - opt_geom.coords[0][0])
-                    opt_field_v.append(opt_geom.coords[-1][1] - opt_geom.coords[0][1])
+            # Create cube with make_geocube
+            cube = make_geocube(
+                vector_data=gdf,
+                measurements=[col],
+                resolution=resolution,
+                fill=np.nan
+            )
             
-            if len(point_geoms) > 0:
-                # Create GeoDataFrame with point geometries (much faster!)
-                gdf = gpd.GeoDataFrame({
-                    'u_opt_field': opt_field_u,
-                    'v_opt_field': opt_field_v
-                }, geometry=point_geoms, crs='EPSG:4326')
+            # Extract data and interpolate to target grid
+            if use_latlon:
+                # Rename and interpolate
+                lats_target = coords['lat']
+                lons_target = coords['lon']
+                cube_renamed = cube.rename({'y': 'lat', 'x': 'lon'})
+                cube_interp = cube_renamed.interp(lat=lats_target, lon=lons_target, method='nearest')
                 
-                # Create cube
-                cube = make_geocube(
-                    vector_data=gdf,
-                    measurements=['u_opt_field', 'v_opt_field'],
-                    resolution=resolution,
-                    fill=np.nan
-                )
-                
-                # Add to dataset with correct dimensions
-                if 'lat' in ds.coords and 'lon' in ds.coords:
-                    # Rename cube dimensions from y,x to lat,lon and interpolate
-                    cube_renamed = cube.rename({'y': 'lat', 'x': 'lon'})
-                    cube_interp = cube_renamed.interp(lat=ds.lat, lon=ds.lon, method='nearest')
-                    
-                    # Add directly - now with matching coordinates
-                    ds['u_opt_field'] = (('time', 'lat', 'lon'), cube_interp['u_opt_field'].values[np.newaxis, :, :])
-                    ds['v_opt_field'] = (('time', 'lat', 'lon'), cube_interp['v_opt_field'].values[np.newaxis, :, :])
-                else:
-                    ds['u_opt_field'] = (('time', 'y', 'x'), cube['u_opt_field'].data[np.newaxis, :, :])
-                    ds['v_opt_field'] = (('time', 'y', 'x'), cube['v_opt_field'].data[np.newaxis, :, :])
-            
-            continue
+                col_all_levels[level_idx, :, :] = cube_interp[col].values
+            else:
+                # Direct indexing for pixel coordinates
+                col_data = cube[col].data
+                # Clip to target dimensions
+                y_size = min(col_data.shape[0], name_list['y_dim'])
+                x_size = min(col_data.shape[1], name_list['x_dim'])
+                col_all_levels[level_idx, :y_size, :x_size] = col_data[:y_size, :x_size]
         
-        # Standard processing for all other columns
-        df_col = df_original[['geometry', col]].copy()
-        df_col = df_col.dropna(subset=[col]).reset_index(drop=True)
-        
-        if df_col.empty:
-            continue
-        
-        # Get geometries and create GeoDataFrame
-        geometries = gpd.GeoSeries(df_col['geometry'].apply(loads))
-        gdf = gpd.GeoDataFrame(df_col[[col]], geometry=geometries, crs='EPSG:4326')
-        
-        # Create cube with make_geocube
-        cube = make_geocube(
-            vector_data=gdf,
-            measurements=[col],
-            resolution=resolution,
-            fill=np.nan
+        # Add to data_vars with DataArray
+        data_vars[col] = xr.DataArray(
+            col_all_levels[np.newaxis, :, :, :],
+            dims=spatial_dims,
+            coords=coords
         )
-        
-        # Add to dataset with correct dimensions
-        if 'lat' in ds.coords and 'lon' in ds.coords:
-            # Rename cube dimensions from y,x to lat,lon and interpolate
-            cube_renamed = cube.rename({'y': 'lat', 'x': 'lon'})
-            cube_interp = cube_renamed.interp(lat=ds.lat, lon=ds.lon, method='nearest')
-            
-            # Add directly - now with matching coordinates
-            ds[col] = (('time', 'lat', 'lon'), cube_interp[col].values[np.newaxis, :, :])
-        else:
-            ds[col] = (('time', 'y', 'x'), cube[col].data[np.newaxis, :, :])
     
-    # Check if dataset has any variables
-    if len(ds.data_vars) == 0:
+    # Check if there are any variables to save
+    if len(data_vars) == 0:
         return
     
+    # Create the xarray Dataset from DataArrays
+    ds = xr.Dataset(data_vars)
+    
+    # Add attributes to coordinates
+    ds['time'].attrs['long_name'] = 'Time'
+    ds['time'].attrs['standard_name'] = 'time'
+    
+    ds['threshold_level'].attrs['long_name'] = 'Threshold Level'
+    ds['threshold_level'].attrs['description'] = 'Intensity threshold level used for tracking'
+    
     # Add variable attributes if we have lat/lon coordinates
-    if 'lat' in ds.coords and 'lon' in ds.coords:
+    if use_latlon:
+        ds['lat'].attrs['units'] = 'degrees_north'
+        ds['lat'].attrs['long_name'] = 'latitude'
+        ds['lat'].attrs['standard_name'] = 'latitude'
+        
+        ds['lon'].attrs['units'] = 'degrees_east'
+        ds['lon'].attrs['long_name'] = 'longitude'
+        ds['lon'].attrs['standard_name'] = 'longitude'
+        
         for var in ds.data_vars:
             ds[var].attrs['crs'] = 'EPSG:4326'
             ds[var].attrs['_FillValue'] = np.nan
+    else:
+        ds['y'].attrs['long_name'] = 'y coordinate'
+        ds['x'].attrs['long_name'] = 'x coordinate'
     
     # Save dataset to netCDF file
     output_file = file.replace('trackingtable', 'raster').replace('.parquet', '.nc')
