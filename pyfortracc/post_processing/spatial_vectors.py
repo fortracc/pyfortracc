@@ -53,170 +53,224 @@ def process_file(args):
     df_original = df_original.sort_values('threshold_level').reset_index(drop=True)
     
     # Get vectors of all methods based on columns where contains u_ and v_
-    u_cols = []
-    v_cols = []
-    for col in df_original.columns:
-        if col.startswith('u_'):
-            u_cols.append(col)
-        elif col.startswith('v_'):
-            v_cols.append(col)
+    u_cols = [col for col in df_original.columns if col.startswith('u_')]
+    v_cols = [col for col in df_original.columns if col.startswith('v_')]
     
     # Get timestamp
     timestamp = pd.to_datetime(df_original['timestamp'].unique()[0])
     
-    # Create an xarray dataset to store all vectors based on methods
-    ds = xr.Dataset()
-    ds = ds.assign_coords(time=('time', [timestamp]))
+    # Get unique threshold levels (already sorted) - ensure it's a numpy array
+    threshold_levels = np.array(sorted(df_original['threshold_level'].unique()))
+    n_levels = len(threshold_levels)
     
     # Check if there's any valid data
-    has_valid_data = False
-    for u_col, v_col in zip(u_cols, v_cols):
-        if not df_original[[u_col, v_col]].isna().all().all():
-            has_valid_data = True
-            break
+    has_valid_data = any(not df_original[[u_col, v_col]].isna().all().all() 
+                         for u_col, v_col in zip(u_cols, v_cols))
     
     if not has_valid_data:
-        # Save empty dataset to netCDF file
-        output_file = file.replace('trackingtable', 'spatial_vectors').replace('.parquet', '.nc')
-        output_path = pathlib.Path(output_file).parent
-        output_path.mkdir(parents=True, exist_ok=True)
-        ds.to_netcdf(output_file)
         return
+    
+    # Pre-create spatial dimensions and coordinates
+    use_latlon = all(key in name_list and name_list[key] is not None 
+                     for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max'])
+    
+    if use_latlon:
+        lats = np.linspace(name_list['lat_min'], name_list['lat_max'], name_list['y_dim'], dtype=np.float32)
+        lons = np.linspace(name_list['lon_min'], name_list['lon_max'], name_list['x_dim'], dtype=np.float32)
+        coords = {
+            'time': [timestamp],
+            'threshold_level': threshold_levels,
+            'lat': lats,
+            'lon': lons
+        }
+        spatial_dims = ('time', 'threshold_level', 'lat', 'lon')
+    else:
+        coords = {
+            'time': [timestamp],
+            'threshold_level': threshold_levels,
+            'y': np.arange(name_list['y_dim'], dtype=np.int32),
+            'x': np.arange(name_list['x_dim'], dtype=np.int32)
+        }
+        spatial_dims = ('time', 'threshold_level', 'y', 'x')
+    
+    # Dictionary to store all data variables
+    data_vars = {}
     
     # Loop over pairs of u and v columns
     for u_col, v_col in zip(u_cols, v_cols):
         # Extract method name from column name
         method = u_col[2:]
         
-        # Create a copy for this method
-        if method == 'opt' and 'opt_field' in df_original.columns:
-            df_method = df_original[['geometry', u_col, v_col, 'opt_field', 'threshold_level']].copy()
-            df_method = df_method.dropna(subset=[u_col, v_col, 'opt_field'], how='any').reset_index(drop=True)
-        else:
-            df_method = df_original[['geometry', u_col, v_col, 'threshold_level']].copy()
-            df_method = df_method.dropna(subset=[u_col, v_col], how='any').reset_index(drop=True)
-         
-        if df_method.empty:
-            continue
+        # Create 3D arrays to store vectors for all threshold levels
+        # Dimensions: (threshold_level, y, x)
+        u_all_levels = np.full((n_levels, name_list['y_dim'], name_list['x_dim']), np.nan, dtype=np.float32)
+        v_all_levels = np.full((n_levels, name_list['y_dim'], name_list['x_dim']), np.nan, dtype=np.float32)
         
-        # Get geometries for this specific method (after filtering)
-        geometries = gpd.GeoSeries(df_method['geometry'].apply(loads))
-        
-        # Process opt_field BEFORE transformation to get correct u/v components
-        opt_field_u = []
-        opt_field_v = []
-        opt_field_x = []
-        opt_field_y = []
-        
-        if method == 'opt' and 'opt_field' in df_method.columns:
-            opt_field_series = df_method['opt_field'].dropna().reset_index(drop=True)
-            if not opt_field_series.empty:
-                opt_field_geom = gpd.GeoSeries(opt_field_series.apply(loads))
-                opt_field_geom = opt_field_geom[~opt_field_geom.is_empty]
+        # Loop over each threshold level
+        for level_idx, threshold_level in enumerate(threshold_levels):
+            # Filter data for this specific threshold level and method
+            mask_level = df_original['threshold_level'] == threshold_level
+            df_level = df_original[mask_level]
+            
+            # Select columns and drop NaN
+            if method == 'opt' and 'opt_field' in df_level.columns:
+                cols = ['geometry', u_col, v_col, 'opt_field']
+                df_method = df_level[cols].dropna(subset=[u_col, v_col, 'opt_field'])
+            else:
+                cols = ['geometry', u_col, v_col]
+                df_method = df_level[cols].dropna(subset=[u_col, v_col])
+             
+            if df_method.empty:
+                continue
+            
+            # Get geometries for this specific method and level
+            geometries = gpd.GeoSeries(df_method['geometry'].apply(loads))
+            
+            # Process opt_field BEFORE transformation to get correct u/v components
+            opt_field_u = []
+            opt_field_v = []
+            opt_field_x = []
+            opt_field_y = []
+            
+            if method == 'opt' and 'opt_field' in df_method.columns:
+                opt_field_series = df_method['opt_field'].dropna().reset_index(drop=True)
+                if not opt_field_series.empty:
+                    opt_field_geom = gpd.GeoSeries(opt_field_series.apply(loads))
+                    opt_field_geom = opt_field_geom[~opt_field_geom.is_empty]
+                    
+                    if not opt_field_geom.empty:
+                        # Calculate u/v BEFORE transformation (in original coordinate system)
+                        for geom in opt_field_geom:
+                            if geom.geom_type == 'MultiLineString':
+                                for line in geom.geoms:
+                                    opt_field_x.append(line.coords[0][0])
+                                    opt_field_y.append(line.coords[0][1])
+                                    opt_field_u.append(line.coords[-1][0] - line.coords[0][0])
+                                    opt_field_v.append(line.coords[-1][1] - line.coords[0][1])
+                            elif geom.geom_type == 'LineString':
+                                opt_field_x.append(geom.coords[0][0])
+                                opt_field_y.append(geom.coords[0][1])
+                                opt_field_u.append(geom.coords[-1][0] - geom.coords[0][0])
+                                opt_field_v.append(geom.coords[-1][1] - geom.coords[0][1])
+            
+            # Apply reverse geotransform if coordinates are provided
+            if use_latlon:
+                geometries = gpd.GeoDataFrame(geometry=geometries, crs='EPSG:4326')['geometry'].affine_transform(gtf_inv)
                 
-                if not opt_field_geom.empty:
-                    # Calculate u/v BEFORE transformation (in original coordinate system)
-                    for geom in opt_field_geom:
-                        if geom.geom_type == 'MultiLineString':
-                            for line in geom.geoms:
-                                opt_field_x.append(line.coords[0][0])
-                                opt_field_y.append(line.coords[0][1])
-                                opt_field_u.append(line.coords[-1][0] - line.coords[0][0])
-                                opt_field_v.append(line.coords[-1][1] - line.coords[0][1])
-                        elif geom.geom_type == 'LineString':
-                            opt_field_x.append(geom.coords[0][0])
-                            opt_field_y.append(geom.coords[0][1])
-                            opt_field_u.append(geom.coords[-1][0] - geom.coords[0][0])
-                            opt_field_v.append(geom.coords[-1][1] - geom.coords[0][1])
-        
-        # Check if name_list have lat_min, lat_max, lon_min, lon_max is different from None
-        if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
-            # Apply reverse geotransform using geopandas affine_transform
-            geometries_gdf = gpd.GeoDataFrame(geometry=geometries, crs='EPSG:4326')
-            geometries = geometries_gdf['geometry'].affine_transform(gtf_inv)
+                # Transform opt_field coordinates if they exist
+                if opt_field_x:
+                    opt_field_coords = gpd.GeoSeries.from_xy(opt_field_x, opt_field_y, crs='EPSG:4326')
+                    opt_field_coords = opt_field_coords.affine_transform(gtf_inv)
+                    opt_field_x = opt_field_coords.x.tolist()
+                    opt_field_y = opt_field_coords.y.tolist()
+                
+                # Create GeoDataFrame with filtered data (with CRS for lat/lon)
+                gdf = gpd.GeoDataFrame(df_method[[u_col, v_col]], geometry=geometries.values)
+                gdf.set_crs(epsg=3857, inplace=True, allow_override=True)
+            else:
+                # For pixel coordinates (no lat/lon), geometries are already in pixel space
+                # No transformation needed - geometries are already in correct coordinate system
+                gdf = gpd.GeoDataFrame(df_method[[u_col, v_col]], geometry=geometries.values)
             
-            # Transform opt_field coordinates if they exist
-            if opt_field_x:
-                opt_field_coords = gpd.GeoSeries([gpd.points_from_xy([x], [y])[0] for x, y in zip(opt_field_x, opt_field_y)], crs='EPSG:4326')
-                opt_field_coords_transformed = opt_field_coords.affine_transform(gtf_inv)
-                opt_field_x = [geom.x for geom in opt_field_coords_transformed]
-                opt_field_y = [geom.y for geom in opt_field_coords_transformed]
+            if use_latlon:
+                # Use GeoCube for geographic coordinates
+                cube = make_geocube(
+                    vector_data=gdf,
+                    measurements=[u_col, v_col],
+                    resolution=(1, 1),
+                    fill=np.nan
+                )
 
-        # Create GeoDataFrame with filtered data and corresponding geometries
-        gdf = gpd.GeoDataFrame(df_method[[u_col, v_col]], geometry=geometries.values)
-        # Set CRS using EPSG:3857 (metric)
-        gdf.set_crs(epsg=3857, inplace=True, allow_override=True)
+                # Extract only points with values
+                u_cube = cube[u_col].data
+                v_cube = cube[v_col].data
+                
+                # Create meshgrid of coordinates
+                X, Y = np.meshgrid(cube.coords['x'].data, cube.coords['y'].data)
+                mask = ~(np.isnan(u_cube) | np.isnan(v_cube))
+                
+                # Get valid points from cube (keep as numpy arrays)
+                x_list = X[mask].astype(np.float64)
+                y_list = Y[mask].astype(np.float64)
+                u_list = u_cube[mask].astype(np.float32)
+                v_list = v_cube[mask].astype(np.float32)
+                
+                # Clean up
+                del u_cube, v_cube, X, Y, mask
+            else:
+                # For pixel coordinates, extract centroids directly from geometries
+                x_list = []
+                y_list = []
+                u_list = []
+                v_list = []
+                
+                for idx, row in gdf.iterrows():
+                    geom = row['geometry']
+                    # Get centroid of geometry
+                    centroid = geom.centroid
+                    x_list.append(centroid.x)
+                    y_list.append(centroid.y)
+                    u_list.append(row[u_col])
+                    v_list.append(row[v_col])
+                
+                # Convert to numpy arrays
+                x_list = np.array(x_list, dtype=np.float64)
+                y_list = np.array(y_list, dtype=np.float64)
+                u_list = np.array(u_list, dtype=np.float32)
+                v_list = np.array(v_list, dtype=np.float32)
+            
+            # Add opt_field values if available
+            if method == 'opt' and opt_field_x:
+                x_list = np.concatenate([x_list, np.array(opt_field_x, dtype=np.float64)])
+                y_list = np.concatenate([y_list, np.array(opt_field_y, dtype=np.float64)])
+                u_list = np.concatenate([u_list, np.array(opt_field_u, dtype=np.float32)])
+                v_list = np.concatenate([v_list, np.array(opt_field_v, dtype=np.float32)])
+            
+            # Convert coordinates to integer indices and clip to bounds
+            if len(x_list) > 0:
+                x_idx = np.clip(x_list.astype(np.int32), 0, name_list['x_dim'] - 1)
+                y_idx = np.clip(y_list.astype(np.int32), 0, name_list['y_dim'] - 1)
+                
+                # Fill matrices for this threshold level
+                u_all_levels[level_idx, y_idx, x_idx] = u_list
+                v_all_levels[level_idx, y_idx, x_idx] = v_list
+            
+            # Clean up
+            if use_latlon:
+                del gdf, cube, geometries
+            else:
+                del gdf, geometries
         
-        # GeoCube - create cube with ALL data (already sorted by threshold_level)
-        cube = make_geocube(
-            vector_data=gdf,
-            measurements=[u_col, v_col],
-            resolution=(1, 1),
-            fill=np.nan
+        # Add time dimension
+        u_data = u_all_levels[np.newaxis, :, :, :]  # shape: (1, n_levels, y_dim, x_dim)
+        v_data = v_all_levels[np.newaxis, :, :, :]  # shape: (1, n_levels, y_dim, x_dim)
+        
+        # Create DataArrays with explicit dimensions and coordinates
+        data_vars['u_' + method] = xr.DataArray(
+            u_data,
+            dims=spatial_dims,
+            coords=coords
         )
-
-        # --- Extract only points with values ---
-        u_cube = cube[u_col].data  # array 2D [y, x]
-        v_cube = cube[v_col].data  # array 2D [y, x]
-        x_coords = cube.coords['x'].data
-        y_coords = cube.coords['y'].data 
-        
-        # Create meshgrid of x and y coordinates
-        X, Y = np.meshgrid(x_coords, y_coords)
-        mask = ~np.isnan(u_cube) & ~np.isnan(v_cube)
-        
-        # Get valid points from cube
-        x_list = X[mask].astype(float).tolist()
-        y_list = Y[mask].astype(float).tolist()
-        u_list = u_cube[mask].astype(float).tolist()
-        v_list = v_cube[mask].astype(float).tolist()
-        
-        # Add opt_field values (already calculated before transformation)
-        if method == 'opt' and opt_field_x:
-            x_list.extend(opt_field_x)
-            y_list.extend(opt_field_y)
-            u_list.extend(opt_field_u)
-            v_list.extend(opt_field_v)
-        
-        # Create matrices filled with NaN
-        u_matrix = np.full((name_list['y_dim'], name_list['x_dim']), np.nan, dtype=np.float32)
-        v_matrix = np.full((name_list['y_dim'], name_list['x_dim']), np.nan, dtype=np.float32)
-            
-        if len(x_list) > 0:
-            # Convert all x and y to int and fit to bounds of x_dim and y_dim
-            x_arr = np.array(x_list, dtype=np.int32)
-            y_arr = np.array(y_list, dtype=np.int32)
-            x_arr = np.clip(x_arr, 0, name_list['x_dim'] - 1)
-            y_arr = np.clip(y_arr, 0, name_list['y_dim'] - 1)
-            u_arr = np.array(u_list, dtype=np.float32)
-            v_arr = np.array(v_list, dtype=np.float32)
-            
-            # Fill matrix - values are already in order (lower to higher threshold)
-            u_matrix[y_arr, x_arr] = u_arr
-            v_matrix[y_arr, x_arr] = v_arr
-        
-        # Add to dataset
-        ds['u_' + method] = (('time', 'y', 'x'), u_matrix[np.newaxis, :, :])
-        ds['v_' + method] = (('time', 'y', 'x'), v_matrix[np.newaxis, :, :])
+        data_vars['v_' + method] = xr.DataArray(
+            v_data,
+            dims=spatial_dims,
+            coords=coords
+        )
         
         # Remove variables to free memory
-        del gdf, cube, geometries, df_method, u_cube, v_cube, X, Y, mask
-        del x_list, y_list, u_list, v_list, u_matrix, v_matrix
+        del u_all_levels, v_all_levels, u_data, v_data
     
-    # Check if have lat and lon in name_list and add dimensions
-    if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
-        # Criar arrays de latitude e longitude
-        lats = np.linspace(name_list['lat_min'], name_list['lat_max'], name_list['y_dim'], dtype=np.float32)
-        lons = np.linspace(name_list['lon_min'], name_list['lon_max'], name_list['x_dim'], dtype=np.float32)
-        
-        # Renomear dimensões de y,x para lat,lon
-        ds = ds.rename({'y': 'lat', 'x': 'lon'})
-        
-        # Atribuir coordenadas
-        ds = ds.assign_coords(lat=('lat', lats))
-        ds = ds.assign_coords(lon=('lon', lons))
-        
-        # Adicionar atributos às coordenadas
+    # Create the xarray Dataset from DataArrays
+    ds = xr.Dataset(data_vars)
+    
+    # Add attributes to coordinates
+    ds['time'].attrs['long_name'] = 'Time'
+    ds['time'].attrs['standard_name'] = 'time'
+    
+    ds['threshold_level'].attrs['long_name'] = 'Threshold Level'
+    ds['threshold_level'].attrs['description'] = 'Intensity threshold level used for tracking'
+    
+    if use_latlon:
         ds['lat'].attrs['units'] = 'degrees_north'
         ds['lat'].attrs['long_name'] = 'latitude'
         ds['lat'].attrs['standard_name'] = 'latitude'
@@ -225,13 +279,13 @@ def process_file(args):
         ds['lon'].attrs['long_name'] = 'longitude'
         ds['lon'].attrs['standard_name'] = 'longitude'
         
-        # Adicionar atributos às variáveis de dados
+        # Add attributes to data variables
         for var in ds.data_vars:
             ds[var].attrs['crs'] = 'EPSG:4326'
             ds[var].attrs['_FillValue'] = np.nan
     else:
-        ds = ds.assign_coords(y=('y', np.arange(name_list['y_dim'], dtype=np.int32)))
-        ds = ds.assign_coords(x=('x', np.arange(name_list['x_dim'], dtype=np.int32)))
+        ds['y'].attrs['long_name'] = 'y coordinate'
+        ds['x'].attrs['long_name'] = 'x coordinate'
 
     # Save dataset to netCDF file
     output_file = file.replace('trackingtable', 'spatial_vectors').replace('.parquet', '.nc')
