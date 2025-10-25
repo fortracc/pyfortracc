@@ -133,6 +133,72 @@ def process_file(args):
         # Dimensions: (threshold_level, y, x) or (threshold_level, lat, lon)
         col_all_levels = np.full((n_levels, name_list['y_dim'], name_list['x_dim']), np.nan, dtype=np.float32)
         
+        # Special handling for columns ending in '_values' with corresponding '_xy' positions
+        if col.endswith('_values'):
+            # Check if corresponding _xy column exists
+            col_base = col.replace('_values', '')  # Remove '_values' suffix
+            col_xy = f"{col_base}_xy"
+            
+            if col_xy in df_original.columns:
+                # Direct insertion using pre-computed positions
+                # _xy contains pixel indices [col, row] in the tracking grid
+                
+                # Process each threshold level
+                for level_idx, threshold_level in enumerate(threshold_levels):
+                    # Filter data for this specific threshold level
+                    df_level = df_original[df_original['threshold_level'] == threshold_level].copy()
+                    
+                    # Check if columns exist in this filtered dataframe
+                    if col not in df_level.columns or col_xy not in df_level.columns:
+                        continue
+                    
+                    # Process each row
+                    for idx, row in df_level.iterrows():
+                        values = row[col]
+                        positions = row[col_xy]
+                        
+                        # Skip if values or positions are NaN, None, or empty
+                        if values is None or positions is None:
+                            continue
+                        if isinstance(values, float) and np.isnan(values):
+                            continue
+                        if isinstance(positions, float) and np.isnan(positions):
+                            continue
+                        if not isinstance(values, (list, np.ndarray)) or not isinstance(positions, (list, np.ndarray)):
+                            continue
+                        if len(values) == 0 or len(positions) == 0:
+                            continue
+                        
+                        # Ensure both lists have same length
+                        if len(values) != len(positions):
+                            continue
+                        
+                        # Insert values at corresponding positions
+                        # positions are in format [col, row] (x, y) as pixel indices
+                        for val, pos in zip(values, positions):
+                            if not isinstance(pos, (list, np.ndarray)) or len(pos) < 2:
+                                continue
+                            
+                            try:
+                                x_pos, y_pos = int(pos[0]), int(pos[1])
+                                
+                                # Check if position is within bounds
+                                if 0 <= y_pos < name_list['y_dim'] and 0 <= x_pos < name_list['x_dim']:
+                                    col_all_levels[level_idx, y_pos, x_pos] = val
+                            except (ValueError, TypeError, IndexError):
+                                # Skip invalid positions
+                                continue
+                
+                # Add to data_vars with DataArray
+                data_vars[col_base] = xr.DataArray(
+                    col_all_levels[np.newaxis, :, :, :],
+                    dims=spatial_dims,
+                    coords=coords
+                )
+                
+                # Skip the rest of the processing for this column
+                continue
+        
         # Special handling for opt_field (LineString/MultiLineString geometries)
         if col == 'opt_field':
             # Need to process u and v components separately for each threshold level
