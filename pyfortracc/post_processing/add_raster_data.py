@@ -17,6 +17,7 @@ def add_raster_data(
     merge_mode="nearest",
     time_tolerance=None,
     statistics=None,
+    return_positions=False,
     parallel=True
 ):
     """
@@ -50,6 +51,10 @@ def add_raster_data(
             - 'count': Extract count of pixels.
             - 'percentile_X': Extract X-th percentile (e.g., 'percentile_25', 'percentile_75').
             - list: e.g., ['values', 'mean', 'std', 'mode', 'percentile_25', 'percentile_75'].
+    return_positions : bool, default=False
+        If True and statistics='values', also returns pixel positions. Two additional columns
+        will be created: {var_name}_xy (pixel indices) and {var_name}_coords (spatial coordinates).
+        Only applies when 'values' statistic is requested.
     parallel : bool, default=True
         Whether to enable parallel processing.
     """
@@ -158,7 +163,7 @@ def add_raster_data(
 
     # Transform merged_df to tuples for easier processing
     merged_list = merged_df[['path_x', 'path_y']].itertuples(index=False, name=None)
-    args_list = [(row[0], row[1], var_2d, raster_function, statistics) for row in merged_list]
+    args_list = [(row[0], row[1], var_2d, raster_function, statistics, return_positions) for row in merged_list]
 
     # Execução paralela
     if parallel and n_workers > 1:
@@ -178,7 +183,7 @@ def process_file(args):
     Function executed for each line of track and raster file pair.
     """
 
-    track_file, raster_file, var_2d, raster_function, statistics = args
+    track_file, raster_file, var_2d, raster_function, statistics, return_positions = args
 
     # Load track data
     track_data = gpd.GeoDataFrame(
@@ -270,14 +275,50 @@ def process_file(args):
             # Extract specific statistics - ONLY when stats_to_extract is not None
             for stat_name in stats_to_extract:
                 if stat_name == 'values':
-                    # Extract all pixel values
-                    col_name = f"{var_name}_values"
-                    pixel_values_list = [
-                        res['mini_raster_array'].compressed().tolist() if res and res.get('mini_raster_array') is not None else []
-                        for res in stats
-                    ]
-                    values = [vals if len(vals) > 0 else np.nan for vals in pixel_values_list]
-                    track_data[col_name] = values
+                    col_values = f"{var_name}_values"
+
+                    values_list = []
+                    xy_list = [] if return_positions else None
+                    coords_list = [] if return_positions else None
+
+                    for res in stats:
+                        if res and res.get('mini_raster_array') is not None:
+                            arr = res['mini_raster_array']
+                            mask = ~arr.mask
+
+                            if np.any(mask):
+                                rows, cols = np.where(mask)
+                                vals = arr[rows, cols]
+                                values_list.append(vals.tolist())
+
+                                if return_positions:
+                                    # Posições no grid (índices de pixel)
+                                    xy_pairs = np.column_stack([cols, rows])
+                                    xy_list.append(xy_pairs.tolist())
+
+                                    # Coordenadas espaciais (lon/lat se o raster for geográfico)
+                                    xs, ys = affine_transform * (cols, rows)
+                                    coord_pairs = np.column_stack([xs, ys])
+                                    coords_list.append(coord_pairs.tolist())
+                            else:
+                                values_list.append(np.nan)
+                                if return_positions:
+                                    xy_list.append(np.nan)
+                                    coords_list.append(np.nan)
+                        else:
+                            values_list.append(np.nan)
+                            if return_positions:
+                                xy_list.append(np.nan)
+                                coords_list.append(np.nan)
+
+                    track_data[col_values] = values_list
+                    
+                    if return_positions:
+                        col_xy = f"{var_name}_xy"
+                        col_coords = f"{var_name}_coords"
+                        track_data[col_xy] = xy_list
+                        track_data[col_coords] = coords_list
+
                 elif stat_name == 'mean':
                     col_name = f"{var_name}_{stat_name}"
                     values = [res.get('mean', np.nan) if res else np.nan for res in stats]
