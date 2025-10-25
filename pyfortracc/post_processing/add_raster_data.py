@@ -7,6 +7,7 @@ import multiprocessing as mp
 from scipy import stats as scipy_stats
 from rasterstats import zonal_stats
 from rasterio.transform import from_bounds
+from rasterio.warp import reproject, Resampling
 from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system
 
 def add_raster_data(
@@ -163,7 +164,7 @@ def add_raster_data(
 
     # Transform merged_df to tuples for easier processing
     merged_list = merged_df[['path_x', 'path_y']].itertuples(index=False, name=None)
-    args_list = [(row[0], row[1], var_2d, raster_function, statistics, return_positions) for row in merged_list]
+    args_list = [(row[0], row[1], var_2d, raster_function, statistics, return_positions, name_list) for row in merged_list]
 
     # Execução paralela
     if parallel and n_workers > 1:
@@ -183,7 +184,7 @@ def process_file(args):
     Function executed for each line of track and raster file pair.
     """
 
-    track_file, raster_file, var_2d, raster_function, statistics, return_positions = args
+    track_file, raster_file, var_2d, raster_function, statistics, return_positions, name_list = args
 
     # Load track data
     track_data = gpd.GeoDataFrame(
@@ -280,40 +281,114 @@ def process_file(args):
                     values_list = []
                     xy_list = [] if return_positions else None
                     coords_list = [] if return_positions else None
+                    
+                    # If return_positions is True, resample raster to tracking grid resolution
+                    if return_positions and name_list:
+                        # Check if we have lat/lon bounds in name_list
+                        if all(key in name_list for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max', 'x_dim', 'y_dim']):
+                            # Create affine transform for the tracking grid
+                            tracking_affine = from_bounds(
+                                name_list['lon_min'], 
+                                name_list['lat_min'], 
+                                name_list['lon_max'], 
+                                name_list['lat_max'],
+                                width=name_list['x_dim'], 
+                                height=name_list['y_dim']
+                            )
+                            
+                            # Create empty array for resampled raster
+                            resampled_array = np.empty(
+                                (name_list['y_dim'], name_list['x_dim']),
+                                dtype=raster_array.dtype
+                            )
+                            
+                            # Resample the raster to tracking grid
+                            reproject(
+                                source=raster_array,
+                                destination=resampled_array,
+                                src_transform=affine_transform,
+                                src_crs='EPSG:4326',
+                                dst_transform=tracking_affine,
+                                dst_crs='EPSG:4326',
+                                resampling=Resampling.nearest
+                            )
+                            
+                            # Now use resampled array for zonal stats
+                            stats_resampled = zonal_stats(
+                                track_data.geometry,
+                                resampled_array,
+                                affine=tracking_affine,
+                                nodata=nodata_value,
+                                all_touched=True,
+                                raster_out=True
+                            )
+                            
+                            # Extract values and positions from resampled raster
+                            for res in stats_resampled:
+                                if res and res.get('mini_raster_array') is not None:
+                                    arr = res['mini_raster_array']
+                                    mask = ~arr.mask
 
-                    for res in stats:
-                        if res and res.get('mini_raster_array') is not None:
-                            arr = res['mini_raster_array']
-                            mask = ~arr.mask
+                                    if np.any(mask):
+                                        rows, cols = np.where(mask)
+                                        vals = arr[rows, cols]
+                                        values_list.append(vals.tolist())
 
-                            if np.any(mask):
-                                rows, cols = np.where(mask)
-                                vals = arr[rows, cols]
-                                values_list.append(vals.tolist())
-
-                                if return_positions:
-                                    # Posições no grid (índices de pixel)
-                                    xy_pairs = np.column_stack([cols, rows])
-                                    xy_list.append(xy_pairs.tolist())
-
-                                    # Coordenadas espaciais (lon/lat se o raster for geográfico)
-                                    xs, ys = affine_transform * (cols, rows)
-                                    coord_pairs = np.column_stack([xs, ys])
-                                    coords_list.append(coord_pairs.tolist())
-                            else:
-                                values_list.append(np.nan)
-                                if return_positions:
+                                        # Get the affine transform for the mini raster
+                                        mini_affine = res.get('mini_raster_affine')
+                                        
+                                        if mini_affine is not None:
+                                            # Convert local mini raster positions to spatial coordinates
+                                            xs, ys = mini_affine * (cols, rows)
+                                            
+                                            # Store spatial coordinates
+                                            coord_pairs = np.column_stack([xs, ys])
+                                            coords_list.append(coord_pairs.tolist())
+                                            
+                                            # Convert spatial coordinates to pixel indices in tracking grid
+                                            from rasterio.transform import rowcol
+                                            pixel_rows, pixel_cols = rowcol(tracking_affine, xs, ys)
+                                            
+                                            # Convert to integers and store as [col, row] (x, y) convention
+                                            pixel_cols = np.round(pixel_cols).astype(int)
+                                            pixel_rows = np.round(pixel_rows).astype(int)
+                                            xy_pairs = np.column_stack([pixel_cols, pixel_rows])
+                                            xy_list.append(xy_pairs.tolist())
+                                        else:
+                                            xy_list.append(np.nan)
+                                            coords_list.append(np.nan)
+                                    else:
+                                        values_list.append(np.nan)
+                                        xy_list.append(np.nan)
+                                        coords_list.append(np.nan)
+                                else:
+                                    values_list.append(np.nan)
                                     xy_list.append(np.nan)
                                     coords_list.append(np.nan)
                         else:
-                            values_list.append(np.nan)
-                            if return_positions:
-                                xy_list.append(np.nan)
-                                coords_list.append(np.nan)
+                            # Fallback to original method if tracking grid info not available
+                            return_positions = False
+                            print("Warning: Tracking grid information not available. Disabling position extraction.")
+                    
+                    # If return_positions is False or no tracking grid info, use original method
+                    if not return_positions:
+                        for res in stats:
+                            if res and res.get('mini_raster_array') is not None:
+                                arr = res['mini_raster_array']
+                                mask = ~arr.mask
+
+                                if np.any(mask):
+                                    rows, cols = np.where(mask)
+                                    vals = arr[rows, cols]
+                                    values_list.append(vals.tolist())
+                                else:
+                                    values_list.append(np.nan)
+                            else:
+                                values_list.append(np.nan)
 
                     track_data[col_values] = values_list
                     
-                    if return_positions:
+                    if return_positions and xy_list is not None:
                         col_xy = f"{var_name}_xy"
                         col_coords = f"{var_name}_coords"
                         track_data[col_xy] = xy_list
