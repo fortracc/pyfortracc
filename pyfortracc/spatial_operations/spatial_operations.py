@@ -227,7 +227,7 @@ def spatial_operation(args):
         # Update current frame based on index
         cur_frame.loc[opt_idx,'u_opt'] = u_
         cur_frame.loc[opt_idx,'v_opt'] = v_
-        cur_frame.loc[opt_idx,'opt_field'] = v_field
+        cur_frame.loc[opt_idx,'opt_field'] = [geom.wkt for geom in v_field]
         cur_frame['opt_field'] = cur_frame['opt_field'].astype(str)
     # Save the result
     cur_frame['trajectory'] = cur_frame['trajectory'].astype(str)
@@ -336,7 +336,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
         cur_trj = cur_frme.loc[cur_non_null_idx]
         prev_trj = prv_frme.loc[cur_trj['past_idx'].values]
         lines, u_, v_ = trajectory(cur_trj, prev_trj)
-        cur_frme.loc[cur_non_null_idx,'trajectory'] = lines
+        cur_frme.loc[cur_non_null_idx,'trajectory'] = [line.wkt for line in lines]
         cur_frme.loc[cur_non_null_idx,'u_'] = u_
         cur_frme.loc[cur_non_null_idx,'v_'] = v_
         # calling expansion function with current and previous clusters and delta_time
@@ -349,7 +349,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
         cur_spl = cur_frme.loc[nw_splt_idx]
         prv_spl = prv_frme.loc[cur_spl['split_pr_idx'].values]
         lines, u_, v_ = split_mtd(cur_spl, prv_spl, nw_splt_idx)
-        cur_frme.loc[nw_splt_idx,'trajectory'] = lines
+        cur_frme.loc[nw_splt_idx,'trajectory'] = [line.wkt for line in lines]
         cur_frme.loc[nw_splt_idx,'u_spl'] = u_
         cur_frme.loc[nw_splt_idx,'v_spl'] = v_
     # Merge method: Read instructions in merge_mtd.py
