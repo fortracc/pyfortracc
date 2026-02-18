@@ -38,7 +38,7 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
-        "Topic :: Scientific/Engineering :: Computer Vision",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Scientific/Engineering :: Atmospheric Science",
         "Topic :: Scientific/Engineering :: Visualization",
         "Topic :: Scientific/Engineering :: GIS",
