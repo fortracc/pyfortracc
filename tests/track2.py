@@ -90,6 +90,8 @@ name_list['lat_min'] = -5.3048 # Min latitude of data in degrees
 name_list['lat_max'] = -0.9912 # Max latitude of data in degrees
 
 name_list['mrg_expansion'] = True # Perform the expansion correction for the merging events
+name_list['spl_expansion'] = True # Perform the expansion correction for the splitting events
+
 name_list['prv_uid'] = True #save previous uids from merge and split
 
 if __name__ == '__main__':
@@ -106,11 +108,9 @@ if __name__ == '__main__':
 
     url = "https://storage.googleapis.com/mapbiomas-public/initiatives/brasil/collection_8/lclu/coverage/brasil_coverage_{}.tif"
     bbox = "-62.1475 -0.9912 -57.8461 -5.3048"  # xmin, ymin, xmax, ymax
-    download_mapbiomas(url, bbox, 2014, 2014, max_workers=1)
-
-
+    download_mapbiomas(url, bbox, 2010, 2010, max_workers=1)
     pyfortracc.features_extraction(name_list, read_function, parallel=True)
-    pyfortracc.spatial_operations(name_list, read_function, parallel=True)
+    pyfortracc.spatial_operations(name_list, read_function, parallel=False)
     pyfortracc.cluster_linking(name_list)
     pyfortracc.concat(name_list, clean=False, parallel=True)
     pyfortracc.post_processing.compute_duration(name_list, parallel=True)
