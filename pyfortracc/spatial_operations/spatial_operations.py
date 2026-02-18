@@ -302,12 +302,14 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     # Get index based on overlays
     cont_indx, cont_prv_indx = continuous(overlays)
     mergs_idx, mergs_prv_idx, merge_frame = merge(overlays)
-    splits_idx, split_prev_idx, nw_splt_idx, nw_splt_prv_idx = split(overlays) 
+    splits_idx, split_prev_idx, nw_splt_idx, nw_splt_prv_idx, new_splt_comming_idx = split(overlays) 
 
     # Classify merge splits index
-    cur_frme.loc[nw_splt_idx,'split_pr_idx'] =  nw_splt_prv_idx # Previous split
-    cur_frme.loc[mergs_idx,'merge_idx'] =  merge_frame['merge_ids'].values # Previous merge
+    cur_frme.loc[nw_splt_idx,'split_pr_idx'] =  nw_splt_prv_idx
+    cur_frme.loc[splits_idx,'split_cr_idx'] =  nw_splt_idx # Current split
     cur_frme.loc[splits_idx,'split_idx'] =  split_prev_idx # Current split
+    cur_frme.loc[nw_splt_idx,'new_splt_cmg_idx'] =  new_splt_comming_idx # New split comimg index
+    cur_frme.loc[mergs_idx,'merge_idx'] =  merge_frame['merge_ids'].values # Previous merge
 
     # Add past_idx, merge_idx and split_pr_idx to current frame
     cur_frme.loc[cont_indx, 'past_idx'] = cont_prv_indx # Continuous
@@ -334,15 +336,18 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
     cur_non_null_idx = np.concatenate((cont_indx, mergs_idx, splits_idx))
     if len(cur_non_null_idx) > 0:
         cur_trj = cur_frme.loc[cur_non_null_idx]
+        cur_news = cur_frme.loc[nw_splt_idx]
         prev_trj = prv_frme.loc[cur_trj['past_idx'].values]
         lines, u_, v_ = trajectory(cur_trj, prev_trj)
         cur_frme.loc[cur_non_null_idx,'trajectory'] = [line.wkt for line in lines]
         cur_frme.loc[cur_non_null_idx,'u_'] = u_
         cur_frme.loc[cur_non_null_idx,'v_'] = v_
         # calling expansion function with current and previous clusters and delta_time
-        exp_norm = expansion(cur_trj, prev_trj, prv_frme, 
-                             nm_lst['delta_time'], nm_lst['mrg_expansion'])
-        cur_frme.loc[cur_non_null_idx,'expansion'] = exp_norm
+        exp_idx, exp_norm = expansion(cur_trj, prev_trj, prv_frme, cur_news,
+                             nm_lst['delta_time'],
+                             nm_lst['mrg_expansion'],
+                             nm_lst['spl_expansion'])
+        cur_frme.loc[exp_idx,'expansion'] = exp_norm
     # Vector methods additons
     # Split method: Read instructions in split_mtd.py
     if nm_lst['spl_correction'] and len(nw_splt_idx) > 0:
@@ -390,4 +395,5 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
         touch_lrg, touch_lowr = edge_clusters(cur_frme, l_edge, r_edg, nm_lst)
         cur_frme.loc[touch_lowr,'board'] = True
         cur_frme.loc[touch_lowr,'board_idx'] = touch_lrg
+
     return cur_frme

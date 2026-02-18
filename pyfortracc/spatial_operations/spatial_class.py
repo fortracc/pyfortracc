@@ -115,6 +115,7 @@ def split(operation):
     split_prev_idx = []
     new_splts_idx = []
     new_splts_prev_idx = []
+    new_splt_comming_idx = []
     for _, sgroup in splits_group:
         max_count = sgroup['size_1'].max()
         max_idx = sgroup.loc[sgroup['size_1'] == max_count]['index_1'].values
@@ -123,12 +124,14 @@ def split(operation):
         split_prev_idx.append(sgroup['index_2'].unique()[0])
         new_splts_idx.extend(min_idx)
         new_splts_prev_idx.extend([sgroup['index_2'].unique()[0]]*len(min_idx))
+        new_splt_comming_idx.extend([sgroup['index_1'].unique()[0]]*len(min_idx))
     # Convert lists to array
     splits_idx = np.array(splits_idx)
     split_prev_idx = np.array(split_prev_idx)
     new_splts_idx = np.array(new_splts_idx)
     new_splts_prev_idx = np.array(new_splts_prev_idx)
-    return splits_idx, split_prev_idx, new_splts_idx, new_splts_prev_idx
+    new_splt_comming_idx = np.array(new_splt_comming_idx)
+    return splits_idx, split_prev_idx, new_splts_idx, new_splts_prev_idx, new_splt_comming_idx
 
 
 def merge_split(mergs_idx_1, splits_idx_1, cur_frame, prev_frame):

@@ -171,6 +171,7 @@ def default_parameters(name_lst=None, read_function=None):
     # TODO: add calc_dir and calc_speed
     if 'calc_dir' not in name_lst:
         name_lst['calc_dir'] = False
+    # TODO: add speed_units
     if 'calc_speed' not in name_lst:
         name_lst['calc_speed'] = False
         name_lst['speed_units'] = 'm/s'
@@ -181,4 +182,6 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['prv_uid'] = False
     if 'mrg_expansion' not in name_lst:
         name_lst['mrg_expansion'] = False
+    if 'spl_expansion' not in name_lst:
+        name_lst['spl_expansion'] = False
     return name_lst
