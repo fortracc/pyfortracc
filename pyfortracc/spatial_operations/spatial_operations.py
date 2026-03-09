@@ -306,7 +306,7 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
 
     # Classify merge splits index
     cur_frme.loc[nw_splt_idx,'split_pr_idx'] =  nw_splt_prv_idx
-    cur_frme.loc[splits_idx,'split_cr_idx'] =  nw_splt_idx # Current split
+    #cur_frme.loc[splits_idx,'split_cr_idx'] =  nw_splt_idx # Current split
     cur_frme.loc[splits_idx,'split_idx'] =  split_prev_idx # Current split
     cur_frme.loc[nw_splt_idx,'new_splt_cmg_idx'] =  new_splt_comming_idx # New split comimg index
     cur_frme.loc[mergs_idx,'merge_idx'] =  merge_frame['merge_ids'].values # Previous merge
