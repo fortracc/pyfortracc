@@ -36,6 +36,14 @@ name_list['min_overlap'] = 20 # Minimum overlap between clusters in percentage
 # Not mandatory parameters, if not set, the algorithm will use the default values
 name_list['track_start'] = '2014-08-16 11:00:00' # Start time of the tracking in UTC
 name_list['track_end'] = '2014-08-16 14:00:00' # End time of the tracking in UTC
+
+name_list['spl_correction'] = True # Set to True to apply the Split correction
+name_list['mrg_correction'] = True # Set to True to apply the Merge correction
+name_list['inc_correction'] = True # Set to True to apply the Inner Cores correction
+name_list['opt_correction'] = True # Set to True to apply the Optical Flow correction
+name_list['elp_correction'] = True # Set to True to apply the Ellipse correction
+name_list['validation'] = True # Set to True to apply the validation of corrections
+name_list['validation_scores'] = True  # Set to True to get the scores of the validation
 #TODO
 
 # Optional parameters, if not set, the algorithm will not use geospatial information
@@ -46,7 +54,7 @@ name_list['lat_max'] = -0.9912 # Max latitude of data in degrees
 
 name_list['forecast_time'] = '2014-08-16 14:00:00'
 name_list['observation_window'] = 5 # Number of previous images
-name_list['lead_time'] = 3 # Amount of time to forecast
+name_list['lead_time'] = 10 # Amount of time to forecast
 
 name_list['edges'] = True # If True, the edges of the clusters will be considered in the tracking
 
@@ -64,5 +72,8 @@ if __name__ == '__main__':
     os.remove('input.zip')
 
     pyfortracc.track(name_list, read_function, parallel=True)
+
+    pyfortracc.spatial_conversions(name_list, boundary=True, trajectory=True, vector_field=True,
+                                   cluster=True, vel_unit='m/s', driver='GeoJSON')
 
     pyfortracc.forecast(name_list, read_function)

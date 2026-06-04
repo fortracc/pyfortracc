@@ -70,7 +70,7 @@ def forecast(name_list, read_function):
     left_edge, right_edge = get_edges(name_list, 
                                       tracked_files, 
                                       read_function)
-    geo_transf = get_geotransform(name_list)
+    geo_transf, _ = get_geotransform(name_list)
     
     # Set readfunction based on lat_min, lat_max, lon_min, lon_max
     if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
