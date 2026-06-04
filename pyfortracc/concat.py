@@ -263,6 +263,11 @@ def default_columns(name_list=None):
         if name_list['validation_scores']:
             columns = columns + ['far_elp', 'hit_elp', 'false-alarm_elp']
 
+    if name_list['new_correction']:
+        columns = columns + ['u_new'] + ['v_new']
+        if name_list['validation_scores']:
+            columns = columns + ['far_new', 'hit_new', 'false-alarm_new']
+
     if name_list['calc_dir']:
         columns = columns + ['dir']
     if name_list['calc_speed']:

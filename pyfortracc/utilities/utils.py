@@ -545,6 +545,9 @@ def set_schema(module,name_list):
     if name_list['elp_correction']:
         s_dict['spatial']['u_elp'] = float
         s_dict['spatial']['v_elp'] = float
+    if name_list['new_correction']:
+        s_dict['spatial']['u_new'] = float
+        s_dict['spatial']['v_new'] = float
     if name_list['validation']:
         s_dict['spatial']['u_noc'] = float
         s_dict['spatial']['v_noc'] = float
@@ -557,18 +560,21 @@ def set_schema(module,name_list):
         s_dict['spatial']['hit_inc'] = int
         s_dict['spatial']['hit_opt'] = int
         s_dict['spatial']['hit_elp'] = int
+        s_dict['spatial']['hit_new'] = int
         s_dict['spatial']['false-alarm_'] = int
         s_dict['spatial']['false-alarm_spl'] = int
         s_dict['spatial']['false-alarm_mrg'] = int
         s_dict['spatial']['false-alarm_inc'] = int
         s_dict['spatial']['false-alarm_opt'] = int
         s_dict['spatial']['false-alarm_elp'] = int
+        s_dict['spatial']['false-alarm_new'] = int
         s_dict['spatial']['far_'] = float
         s_dict['spatial']['far_spl'] = float
         s_dict['spatial']['far_mrg'] = float
         s_dict['spatial']['far_inc'] = float
         s_dict['spatial']['far_opt'] = float
         s_dict['spatial']['far_elp'] = float
+        s_dict['spatial']['far_new'] = float
     # Set the schema
     schema = np.dtype(list(map(tuple, s_dict[module].items())))
     return schema               

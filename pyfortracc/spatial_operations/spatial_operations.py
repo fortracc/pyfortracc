@@ -17,6 +17,7 @@ from pyfortracc.vector_methods.merge_mtd import merge_mtd
 from pyfortracc.vector_methods.incores_mtd import innercores_mtd
 from pyfortracc.vector_methods.opticalflow_mtd import opticalflow_mtd
 from pyfortracc.vector_methods.ellipse_mtd import ellipse_mtd
+from pyfortracc.vector_methods.new_mtd import new_mtd
 from .count_inside import count_inside
 from .overlay import overlay_
 from .spatial_class import continuous, merge, split, merge_split
@@ -229,6 +230,21 @@ def spatial_operation(args):
         cur_frame.loc[opt_idx,'v_opt'] = v_
         cur_frame.loc[opt_idx,'opt_field'] = [geom.wkt for geom in v_field]
         cur_frame['opt_field'] = cur_frame['opt_field'].astype(str)
+    # New method: Read instructions in new_mtd.py
+    # Estimate a vector for NEW clusters (no previous match) using the mean of
+    # the nearest neighbours that already have a vector. Runs after all base
+    # vectors are computed. The estimate is written to u_/v_ so these clusters
+    # carry a usable displacement; when validation is on it is also marked as
+    # the chosen method (see the validation block below).
+    if nm_lst['new_correction']:
+        new_idx = cur_frame.loc[cur_frame['status'] == 'NEW'].index
+        if len(new_idx) > 0:
+            new_idx, u_, v_ = new_mtd(cur_frame, new_idx,
+                                      nm_lst['new_neighbors'])
+            cur_frame.loc[new_idx, 'u_new'] = u_
+            cur_frame.loc[new_idx, 'v_new'] = v_
+            cur_frame.loc[new_idx, 'u_'] = u_
+            cur_frame.loc[new_idx, 'v_'] = v_
     # Save the result
     cur_frame['trajectory'] = cur_frame['trajectory'].astype(str)
     # Calculate best method if validation is True
@@ -242,6 +258,17 @@ def spatial_operation(args):
             # Fill method equals None to noc
             cur_frame['method'] = cur_frame['method'].fillna('noc')
             cur_frame['far'] = cur_frame['far'].fillna(1)
+            # NEW clusters have no past_idx, so they cannot be validated. When
+            # the NEW correction is on, take its estimated vector as the chosen
+            # method (best far = 0) and pass it to u_/v_ so these clusters carry
+            # a usable displacement.
+            if nm_lst['new_correction']:
+                new_mask = (cur_frame['status'] == 'NEW') & \
+                           cur_frame['u_new'].notna()
+                cur_frame.loc[new_mask, 'u_'] = cur_frame.loc[new_mask, 'u_new']
+                cur_frame.loc[new_mask, 'v_'] = cur_frame.loc[new_mask, 'v_new']
+                cur_frame.loc[new_mask, 'method'] = 'new'
+                cur_frame.loc[new_mask, 'far'] = 0.0
     # Save the result
     write_parquet(cur_frame[spatial_col], output_file)
     return

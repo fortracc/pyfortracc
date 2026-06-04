@@ -36,6 +36,8 @@ def persistence(tracked_files, name_list):
         cluster_columns = ['threshold_level', 'uid', 'iuid']
         track_df['iuid'] = track_df['iuid'].where(track_df['iuid'].notna(), track_df['uid'])
         track_df['uid'] = track_df['iuid']
+    else:
+        cluster_columns = ['threshold_level', 'uid']
 
     # Get the latest timestamp
     last_timestamp = track_df['timestamp'].max()

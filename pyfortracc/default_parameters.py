@@ -82,6 +82,11 @@ def default_parameters(name_lst=None, read_function=None):
         Optical flow method. It can be 'farneback' or 'lucas-kanade'
     elp_correction: bool
         Vector correction method for ellipse fitting.
+    new_correction: bool
+        Vector correction method for NEW events. Estimates a vector for clusters
+        with no previous match by averaging the vectors of the nearest neighbours.
+    new_neighbors: int
+        Number of nearest neighbours used by the NEW correction method.
     'epsg': int
         EPSG code for the projection.
     Returns
@@ -162,6 +167,10 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['opt_mtd'] = 'lucas-kanade'
     if 'elp_correction' not in name_lst:
         name_lst['elp_correction'] = False
+    if 'new_correction' not in name_lst:
+        name_lst['new_correction'] = False
+    if 'new_neighbors' not in name_lst:
+        name_lst['new_neighbors'] = 3
     if 'default_columns' not in name_lst:
         name_lst['default_columns'] = True
     if 'validation' not in name_lst:

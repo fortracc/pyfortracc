@@ -87,7 +87,11 @@ def translate_vfield(args):
     if 'opt_field' not in parquet.columns:
         return
     # Set used columns for translate boundary
-    columns = ['cindex','timestamp','uid','iuid','status','threshold']
+    columns = ['cindex','timestamp','uid','status','threshold']
+    # Check if have more then one threshold, is true add column iuid
+    if len(parquet['threshold'].unique()) > 1:
+        columns.append('iuid')
+        columns.insert(3, columns.pop(columns.index('iuid')))
     # Load geometry
     parquet['opt_field'] = parquet['opt_field'].apply(loads)
     # Select columns

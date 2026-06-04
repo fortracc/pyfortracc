@@ -27,11 +27,11 @@ name_list = {}
 name_list['input_path'] = 'input/' # path to the input data
 name_list['output_path'] = 'output/' # path to the output data
 name_list['timestamp_pattern'] = 'sbmn_cappi_%Y%m%d_%H%M.nc.gz' # timestamp file pattern
-name_list['thresholds'] = [20,30,35] # in dbz
+name_list['thresholds'] = [20] # in dbz
 name_list['min_cluster_size'] = [3,3,3] # in number of points per cluster
 name_list['operator'] = '>=' # '>= *   **<=' or '=='
 name_list['delta_time'] = 12 # in minutes
-name_list['min_overlap'] = 20 # Minimum overlap between clusters in percentage
+name_list['min_overlap'] = 5 # Minimum overlap between clusters in percentage
 
 # Not mandatory parameters, if not set, the algorithm will use the default values
 name_list['track_start'] = '2014-08-16 11:00:00' # Start time of the tracking in UTC
@@ -42,6 +42,7 @@ name_list['mrg_correction'] = True # Set to True to apply the Merge correction
 name_list['inc_correction'] = True # Set to True to apply the Inner Cores correction
 name_list['opt_correction'] = True # Set to True to apply the Optical Flow correction
 name_list['elp_correction'] = True # Set to True to apply the Ellipse correction
+name_list['new_correction'] = True # Set to True to apply the NEW correction
 name_list['validation'] = True # Set to True to apply the validation of corrections
 name_list['validation_scores'] = True  # Set to True to get the scores of the validation
 #TODO
@@ -53,10 +54,10 @@ name_list['lat_min'] = -5.3048 # Min latitude of data in degrees
 name_list['lat_max'] = -0.9912 # Max latitude of data in degrees
 
 name_list['forecast_time'] = '2014-08-16 14:00:00'
-name_list['observation_window'] = 5 # Number of previous images
-name_list['lead_time'] = 10 # Amount of time to forecast
+name_list['observation_window'] = 2 # Number of previous images
+name_list['lead_time'] = 3 # Amount of time to forecast
 
-name_list['edges'] = True # If True, the edges of the clusters will be considered in the tracking
+name_list['edges'] = False # If True, the edges of the clusters will be considered in the tracking
 
 
 if __name__ == '__main__':
@@ -74,6 +75,8 @@ if __name__ == '__main__':
     pyfortracc.track(name_list, read_function, parallel=True)
 
     pyfortracc.spatial_conversions(name_list, boundary=True, trajectory=True, vector_field=True,
-                                   cluster=True, vel_unit='m/s', driver='GeoJSON')
+                                   cluster=True, vel_unit='m/s', driver='GeoJSON',
+                                    start_time=name_list['track_start'],
+                                    end_time=name_list['track_end'])
 
     pyfortracc.forecast(name_list, read_function)

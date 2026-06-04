@@ -138,6 +138,9 @@ def translate_boundary(args):
     if 'u_mrg' in parquet.columns and 'v_mrg' in parquet.columns:
         columns.append('u_mrg')
         columns.append('v_mrg')
+    if 'u_new' in parquet.columns and 'v_new' in parquet.columns:
+        columns.append('u_new')
+        columns.append('v_new')
     # Load geometry
     geometries = parquet['geometry'].apply(loads)
     centroids = geometries.apply(lambda x: x.centroid)

@@ -173,6 +173,10 @@ def forecast(name_list, read_function):
         # Update cur_file to spatial output file
         cur_file = spat_file
         prv_frame = pd.read_parquet(prv_file)
+        # The tracking table only carries 'iuid' for multi-threshold runs, but
+        # linking always expects it; mirror uid when it is missing (single threshold).
+        if 'iuid' not in prv_frame.columns:
+            prv_frame['iuid'] = prv_frame['uid']
         cdx_range = prv_frame.index.max() if not prv_frame.empty else 0
         uid_iter = prv_frame['uid'].max() + 1 if not prv_frame.empty else 0
         previous_stamp = pd.to_datetime(prv_frame['timestamp'].max()) if not prv_frame.empty else None
