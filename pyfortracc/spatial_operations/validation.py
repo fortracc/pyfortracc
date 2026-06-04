@@ -94,6 +94,17 @@ def extrapolate(row, u_, v_):
     for uv in range(len(u_)):
         # Get u and v values and round to int
         mtd_u, mtd_v = row[u_[uv]], row[v_[uv]]
+        # Skip methods without a valid vector. A NaN rounded to int becomes 0,
+        # which would turn the method into a zero-displacement prediction that
+        # ties with 'noc' and can wrongly win, overwriting u_/v_ with NaN.
+        if pd.isna(mtd_u) or pd.isna(mtd_v):
+            row['hit' + str(u_[uv][1:])] = 0
+            row['false-alarm' + str(u_[uv][1:])] = 0
+            row['far' + str(u_[uv][1:])] = 1
+            used_methods.append('hit' + str(u_[uv][1:]))
+            used_methods.append('false-alarm' + str(u_[uv][1:]))
+            used_methods.append('far' + str(u_[uv][1:]))
+            continue
         mtd_u = np.round(mtd_u).astype(int)
         mtd_v = np.round(mtd_v).astype(int)
         mtd_u = mtd_u + row['prev_y'] # Apply method to previous cluster
@@ -118,6 +129,14 @@ def extrapolate(row, u_, v_):
                                             row[u_[uv]], # Get the u_ value
                                             row[v_[uv]]], # Get the v_ value
                                             index=['far', 'method', 'u_', 'v_']).T])
+    # If no method produced a valid vector, keep the cluster without correction
+    if best_method.empty:
+        row = row[used_methods]
+        row['u_'] = np.nan
+        row['v_'] = np.nan
+        row['far'] = 1
+        row['method'] = 'noc'
+        return row
     # Fill '' at column method with none
     best_method['method'] = best_method['method'].replace('', 'noc') # noc = no correction
     # Select the used methods and the best method
