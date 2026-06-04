@@ -27,7 +27,7 @@ name_list = {}
 name_list['input_path'] = 'input/' # path to the input data
 name_list['output_path'] = 'output/' # path to the output data
 name_list['timestamp_pattern'] = 'sbmn_cappi_%Y%m%d_%H%M.nc.gz' # timestamp file pattern
-name_list['thresholds'] = [20] # in dbz
+name_list['thresholds'] = [20, 30, 35] # in dbz
 name_list['min_cluster_size'] = [3,3,3] # in number of points per cluster
 name_list['operator'] = '>=' # '>= *   **<=' or '=='
 name_list['delta_time'] = 12 # in minutes

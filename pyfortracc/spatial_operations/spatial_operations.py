@@ -384,6 +384,13 @@ def operations(cur_frme, prv_frme, threshold, l_edge, r_edg, nm_lst):
         cur_frme.loc[nw_splt_idx,'trajectory'] = [line.wkt for line in lines]
         cur_frme.loc[nw_splt_idx,'u_spl'] = u_
         cur_frme.loc[nw_splt_idx,'v_spl'] = v_
+        # NEW/SPL clusters are not in cur_non_null_idx (no base trajectory) and
+        # have no past_idx, so they are never validated and otherwise keep
+        # u_/v_ empty. Fill u_/v_ from the split estimate only where they are
+        # still empty, so an existing vector is never overwritten.
+        spl_empty = cur_frme.index.isin(nw_splt_idx) & cur_frme['u_'].isna()
+        cur_frme.loc[spl_empty,'u_'] = cur_frme.loc[spl_empty,'u_spl']
+        cur_frme.loc[spl_empty,'v_'] = cur_frme.loc[spl_empty,'v_spl']
     # Merge method: Read instructions in merge_mtd.py
     if nm_lst['mrg_correction'] and len(mergs_idx) > 0:
         cur_mrg = cur_frme.loc[mergs_idx]
