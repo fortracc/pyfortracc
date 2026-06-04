@@ -12,7 +12,7 @@ shapelysmooth==0.2.1
 tqdm==4.67.1
 ipython==7.34.0
 psutil==7.2.2
-requests==2.32.4
-gdown==5.2.1
+requests==2.33.0
+gdown==5.2.2
 geocube==0.7.1
 rasterstats==0.20.0
