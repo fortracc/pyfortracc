@@ -1,4 +1,4 @@
-# pyForTraCC - Python library for Forecasting and Tracking the Evolution of Configurable Clusters
+# pyForTraCC - Python library for Forecasting and Tracking the Evolution of Configurable Clusters.
 
 <!-- badges: start -->
 [![stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://pyfortracc.readthedocs.io)
