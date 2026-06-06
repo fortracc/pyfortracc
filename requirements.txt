@@ -4,7 +4,7 @@ opencv-python-headless==4.13.0.90
 xarray==2025.12.0
 scipy==1.17.0
 scikit-learn==1.8.0
-pyarrow==23.0.0
+pyarrow==23.0.1
 duckdb==1.4.4
 netCDF4==1.7.4
 cartopy==0.25.0
