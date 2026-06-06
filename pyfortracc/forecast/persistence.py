@@ -64,6 +64,12 @@ def persistence(tracked_files, name_list):
     # Merge the mean vector with the latest timestamp dataframe
     track_last = track_last.merge(forecast_vectors, on=['threshold_level', 'uid'], how='left')
 
+    # No cluster at the anchor frame carries a valid motion vector (e.g. all
+    # systems left the domain or dissipated). Return an empty (NaN) field
+    # instead of crashing on the np.concatenate calls below.
+    if track_last.empty:
+        return np.full((name_list['y_dim'], name_list['x_dim']), np.nan)
+
     # Apply the mean vector to the array_y and array_x columns
     track_last['array_y'] = track_last['array_y'] + track_last['u_mean']
     track_last['array_x'] = track_last['array_x'] + track_last['v_mean']

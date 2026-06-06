@@ -53,7 +53,7 @@ name_list['lon_max'] = -57.8461 # Max longitude of data in degrees
 name_list['lat_min'] = -5.3048 # Min latitude of data in degrees
 name_list['lat_max'] = -0.9912 # Max latitude of data in degrees
 
-name_list['forecast_time'] = '2014-08-16 14:00:00'
+name_list['forecast_time'] = '2014-08-16 14:00:00' # Overwritten by the rolling-origin loop below
 name_list['observation_window'] = 2 # Number of previous images
 name_list['lead_time'] = 3 # Amount of time to forecast
 
@@ -79,4 +79,6 @@ if __name__ == '__main__':
                                     start_time=name_list['track_start'],
                                     end_time=name_list['track_end'])
 
-    pyfortracc.forecast(name_list, read_function)
+    for time in pd.date_range(start='2014-08-16 14:00:00', end='2014-08-16 17:00:00', freq='12min'):
+        name_list['forecast_time'] = time.strftime('%Y-%m-%d %H:%M:%S')
+        pyfortracc.forecast(name_list, read_function)

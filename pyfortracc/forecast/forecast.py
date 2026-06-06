@@ -46,15 +46,30 @@ def forecast(name_list, read_function):
         print("Missing parameters for forecasting. Please provide 'forecast_time', 'observation_window', and 'lead_time'.")
         return
 
+    # Work on a copy so we never mutate the caller's name_list. This function
+    # rewrites input_path/output_path/timestamp_pattern in place; without the
+    # copy, a second call (e.g. looping over forecast_time) would inherit the
+    # forecast paths and fail to find the original track/trackingtable.
+    name_list = dict(name_list)
+
     # Set default parameters if not provided
-    name_list = default_parameters(name_lst=name_list, 
+    name_list = default_parameters(name_lst=name_list,
                                    read_function=read_function)
     
-    # Get track files from the output path
-    tracked_files = get_feature_files(name_list['output_path'] + 'track/trackingtable/',
-                                      name_list=name_list)
+    # Get track files from the output path. We read the whole tracking table
+    # (no name_list interval filter) and then keep only the frames observed at
+    # or before forecast_time. This anchors each (rolling-origin) call on the
+    # real data available up to forecast_time, so looping forecast_time yields
+    # independent forecasts instead of all anchoring on the global last frame.
+    tracked_files = get_feature_files(name_list['output_path'] + 'track/trackingtable/')
     # Set forecast parameters
     last_timestamp = pd.to_datetime(name_list['forecast_time'])
+    tracked_files = [f for f in tracked_files
+                     if pd.to_datetime(pathlib.Path(f).stem,
+                                       format='%Y%m%d_%H%M') <= last_timestamp]
+    if not tracked_files:
+        print(f"No tracked frames at or before forecast_time {name_list['forecast_time']}.")
+        return
     delta_time = pd.to_timedelta(name_list['delta_time'], unit='m')
     forecast_times = pd.date_range(start=last_timestamp + delta_time,
                                    periods=name_list['lead_time'],
