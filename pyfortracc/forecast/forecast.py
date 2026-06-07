@@ -122,14 +122,20 @@ def forecast(name_list, read_function):
             frcst_file = f"{forecast_times[ftsmp].strftime('%Y%m%d_%H%M%S.nc')}"
             # Save as a netCDF file
             save_netcdf(forecast_img, name_list, frcst_out + frcst_file)
-            # Update name_list with timestamp pattern for netCDF
+            # Update name_list with timestamp pattern for netCDF. The forecast
+            # files are renamed by us, so any user pattern_position (tuned for the
+            # original input filenames) no longer applies; reset it to use the
+            # whole forecast filename, otherwise get_filestamp slices to ''.
             name_list['timestamp_pattern'] = '%Y%m%d_%H%M%S.nc'
+            name_list['pattern_position'] = [None, None]
         else:
             # Save as a numpy file
             frcst_file = f"{forecast_times[ftsmp].strftime('%Y%m%d_%H%M%S.npy')}"
             np.save(frcst_out, frcst_out + frcst_file)
-            # Update name_list with timestamp pattern for numpy
+            # Update name_list with timestamp pattern for numpy. Reset
+            # pattern_position too (see netCDF branch above for the reason).
             name_list['timestamp_pattern'] = '%Y%m%d_%H%M%S.npy'
+            name_list['pattern_position'] = [None, None]
 
         # 2 - Second Step of the forecast is extract features from the forecast image
         print(f"  * Features Extraction")
