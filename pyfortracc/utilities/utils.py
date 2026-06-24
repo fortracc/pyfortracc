@@ -357,13 +357,14 @@ def get_edges(name_list, feat_files=[], read_fnc=None):
     # Start with empty data shape
     data_shape = (0, 0)
     if name_list['edges']:
-        # Get the data shape from the first file
-        for file in feat_files:
-            feat_df = pd.read_parquet(file)
-            if len(feat_df) > 0:
-                file_path = feat_df['file'].unique()[0]
-                data_shape = read_fnc(file_path).shape
-                break
+        # Only get the data shape if geographical limits are not defined
+        if name_list['lat_min'] is None or name_list['lat_max'] is None:
+            for file in feat_files:
+                feat_df = pd.read_parquet(file)
+                if len(feat_df) > 0:
+                    file_path = feat_df['file'].unique()[0]
+                    data_shape = read_fnc(file_path).shape
+                    break
 
     # Check if lat_min is not defined
     if name_list['lat_min'] is None or name_list['lat_max'] is None:
