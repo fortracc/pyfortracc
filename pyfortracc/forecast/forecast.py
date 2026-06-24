@@ -70,6 +70,17 @@ def forecast(name_list, read_function):
     if not tracked_files:
         print(f"No tracked frames at or before forecast_time {name_list['forecast_time']}.")
         return
+    # Keep only the last `observation_window` frames before forecast_time.
+    # get_feature_files() was called WITHOUT name_list, so its own
+    # observation-window trimming (utils.get_files_interval) never ran and it
+    # returned the ENTIRE tracking history. Without this trim, `tracked_files`
+    # grows with how late forecast_time is in the dataset, and persistence()
+    # re-reads/concatenates every frame on each lead time -> runtime and memory
+    # blow up linearly with the date (the cause of the late-date OOM/BrokenPool).
+    # observation_window may be None (default_parameters); guard against it.
+    obs_window = name_list.get('observation_window')
+    if obs_window:
+        tracked_files = tracked_files[-int(obs_window):]
     delta_time = pd.to_timedelta(name_list['delta_time'], unit='m')
     forecast_times = pd.date_range(start=last_timestamp + delta_time,
                                    periods=name_list['lead_time'],
