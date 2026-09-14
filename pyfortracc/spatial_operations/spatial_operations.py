@@ -7,7 +7,7 @@ from shapely.wkt import loads
 from pyfortracc.default_parameters import default_parameters
 from pyfortracc.utilities.utils import (get_feature_files, get_edges,
                                         get_loading_bar, get_previous_file,
-                                        get_previous_proccessed_files,
+                                        is_complete_parquet,
                                         check_operational_system,
                                         get_geotransform, set_nworkers, 
                                         create_dirs, set_schema, set_outputdf,
@@ -52,46 +52,43 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
     # Get feature files to be processed
     feat_path = name_lst['output_path'] + 'track/processing/features/'
     feat_files = get_feature_files(feat_path)
-    #feat_files = get_previous_proccessed_files(name_lst, feat_files)
     # Set ouput to spatial operations
     output_path = name_lst['output_path'] + 'track/processing/spatial/'
     name_lst['output_spatial'] = output_path
     create_dirs(output_path)  # Create the directories
     # Get edges of the data, used to check if the cluster is on the edges
     left_edge, right_edge = get_edges(name_lst, feat_files, read_fnc)
-    # Get loading bar
-    loading_bar = get_loading_bar(feat_files)
     # Initialize schema
     schema = set_schema('spatial', name_lst)
     # Get number of prev_files to skip based on the number of prev_time
     prev_skip = name_lst['num_prev_skip']
     # Get geotransform
     geotrf, inv_geotrf = get_geotransform(name_lst)
+    tasks = [(feat_time, feat_file,
+              feat_files[feat_time - 1: feat_time],
+              feat_files[(feat_time - 1 + prev_skip) - 1: feat_time],
+              name_lst, left_edge, right_edge,
+              read_fnc, schema, False, geotrf)
+             for feat_time, feat_file in enumerate(feat_files)]
+    # Skip the frames already processed by an interrupted run. Each frame
+    # only depends on the feature files, so the frames are independent
+    if name_lst['resume']:
+        tasks = [task for task in tasks if not is_complete_parquet(
+                 output_path + pathlib.Path(task[1]).name)]
+        print('Resuming: {} of {} files already processed'.format(
+            len(feat_files) - len(tasks), len(feat_files)))
+    # Get loading bar
+    loading_bar = get_loading_bar(tasks)
     if parallel:
         # Set number of workers
         n_workers = set_nworkers(name_lst)
         with Pool(n_workers) as pool:
-            for _ in pool.imap_unordered(spatial_operation,
-                                         [(feat_time, feat_file,
-                                           feat_files[feat_time - 1:
-                                                      feat_time],
-                                           feat_files[(feat_time - 1 +
-                                                       prev_skip) - 1:
-                                                      feat_time],
-                                           name_lst, left_edge, right_edge,
-                                           read_fnc, schema, False, geotrf)
-                                          for feat_time, feat_file
-                                          in enumerate(feat_files)]):
+            for _ in pool.imap_unordered(spatial_operation, tasks):
                 loading_bar.update(1)
         pool.close()
     else:
-        for feat_time, feat_file in enumerate(feat_files):
-            spatial_operation((feat_time, feat_file,
-                               feat_files[feat_time - 1: feat_time],
-                               feat_files[(feat_time - 1 + prev_skip) - 1:
-                                          feat_time],
-                               name_lst, left_edge, right_edge, 
-                               read_fnc, schema, False, geotrf))
+        for task in tasks:
+            spatial_operation(task)
             loading_bar.update(1)
     loading_bar.close()
     return

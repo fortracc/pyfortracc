@@ -8,7 +8,7 @@ import pandas as pd
 import geopandas as gpd
 import pathlib
 import multiprocessing as mp
-import inspect
+import pyarrow.parquet as pq
 import xarray as xr
 from tqdm import tqdm
 from datetime import datetime, timedelta
@@ -153,50 +153,30 @@ def get_feature_files(features_path, name_list=None):
         sys.exit()
     return files_list
 
-def get_previous_proccessed_files(name_list, feat_files):
+def is_complete_parquet(path_file):
     """
-    Retrieve the list of feature files that have not been processed yet.
+    Check if a Parquet file exists and was completely written.
 
-    This function determines the module from which it was called and uses this information 
-    to locate previously processed files in a specific directory. It then returns the list 
-    of feature files that are pending processing by removing those that have already been 
-    processed.
+    Used by the `resume` option to skip the files already processed by an
+    interrupted run. A file truncated by an interrupted write has no Parquet
+    footer, so reading its metadata fails and the file is processed again.
 
     Parameters
     ----------
-    name_list : dict
-        A dictionary containing configuration parameters including paths for previous 
-        processing output directories.
-    feat_files : list of str
-        A list of file paths to be processed.
+    path_file : str
+        The file path of the Parquet file.
 
     Returns
     -------
-    feat_files : list of str
-        A list of file paths from `feat_files` that have not yet been processed, based on 
-        the files found in the respective previous processing directory.
+    bool
+        True if the file exists and its metadata can be read, False otherwise.
     """
-    # Get current module name comming from python function using inspect
-    module_name = inspect.stack()[1][3]
-    if module_name == 'feature_extraction':
-        prev_files = sorted(glob.glob(name_list['output_path'] + \
-                                    'track/processing/features/*.parquet'))
-    elif module_name == 'spatial_operations':
-        prev_files = sorted(glob.glob(name_list['output_path'] + \
-                                    'track/processing/spatial/*.parquet'))
-    elif module_name == 'cluster_linking':
-        prev_files = sorted(glob.glob(name_list['output_path'] + \
-                                    'track/processing/linked/*.parquet'))
-    else:
-        return feat_files
-    if len(prev_files) == 0:
-        return feat_files
-    # Remove the files by difference
-    size_prev = len(prev_files) - int(name_list['n_jobs'])
-    # Remove first feat_files according the size_prev
-    feat_files = feat_files[size_prev:]
-    return feat_files
-    
+    try:
+        pq.read_metadata(path_file)
+    except Exception:
+        return False
+    return True
+
 
 def get_parquets(name_list):
     """
@@ -529,6 +509,10 @@ def set_schema(module,name_list):
                 'prv_spl_iuid': float,
             }
         }
+    # Remove the cluster pixels from features schema
+    if not name_list['save_arrays']:
+        for col in ('array_values', 'array_x', 'array_y'):
+            del s_dict['features'][col]
     # Add the methods field to spatial schema
     if name_list['spl_correction']:
         s_dict['spatial']['u_spl'] = float

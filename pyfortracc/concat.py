@@ -7,7 +7,9 @@ import pyarrow as pa
 import pathlib
 from pyarrow.lib import Schema
 from multiprocessing import Pool
-from pyfortracc.utilities.utils import get_loading_bar, set_nworkers, check_operational_system
+from pyfortracc.utilities.utils import (get_loading_bar, set_nworkers,
+                                        check_operational_system,
+                                        is_complete_parquet)
 from pyfortracc.default_parameters import default_parameters
 
 
@@ -70,23 +72,32 @@ def concat(name_list, mode='track', clean=True, parallel=True):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     # Get schema from the last file        
-    schema = read_files((fet_files[-1], spt_files[-1], lnk_files[-1], 
+    schema = read_files((fet_files[-1], spt_files[-1], lnk_files[-1],
                         default_cols, output_path, None, False))
+    files = list(zip(fet_files, spt_files, lnk_files))
+    # Skip the files already concatenated by an interrupted run
+    if name_list['resume']:
+        files = [(fet_file, spt_file, lnk_file)
+                 for fet_file, spt_file, lnk_file in files
+                 if not is_complete_parquet(output_path +
+                                            pathlib.Path(fet_file).name)]
+        print('Resuming: {} of {} files already processed'.format(
+            len(fet_files) - len(files), len(fet_files)))
     # Loading bar
-    loading_bar = get_loading_bar(fet_files)
+    loading_bar = get_loading_bar(files)
     if parallel:
         # Set number of workers
         n_workers = set_nworkers(name_list)
         with Pool(n_workers) as pool:
             for _ in pool.imap_unordered(read_files,
-                                        [(fet_file, spt_file, lnk_file, 
+                                        [(fet_file, spt_file, lnk_file,
                                             default_cols, output_path, schema, clean)
-                                        for fet_file, spt_file, lnk_file in zip(fet_files, spt_files, lnk_files)]):
+                                        for fet_file, spt_file, lnk_file in files]):
                 loading_bar.update(1)
         pool.close()
     else:
-        for fet_file, spt_file, lnk_file in zip(fet_files, spt_files, lnk_files):
-            read_files((fet_file, spt_file, lnk_file, default_cols, 
+        for fet_file, spt_file, lnk_file in files:
+            read_files((fet_file, spt_file, lnk_file, default_cols,
                         output_path, schema, clean))
             loading_bar.update(1)
     loading_bar.close()           
@@ -225,7 +236,11 @@ def default_columns(name_list=None):
                 'past_idx',
                 'merge_idx',
                 'split_pr_idx']
-    
+
+    if not name_list['save_arrays']:
+        columns = [col for col in columns
+                   if col not in ('array_values', 'array_y', 'array_x')]
+
     if len(name_list['thresholds']) > 1:
         # Get position of uid column and add iuid after it
         uid_pos = columns.index('uid')

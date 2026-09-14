@@ -14,7 +14,8 @@ def track(name_lst={},
             clst_lnk=True,
             concat_r=True,
             duration=False,
-            clean=True):
+            clean=True,
+            resume=False):
     """ Track Module
     It is a module that performs the tracking clusters in time and space.
 
@@ -32,14 +33,23 @@ def track(name_lst={},
         If True, spatial operations are performed.
     clst_lnk : bool
         If True, cluster linking is performed.
+    clean : bool
+        If True, the output_path is removed before the tracking.
+        Ignored when resuming.
+    resume : bool
+        If True, resume an interrupted run from the files already written in
+        output_path. Run again with the same name_lst of the interrupted run.
     """
     # Parameters check
     if name_lst == {}:
         raise ValueError('name_lst parameter is empty')
     if read_fnc is None:
         raise ValueError('read_fnc object is empty')
+    # Set resume to be used by each stage. The argument always overrides the
+    # name_lst value, so a name_lst reused from a resumed run starts clean
+    name_lst['resume'] = resume
     # Clean previous results
-    if clean:
+    if clean and not name_lst['resume']:
         shutil.rmtree(name_lst['output_path'], ignore_errors=True)
     # Extract features
     if feat_ext:

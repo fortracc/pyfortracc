@@ -1,6 +1,7 @@
 import pandas as pd
 import pathlib
 import numpy as np
+import pyarrow.parquet as pq
 import xarray as xr
 from pyfortracc.default_parameters import default_parameters
 from pyfortracc.utilities.utils import get_feature_files, \
@@ -51,6 +52,10 @@ def forecast(name_list, read_function):
     # copy, a second call (e.g. looping over forecast_time) would inherit the
     # forecast paths and fail to find the original track/trackingtable.
     name_list = dict(name_list)
+    # The persistence moves the cluster pixels to build the forecast image,
+    # and each lead time is built from the previous one, so the forecast
+    # frames always keep the array columns
+    name_list['save_arrays'] = True
 
     # Set default parameters if not provided
     name_list = default_parameters(name_lst=name_list,
@@ -70,6 +75,12 @@ def forecast(name_list, read_function):
     if not tracked_files:
         print(f"No tracked frames at or before forecast_time {name_list['forecast_time']}.")
         return
+    # The tracking table must have been saved with the array columns
+    array_cols = {'array_x', 'array_y', 'array_values'}
+    if not array_cols.issubset(pq.read_schema(tracked_files[-1]).names):
+        raise ValueError("The forecast requires the array_x, array_y and "
+                         "array_values columns in the tracking table. Run "
+                         "track with name_list['save_arrays'] = True.")
     # Keep only the last `observation_window` frames before forecast_time.
     # get_feature_files() was called WITHOUT name_list, so its own
     # observation-window trimming (utils.get_files_interval) never ran and it

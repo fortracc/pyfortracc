@@ -162,6 +162,9 @@ def plot(name_list,
         # Apply nan_operation
         data = np.where((data < min_val) | (data > max_val), np.nan, data)
     else:
+        if 'array_x' not in tck_table.columns:
+            raise ValueError("read_function is required to plot a tracking "
+                             "table saved with name_list['save_arrays'] = False.")
         # Get array x, y and values
         x = tck_table['array_x'].explode().values.astype(int)
         y = tck_table['array_y'].explode().values.astype(int)

@@ -87,6 +87,18 @@ def default_parameters(name_lst=None, read_function=None):
         with no previous match by averaging the vectors of the nearest neighbours.
     new_neighbors: int
         Number of nearest neighbours used by the NEW correction method.
+    resume: bool
+        If True, resume an interrupted run: each stage skips the files already
+        completely written in output_path and cluster linking restarts from
+        the last linked frame. The name_list must be the same as in the
+        interrupted run. Used when calling the stages individually; in
+        track() use its resume argument, which overrides this value.
+    save_arrays: bool
+        If False, the cluster pixels (array_x, array_y and array_values columns)
+        are not saved, reducing memory and disk usage. They are required by
+        opt_correction and validation, so these cannot be used with
+        save_arrays False. The forecast also requires them in the tracking
+        table, and plot requires them when no read_function is given.
     'epsg': int
         EPSG code for the projection.
     Returns
@@ -171,6 +183,8 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['new_correction'] = False
     if 'new_neighbors' not in name_lst:
         name_lst['new_neighbors'] = 3
+    if 'resume' not in name_lst:
+        name_lst['resume'] = False
     if 'default_columns' not in name_lst:
         name_lst['default_columns'] = True
     if 'validation' not in name_lst:
@@ -193,4 +207,16 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['mrg_expansion'] = False
     if 'spl_expansion' not in name_lst:
         name_lst['spl_expansion'] = False
+    if 'save_arrays' not in name_lst:
+        name_lst['save_arrays'] = True
+    # The cluster pixels are read from the features files by these methods
+    if not name_lst['save_arrays']:
+        needs_arrays = [key for key in ('opt_correction', 'validation')
+                        if name_lst[key]]
+        if needs_arrays:
+            needs_arrays = ' and '.join(needs_arrays)
+            raise ValueError("name_list['save_arrays'] = False cannot be used "
+                             "with {0}, which require the array_x, array_y and "
+                             "array_values columns. Set save_arrays to True "
+                             "or disable {0}.".format(needs_arrays))
     return name_lst

@@ -7,7 +7,8 @@ from .statistics import geo_statistics
 from pyfortracc.utilities.utils import (get_input_files, set_operator,
                                         create_dirs, write_parquet, set_schema,
                                         set_outputdf, set_nworkers, check_operational_system,
-                                        get_loading_bar, get_filestamp)
+                                        get_loading_bar, get_filestamp,
+                                        is_complete_parquet)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -34,13 +35,20 @@ def features_extraction(name_lst, read_fnc, parallel=True):
     files = get_input_files(name_lst['input_path'])
     # Set the operator used to thresholding segmentation
     operator = set_operator(name_lst['operator'])
-    # Get loading bar
-    loading_bar = get_loading_bar(files)
     # Create output directories and update output_path in name_lst
     output_path = name_lst['output_path'] + 'track/processing/features/'
     name_lst['output_features'] = output_path
     # Create the directories
     create_dirs(output_path)
+    # Skip the files already processed by an interrupted run
+    if name_lst['resume']:
+        n_files = len(files)
+        files = [file for file in files
+                 if not is_complete_parquet(feature_file(name_lst, file))]
+        print('Resuming: {} of {} files already processed'.format(
+            n_files - len(files), n_files))
+    # Get loading bar
+    loading_bar = get_loading_bar(files)
     # Initialize schema of the output dataframe
     schema = set_schema('features', name_lst)
     # Get geotransform
@@ -63,6 +71,22 @@ def features_extraction(name_lst, read_fnc, parallel=True):
     loading_bar.close()
 
 
+def feature_file(name_list, file):
+    """
+    Return the path of the features file of an input file
+
+    parameters:
+    ----------
+    name_list: dictionary
+        dictionary with the parameters, including 'output_features'
+    file: string
+        path to the input file
+    """
+    tstamp = get_filestamp(name_list, file)
+    fpattern = '%Y%m%d_%H%M'  # File pattern
+    return name_list['output_features'] + tstamp.strftime(fpattern) + '.parquet'
+
+
 def extract_features(args):
     """
     Calculate the features for a single file
@@ -83,17 +107,15 @@ def extract_features(args):
     output_df = set_outputdf(schema)
     # Get the timestamp from the file
     tstamp = get_filestamp(name_list, file)
-    fpattern = '%Y%m%d_%H%M'  # File pattern
-    output_path = name_list['output_features']
     min_size = name_list['min_cluster_size']
     cluster_mtd = name_list['cluster_method']
-    feature_file = output_path + '{}.parquet'.format(tstamp.strftime(fpattern))
+    output_file = feature_file(name_list, file)
     # Read the data from the file using the read_func
     try:
         data = read_func(file)
     except Exception as e:
         print('Error reading file: {}'.format(file), e)
-        write_parquet(output_df, feature_file)
+        write_parquet(output_df, output_file)
         return
     # Start processing clustering and geo_statistics
     for thld_lvl, threshold in enumerate(name_list['thresholds']):
@@ -110,5 +132,5 @@ def extract_features(args):
     output_df['timestamp'] = tstamp
     output_df['file'] = file
     output_df.reset_index(inplace=True, drop=True)
-    write_parquet(output_df, feature_file)
+    write_parquet(output_df, output_file)
     return

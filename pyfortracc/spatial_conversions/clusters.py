@@ -2,6 +2,7 @@ import numpy as np
 import xarray as xr
 import pandas as pd
 import pathlib
+import pyarrow.parquet as pq
 from multiprocessing import Pool
 from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
                                         set_nworkers, check_operational_system,
@@ -37,6 +38,12 @@ def clusters(name_list, start_time, end_time, read_function, mode='track', cmp_l
     parquets = get_parquets(name_list)
     parquets = parquets.loc[parquets['mode'] == mode]
     parquets = parquets.loc[start_time:end_time]
+    # The clusters are rasterized from the cluster pixels
+    if not parquets.empty and \
+        'array_x' not in pq.read_schema(parquets['file'].iloc[0]).names:
+        print("Skipped: the tracking table was saved with "
+              "name_list['save_arrays'] = False, which has no cluster pixels.")
+        return
     parquets = parquets.groupby(parquets.index)
     loading_bar = get_loading_bar(parquets)
     n_workers = set_nworkers(name_list)

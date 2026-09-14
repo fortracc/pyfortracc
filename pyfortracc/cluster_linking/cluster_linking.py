@@ -5,7 +5,8 @@ from pyfortracc.utilities.utils import (get_feature_files, create_dirs,
                                         get_loading_bar, get_featstamp,
                                         set_schema, set_outputdf,
                                         read_parquet, write_parquet,
-                                        check_operational_system)
+                                        check_operational_system,
+                                        is_complete_parquet)
 from .new_frame import new_frame
 from .max_uid import update_max_uid
 from .board_clusters import board_clusters
@@ -34,7 +35,6 @@ def cluster_linking(name_lst):
     name_lst['output_spatial'] = output_path
     feat_files = get_feature_files(feat_path)
     create_dirs(output_path)
-    loading_bar = get_loading_bar(feat_files)
     # Get number of prev_files to skip based on the number of prev_time
     prev_skip = name_lst['num_prev_skip']
     # Set delta_time
@@ -54,14 +54,66 @@ def cluster_linking(name_lst):
     prv_stamp = get_featstamp(feat_files[0]) - dt_time
     # Set idx counter is used to create cindex
     cdx = 0
-    for feat_time, feat_file in enumerate(feat_files):
-        prv_frame, prv_stamp, uid_iter, cdx = linking((feat_time, feat_file, 
+    # Index of the first frame to be linked
+    start = 0
+    if name_lst['resume']:
+        start, prv_frame, prv_stamp, uid_iter, cdx = resume_linking(
+            feat_files, output_path, prv_frame, prv_stamp, uid_iter, cdx)
+        print('Resuming: {} of {} files already processed'.format(
+            start, len(feat_files)))
+    loading_bar = get_loading_bar(feat_files[start:])
+    for feat_time, feat_file in enumerate(feat_files[start:], start):
+        prv_frame, prv_stamp, uid_iter, cdx = linking((feat_time, feat_file,
                                                 prv_frame, prv_stamp,
                                                 name_lst, uid_iter,
                                                 max_dt_time, schema, cdx))
         loading_bar.update(1)
     loading_bar.close()
     return
+
+
+def resume_linking(feat_files, output_path, prv_frame, prv_stamp, uid_iter, cdx):
+    """
+    Restore the linking state of an interrupted run from its linked files.
+
+    Frames are linked in order and each one depends on the previous, so the
+    run resumes from the first frame without a complete linked file. The
+    state that linking() carries between frames is rebuilt from the linked
+    files: the previous frame is the last linked file, and the uid and
+    cindex counters are replayed with the same updates made by linking().
+
+    Parameters
+    ----------
+    feat_files : list of str
+        Spatial files to be linked, in time order.
+    output_path : str
+        Directory of the linked files.
+    prv_frame, prv_stamp, uid_iter, cdx :
+        Initial linking state, returned unchanged if no frame was linked.
+
+    Returns
+    -------
+    tuple
+        Index of the first frame to be linked and the restored prv_frame,
+        prv_stamp, uid_iter and cdx.
+    """
+    start = 0
+    for feat_file in feat_files:
+        linked_file = output_path + pathlib.Path(feat_file).name
+        if not is_complete_parquet(linked_file):
+            break
+        uids = pd.read_parquet(linked_file, columns=['uid'])['uid']
+        # Same counter updates made by linking()
+        cdx += 1
+        if len(uids) > 0:
+            cdx += len(uids) - 1
+            uid_iter = update_max_uid(uids.max(), uid_iter)
+        start += 1
+    if start > 0:
+        last_file = feat_files[start - 1]
+        prv_frame = read_parquet(output_path + pathlib.Path(last_file).name, None)
+        prv_stamp = get_featstamp(last_file)
+    return start, prv_frame, prv_stamp, uid_iter, cdx
 
 
 def linking(args):

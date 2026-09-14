@@ -80,6 +80,7 @@ These parameters provide advanced configuration options for pyForTraCC, enabling
 - **opt_correction**: Enables optical flow vector correction. Default is `False`.
 - **opt_mtd**: Optical flow method to use. Options are `'farneback'` or `'lucas-kanade'`. Default is `'lucas-kanade'`.
 - **elp_correction**: Enables vector correction using ellipse fitting. Default is `False`.
+- **save_arrays**: If `False`, the cluster pixels (`array_x`, `array_y` and `array_values` columns) are not saved, reducing memory and disk usage. Cannot be used with `opt_correction` or `validation`, which require these columns (an error is raised). The forecast also requires them in the tracking table, and `plot` requires them when no `read_function` is given. Default is `True`.
 - **calc_dir**: If `True`, calculates the direction of cluster movement. Default is `False`. (coming soon)
 - **calc_speed**: If `True`, calculates the speed of cluster movement. Default is `False`. (coming soon)
 - **speed_units**: Units for speed calculation. Default is `'m/s'`. (coming soon)
