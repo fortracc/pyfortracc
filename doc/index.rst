@@ -1,5 +1,5 @@
 pyForTraCC - Python Library for Tracking and Forecasting Configurable Clusters
-=======================================================
+==============================================================================
 
 The Forecasting and Tracking the Evolution of Cloud Clusters (ForTraCC) algorithm, introduced by Vila et al. (2008) (https://doi.org/10.1175/2007WAF2006121.1), was a pioneering tool in monitoring and predicting the evolution of cloud clusters, with significant applications in weather forecasting. Building upon this foundation, the Python Forecasting and Tracking the Evolution of Configurable Clusters (pyForTraCC) extends these capabilities with new customization options. The term "configurable" replaces "cloud" to reflect a key enhancement: pyForTraCC allows users to adjust and modify the tracked clusters based on specific configurations or parameters. This flexibility enables tailored definitions and monitoring of clusters, adapting to varying criteria or specific user needs. This added customization makes pyForTraCC a versatile tool for a broader range of tracking and forecasting applications, from precipitation systems to other phenomena.
 
@@ -14,24 +14,29 @@ By utilizing a time-varying 2D input images and a specified threshold value, pyF
 
 For further information on pyForTraCC, its modules, and the continuous development process, please refer to the official documentation and stay tuned for updates from the community.
 
-The algorithm is divided into two main routines Track and Forecast. 
+The algorithm is divided into two main routines, Track and Forecast, followed by optional post-processing.
 
 1. **Track**: The tracking routine is responsible for identifying and tracking the clusters in a time-varying field. This routine is divided into four main steps: 
-  - **Features Extraction**: The first step is to identify the features in a time-varying field. The features are identified by applying a multi-thresholding technique to the field, clustering the contiguous pixels with values above the threshold and vectorizing the clusters into a geospatial object.
-  - **Spatial Operations**: The second step is to perform spatial operations on the features. The spatial operations are used to identify the spatial relationships between the features and create a vector displacement between the centroids of the features.
-  - **Cluster Linkage**: The third step is to link the features between the time steps. The linkage is performed by indexing the features in the current time step with the features in the previous time step and create a unique identifier for each cluster that is maintained throughout the tracking process. Additionally, the algorithm creates a trajectory for each cluster and a lifetime of the cluster.
-  - **Concatenation**: The fourth step is to concatenate the features and trajectories into a single parquet file. The parquet file contains entire tracking information of the clusters. And a create a generalized track entity called `tracking table` that contains all information of track process.
 
-2. **Forecast**: The forecasting routine is responsible for predicting the future position of the clusters. This routine is a loop that iterates over the time steps and performs two main steps:
-  - **Virtual Image**: The first step is to create a virtual image based persistence forecast of individual clusters. The virtual image is created by shifting the clusters in the current time step to the `n` time steps ahead. The extrapolation is performed by applying a mean vector displacement of the clusters based on u and v components.
-  - **Track Routing**: The second step uses a `Track Routine` to identify the clusters in the virtual image. The track routine is applied to the virtual image to identify the clusters in the future time step.  
+   - **Features Extraction**: The first step is to identify the features in a time-varying field. The features are identified by applying a multi-thresholding technique to the field, clustering the contiguous pixels with values above the threshold and vectorizing the clusters into a geospatial object.
+   - **Spatial Operations**: The second step is to perform spatial operations on the features. The spatial operations are used to identify the spatial relationships between the features and create a vector displacement between the centroids of the features.
+   - **Cluster Linkage**: The third step is to link the features between the time steps. The linkage is performed by indexing the features in the current time step with the features in the previous time step and create a unique identifier for each cluster that is maintained throughout the tracking process. Additionally, the algorithm creates a trajectory for each cluster and a lifetime of the cluster.
+   - **Concatenation**: The fourth step is to concatenate the features and trajectories into a single parquet file. The parquet file contains entire tracking information of the clusters. And a create a generalized track entity called `tracking table` that contains all information of track process.
 
+2. **Forecast**: The forecasting routine extrapolates the tracked clusters to the next time steps (nowcasting). For each lead time it performs two main steps:
+
+   - **Virtual Image**: The first step creates a virtual image by shifting the pixels of the clusters observed at the forecast time along their mean displacement vector (u and v components) over the last ``observation_window`` time steps (persistence forecast).
+   - **Track Routine**: The second step applies the `Track Routine` to the virtual image, so the forecast clusters are identified, linked to the observed ones and stored in a `forecast table` with the same structure as the tracking table.
+
+3. **Post-processing**: After tracking, the results can be enriched with external raster and vector data, the total duration of each cluster, gridded fields, and exported to geospatial formats (GeoJSON, Shapefile, NetCDF) or to the classic ForTraCC format.
+
+New users should start with the :doc:`Quick Start <BI/BI_QUICKSTART>` page, which runs the complete workflow (tracking, forecast and post-processing) on a small synthetic dataset in a few minutes.
 
 For further information on pyForTraCC, its modules, and the continuous development process, please refer to the official documentation and stay tuned for updates 
 from the community.
 
 .. note::
-   This guide for the pyfortrac package is currently under development and will be continuously updated and improved. If you encounter any errors or issues, 
+   This guide for the pyfortracc package is currently under development and will be continuously updated and improved. If you encounter any errors or issues, 
    please don't hesitate to reach out to Helvecio Neto or Alan Calheiros for assistance. Thank you for your understanding and support as we work to enhance this 
    resource.
 
@@ -41,10 +46,12 @@ from the community.
    :hidden:
 
    BI/BI_INSTALL
+   BI/BI_QUICKSTART
    BI/BI_DATA
    BI/BI_NAMELIST
    BI/BI_TRACKING
    BI/BI_FORECAST
+   BI/BI_POSTPROCESSING
    BI/BI_UTILITIES
    BI/BI_EXAMPLES
    BI/BI_PUBLICATIONS

@@ -33,22 +33,15 @@ This module serves as the foundation for analyzing and interpreting the structur
 Forecast
 ****************************************************
 
-The `pyfortracc.forecast` codes includes functions designed to manage the reading, generating, and saving of forecast data, particularly in the context of NetCDF files.
+The `pyfortracc.forecast` codes extrapolate the tracked clusters to the next time steps (nowcasting).
 
 Key functionalities include:
 
-    * Forecast Image Extraction: Reads forecast images from NetCDF files and extracts the relevant data arrays for further analysis.
-    * Saving Forecast Data: Saves forecast images to NetCDF files, ensuring that all necessary metadata is included for accurate future reference.
-    * Forecast Generation: Creates forecasts based on input tracking data, generating forecast images that are subsequently saved for analysis and visualization.
+    * Forecast Generation: Reads the last frames of the tracking table before the forecast time, builds a virtual image for each lead time and processes it with the tracking routine, producing a forecast table with the same structure as the tracking table.
+    * Persistence Method: Computes the mean displacement vector of each cluster over the observation window and shifts the cluster pixels along it.
+    * Forecast Outputs: Saves the virtual images as NetCDF files, the forecast table as parquet files and the forecast cluster boundaries as GeoJSON.
 
-This module is essential for producing and managing forecast data, allowing for the effective analysis and interpretation of predicted outcomes based on tracked data.
-
-.. warning::
-    The `forecast` module is currently under active development and is subject to ongoing improvements. 
-    While it provides a framework for generating and processing forecast images, additional features and 
-    refinements are planned to enhance its accuracy and functionality. Updates will be made to incorporate 
-    ore advanced forecasting techniques and to optimize the overall performance. Please note that the current 
-    implementation serves as a preliminary version, and further enhancements are forthcoming.
+The only forecast mode currently available is persistence. See :doc:`../BI/BI_FORECAST` for a guide.
 
 Plot
 ****************************************************
@@ -65,19 +58,17 @@ This module is key to transforming raw data into meaningful visualizations, allo
 Post processing
 ****************************************************
 
-The `pyfortracc.post_processing` codes encompasses a range of functions designed to enhance and refine the tracking data after the initial processing stage. 
-These functions are crucial for adding additional features, updating data, and preparing the tracking information for further analysis and use.
+The `pyfortracc.post_processing` codes enrich and export the tracking table after the tracking.
 
 Key functionalities include:
 
-    * Feature Integration: Adds and updates features in the tracking table based on spatial data from shapefiles, geopackage files, or raster files, ensuring that the tracking data is enriched with relevant geographic information.
-    * Raster Operations: Includes tools to crop raster images to specific bounding boxes and reproject and resize rasters to fit new resolutions and bounding boxes, optimizing them for further analysis or visualization.
-    * Cluster Duration Calculation: Calculates and updates the duration of clusters within the dataset, providing critical temporal insights that are recorded in a Parquet file.
-    * Output Management: Temporarily suppresses stdout and stderr outputs during processing, ensuring a cleaner and more focused output log.
-    * Spark Session Configuration: Creates and configures a Spark session with specified parameters, enabling efficient processing and analysis of large datasets.
+    * Cluster Duration: Computes the total duration of each cluster and marks its first and last frames (DuckDB based).
+    * Raster Integration: Extracts values and zonal statistics from external gridded data inside each cluster.
+    * Vector Integration: Labels each cluster with an attribute of the polygon of a vector file with the largest intersection.
+    * Rasterization: Converts columns of the tracking table and the displacement vectors into NetCDF grids.
+    * Legacy Format: Exports the tracking to the text "family" format of the original ForTraCC algorithm.
 
-This module plays a vital role in refining and enhancing the data, preparing it for final analysis and ensuring that all necessary features and adjustments 
-are accurately incorporated.
+See :doc:`../BI/BI_POSTPROCESSING` for a guide.
 
 
 Spatial conversions

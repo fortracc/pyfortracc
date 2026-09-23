@@ -13,7 +13,7 @@ Clusters
 .. autofunction:: pyfortracc.spatial_conversions.clusters.clusters
 .. autofunction:: pyfortracc.spatial_conversions.clusters.translate_cluster
 
-Spatial conversions
+Spatial conversions module
 -------------------------------------------------------
 
 .. autofunction:: pyfortracc.spatial_conversions.spatial_conversions.spatial_conversions

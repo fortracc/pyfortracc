@@ -1,11 +1,6 @@
 Spatial operations
 =======================================================
 
-Contains
--------------------------------------------------------
-
-.. autofunction:: pyfortracc.spatial_operations.contains.contains_
-
 Count inside
 -------------------------------------------------------
 
@@ -15,6 +10,11 @@ Edge clusters
 -------------------------------------------------------
 
 .. autofunction:: pyfortracc.spatial_operations.edge_clusters.edge_clusters
+
+Expansion
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.spatial_operations.expansion.expansion
 
 Overlay
 -------------------------------------------------------
@@ -27,8 +27,9 @@ Spatial class
 .. autofunction:: pyfortracc.spatial_operations.spatial_class.continuous
 .. autofunction:: pyfortracc.spatial_operations.spatial_class.merge
 .. autofunction:: pyfortracc.spatial_operations.spatial_class.split
+.. autofunction:: pyfortracc.spatial_operations.spatial_class.merge_split
 
-Spatial operations
+Spatial operations module
 -------------------------------------------------------
 
 .. autofunction:: pyfortracc.spatial_operations.spatial_operations.spatial_operations
@@ -45,9 +46,3 @@ Validation
 
 .. autofunction:: pyfortracc.spatial_operations.validation.validation
 .. autofunction:: pyfortracc.spatial_operations.validation.extrapolate
-
-Within
--------------------------------------------------------
-
-.. autofunction:: pyfortracc.spatial_operations.within.within_
-

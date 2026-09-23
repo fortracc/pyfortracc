@@ -1,6 +1,11 @@
 Vector methods
 =======================================================
 
+Ellipse mtd
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.vector_methods.ellipse_mtd.ellipse_mtd
+
 Incores mtd
 -------------------------------------------------------
 
@@ -11,6 +16,11 @@ Merge mtd
 
 .. autofunction:: pyfortracc.vector_methods.merge_mtd.merge_mtd
 
+
+New mtd
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.vector_methods.new_mtd.new_mtd
 
 Opticalflow filters
 -------------------------------------------------------
@@ -28,12 +38,10 @@ Opticalflow filters
 .. autofunction:: pyfortracc.vector_methods.opticalflow_filters.erode_image
 .. autofunction:: pyfortracc.vector_methods.opticalflow_filters.texture_analysis
 
-Optica flow mtd
+Optical flow mtd
 -------------------------------------------------------
 
 .. autofunction:: pyfortracc.vector_methods.opticalflow_mtd.opticalflow_mtd
-.. autofunction:: pyfortracc.vector_methods.opticalflow_mtd.read_norm
-.. autofunction:: pyfortracc.vector_methods.opticalflow_mtd.norm_img
 .. autofunction:: pyfortracc.vector_methods.opticalflow_mtd.lucas_kanade
 .. autofunction:: pyfortracc.vector_methods.opticalflow_mtd.farneback
 

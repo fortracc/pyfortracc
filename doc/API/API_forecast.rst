@@ -1,9 +1,15 @@
 Forecast
 =======================================================
 
-forecast
+See :doc:`../BI/BI_FORECAST` for a guide with examples.
+
+Forecast module
 -------------------------------------------------------
 
-.. autofunction:: pyfortracc.forecast.forecast.read_forecast_image
-.. autofunction:: pyfortracc.forecast.forecast.save_forecast_image
 .. autofunction:: pyfortracc.forecast.forecast.forecast
+
+persistence
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.forecast.persistence.persistence
+.. autofunction:: pyfortracc.forecast.persistence.persistence_mean

@@ -23,19 +23,11 @@ Math utils
 .. autofunction:: pyfortracc.utilities.math_utils.point_position
 .. autofunction:: pyfortracc.utilities.math_utils.calculate_vel
 
-Transform
--------------------------------------------------------
-.. autofunction:: pyfortracc.utilities.transform.geotransform
-.. autofunction:: pyfortracc.utilities.transform.set_geotransform
-.. autofunction:: pyfortracc.utilities.transform.to_geojson
-.. autofunction:: pyfortracc.utilities.transform.to_netcdf
-.. autofunction:: pyfortracc.utilities.transform.split_lon_max
-
 Utils
 -------------------------------------------------------
 .. autofunction:: pyfortracc.utilities.utils.get_input_files
 .. autofunction:: pyfortracc.utilities.utils.get_feature_files
-.. autofunction:: pyfortracc.utilities.utils.get_previous_proccessed_files
+.. autofunction:: pyfortracc.utilities.utils.is_complete_parquet
 .. autofunction:: pyfortracc.utilities.utils.get_parquets
 .. autofunction:: pyfortracc.utilities.utils.get_loading_bar
 .. autofunction:: pyfortracc.utilities.utils.get_filestamp
@@ -51,4 +43,9 @@ Utils
 .. autofunction:: pyfortracc.utilities.utils.set_amemory
 .. autofunction:: pyfortracc.utilities.utils.write_parquet
 .. autofunction:: pyfortracc.utilities.utils.read_parquet
+.. autofunction:: pyfortracc.utilities.utils.save_netcdf
+
+Bubble simulation
+-------------------------------------------------------
+.. autofunction:: pyfortracc.utilities.bubble_simulation.bubble_simulation
 

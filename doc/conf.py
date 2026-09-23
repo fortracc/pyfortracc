@@ -17,7 +17,9 @@ project = 'pyForTraCC'
 current_year = time.strftime("%Y")
 copyright = f'{current_year}, COPDT/CGIP/INPE (Brazil)'
 author = 'Helvecio B. L. Neto, Alan J. P. Calheiros, Adriano P. Almeida, Arturo Sanchez, and Milton B. Silva'
-release = '1.0.0'
+# Read the version from the package
+with open(os.path.join(os.path.dirname(__file__), '..', 'pyfortracc', '_version.py')) as f:
+    release = f.read().split('=')[1].strip().strip('"').strip("'")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -30,7 +32,15 @@ extensions = [
     "sphinx.ext.todo", 
     "sphinx.ext.viewcode",
     'sphinx.ext.autosectionlabel',
+    'sphinx.ext.napoleon',
     ]
+
+# Render the NumPy style docstrings of the package
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+# Section labels are prefixed with the document name (e.g. BI/BI_DATA:Title)
+# to avoid duplicated labels between pages
+autosectionlabel_prefix_document = True
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
@@ -39,5 +49,5 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
+html_static_path = []
 

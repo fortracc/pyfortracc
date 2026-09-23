@@ -1,7 +1,7 @@
 Features extraction
 =======================================================
 
-Features extraction
+Features extraction module
 -------------------------------------------------------
 
 .. autofunction:: pyfortracc.features_extraction.features_extraction.features_extraction

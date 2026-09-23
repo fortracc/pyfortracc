@@ -19,11 +19,12 @@ Board clusters
 
 .. autofunction:: pyfortracc.cluster_linking.board_clusters.board_clusters
 
-Cluster linking
+Cluster linking module
 -------------------------------------------------------
 
 .. autofunction:: pyfortracc.cluster_linking.cluster_linking.cluster_linking
 .. autofunction:: pyfortracc.cluster_linking.cluster_linking.linking
+.. autofunction:: pyfortracc.cluster_linking.cluster_linking.resume_linking
 
 Max uid
 -------------------------------------------------------

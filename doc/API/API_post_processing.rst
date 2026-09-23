@@ -1,24 +1,36 @@
 Post processing
 =======================================================
 
-Add geofeature
--------------------------------------------------------
-
-.. autofunction:: pyfortracc.post_processing.add_geofeature.add_geofeature
-.. autofunction:: pyfortracc.post_processing.add_geofeature.update_geo
-
-Add rasterfeature
--------------------------------------------------------
-
-.. autofunction:: pyfortracc.post_processing.add_rasterfeature.add_rasterfeature
-.. autofunction:: pyfortracc.post_processing.add_rasterfeature.update_trk
-.. autofunction:: pyfortracc.post_processing.add_rasterfeature.crop_raster
-.. autofunction:: pyfortracc.post_processing.add_rasterfeature.repro_raster
+See :doc:`../BI/BI_POSTPROCESSING` for a guide with examples.
 
 Duration
 -------------------------------------------------------
 
 .. autofunction:: pyfortracc.post_processing.duration.compute_duration
 .. autofunction:: pyfortracc.post_processing.duration.update_parquet
-.. autofunction:: pyfortracc.post_processing.duration.suppress_output
-.. autofunction:: pyfortracc.post_processing.duration.spark_session
+
+Add raster data
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.post_processing.add_raster_data.add_raster_data
+
+Add vector data
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.post_processing.add_vector_data.add_vector_data
+.. autofunction:: pyfortracc.post_processing.add_vector_data.process_vector_file
+
+Track to raster
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.post_processing.track2raster.track2raster
+
+Spatial vectors
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.post_processing.spatial_vectors.spatial_vectors
+
+ForTraCC family converter
+-------------------------------------------------------
+
+.. autofunction:: pyfortracc.post_processing.fortracc_converter.convert_parquet_to_family
