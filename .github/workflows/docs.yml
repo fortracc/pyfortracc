@@ -1,0 +1,28 @@
+name: Build documentation
+
+# Triggers a new build of https://pyfortracc.readthedocs.io when the documentation
+# or the package code (used by the API reference) changes on main.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'doc/**'
+      - 'pyfortracc/**'
+      - '.readthedocs.yml'
+  workflow_dispatch:
+
+jobs:
+  trigger-readthedocs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Read the Docs build
+        env:
+          RTD_TOKEN: ${{ secrets.RTD_TOKEN }}
+        run: |
+          if [ -z "$RTD_TOKEN" ]; then
+            echo "::error::Secret RTD_TOKEN is not set. Create a token at https://app.readthedocs.org/accounts/tokens/ and add it to the repository secrets."
+            exit 1
+          fi
+          curl --fail-with-body -sS -X POST \
+            -H "Authorization: Token $RTD_TOKEN" \
+            https://readthedocs.org/api/v3/projects/pyfortracc/versions/latest/builds/
