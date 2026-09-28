@@ -9,6 +9,7 @@ from pyfortracc.utilities.utils import (get_input_files, set_operator,
                                         set_outputdf, set_nworkers, check_operational_system,
                                         get_loading_bar, get_filestamp,
                                         is_complete_parquet)
+from pyfortracc.utilities.persist_uid import load_state, new_files
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -40,6 +41,13 @@ def features_extraction(name_lst, read_fnc, parallel=True):
     name_lst['output_features'] = output_path
     # Create the directories
     create_dirs(output_path)
+    # Skip the files already tracked by a previous run (persist_uid)
+    state = load_state(name_lst)
+    if state is not None:
+        files = new_files(files, state,
+                          lambda file: get_filestamp(name_lst, file))
+        print('{} new files after {}'.format(len(files),
+                                             state['last_stamp']))
     # Skip the files already processed by an interrupted run
     if name_lst['resume']:
         n_files = len(files)

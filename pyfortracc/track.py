@@ -4,6 +4,7 @@ from .spatial_operations import spatial_operations
 from .cluster_linking import cluster_linking
 from .concat import concat
 from .post_processing.duration import compute_duration
+from .utilities.persist_uid import state_exists
 
 
 def track(name_lst={},
@@ -35,7 +36,8 @@ def track(name_lst={},
         If True, cluster linking is performed.
     clean : bool
         If True, the output_path is removed before the tracking.
-        Ignored when resuming.
+        Ignored when resuming or when name_lst['persist_uid'] is True and a
+        state was saved by a previous run.
     resume : bool
         If True, resume an interrupted run from the files already written in
         output_path. Run again with the same name_lst of the interrupted run.
@@ -48,8 +50,9 @@ def track(name_lst={},
     # Set resume to be used by each stage. The argument always overrides the
     # name_lst value, so a name_lst reused from a resumed run starts clean
     name_lst['resume'] = resume
-    # Clean previous results
-    if clean and not name_lst['resume']:
+    # Clean previous results. A persisted state is kept, so the new frames
+    # continue the uids of the previous runs
+    if clean and not name_lst['resume'] and not state_exists(name_lst):
         shutil.rmtree(name_lst['output_path'], ignore_errors=True)
     # Extract features
     if feat_ext:

@@ -93,6 +93,15 @@ def default_parameters(name_lst=None, read_function=None):
         the last linked frame. The name_list must be the same as in the
         interrupted run. Used when calling the stages individually; in
         track() use its resume argument, which overrides this value.
+    persist_uid: bool
+        If True, the tracking state (next uid, cindex, iuid counters, last
+        linked frame and last features frames) is saved in
+        output_path/track/state/ at the end of the cluster linking. The next
+        runs only process the files after the last tracked frame and continue
+        its uids, iuids, lifetimes and events, which allows tracking in real
+        time as new files arrive. track() does not clean the output_path
+        while a state exists. Remove output_path/track/state/ to start a new
+        tracking.
     save_arrays: bool
         If False, the cluster pixels (array_x, array_y and array_values columns)
         are not saved, reducing memory and disk usage. They are required by
@@ -207,6 +216,8 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['mrg_expansion'] = False
     if 'spl_expansion' not in name_lst:
         name_lst['spl_expansion'] = False
+    if 'persist_uid' not in name_lst:
+        name_lst['persist_uid'] = False
     if 'save_arrays' not in name_lst:
         name_lst['save_arrays'] = True
     # The cluster pixels are read from the features files by these methods

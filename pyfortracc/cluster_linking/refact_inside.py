@@ -1,23 +1,35 @@
 import numpy as np
+import pandas as pd
+from .iuid_counter import next_iuids
 
-def refact_inside(cur_frme, uid_iter):
+
+def refact_inside(cur_frme, uid_iter, iuid_cnt=None):
     """
     This function refact uids for the inside clusters.
     The conditions to new uids are:
     - threshold_level is 0
     - inside_idx is not null
 
+    The iuids of the new inner clusters are deterministic: the suffix is the
+    next value of the (uid, threshold_level) counter in iuid_cnt, so it never
+    repeats an iuid already used by the same uid.
+
     Parameters
     ----------
     cur_frme : pandas.DataFrame
-    uid_iter : int
     Current frame.
+    uid_iter : int
+    Next free uid.
+    iuid_cnt : dict, optional
+    Counters {(uid, threshold_level): suffix}, updated in place.
 
     Returns
     -------
     cur_frme : pandas.DataFrame
     Current frame with new uids.
     """
+    if iuid_cnt is None:
+        iuid_cnt = {}
     # Rules:
     # Get threshold_level 0 of clusters with inside_idx
     thr_lvl = 'threshold_level'
@@ -34,29 +46,24 @@ def refact_inside(cur_frme, uid_iter):
     insd['diff'] = (insd['cur_iud'].astype(int) - insd['uid']).abs()
     # Select only differences greater than 1
     insd = insd[insd['diff'] >= 1]
-    iuid_thrls = cur_frme.loc[insd.index, thr_lvl].values
-    insd[thr_lvl] = iuid_thrls
-    insd['iuid'] = insd['uid'].astype(int)
-    insd[thr_lvl] = insd[thr_lvl] - 1
-    insd[thr_lvl] = insd[thr_lvl].astype(str)
-    insd[thr_lvl] = insd[thr_lvl].apply(lambda x: '0' * int(x) +
-                                        str(np.random.randint(1, 999)))
-    insd['iuid'] = insd['iuid'].astype(str) + '.' + insd[thr_lvl]
-    insd['iuid'] = insd['iuid'].astype(float)
-    cur_frme.loc[insd.index, 'uid'] = insd['iuid'].astype(int).values
-    cur_frme.loc[insd.index, 'iuid'] = insd['iuid'].values
-    # Find any uid or iuid is null
-    null_uid = cur_frme.loc[cur_frme['uid'].isnull()]
-    # TODO: Check error in line 54: ValueError: arange: cannot compute length
-    try:
-        if not null_uid.empty:
-            max_uid = cur_frme['uid'].max()
-            cur_frme.loc[null_uid.index, 'uid'] = np.arange(max_uid, max_uid + len(null_uid), 1, dtype=int)
-            iuid_str = cur_frme.loc[null_uid.index, 'uid'].astype(int).astype(str)
-            thr_lvls = cur_frme.loc[null_uid.index, thr_lvl].values - 1
-            iuid_str = iuid_str + '.' + thr_lvls.astype(str)
-            iuid_str = iuid_str.apply(lambda x: x + str(np.random.randint(1, 999))).astype(float)
-            cur_frme.loc[null_uid.index, 'iuid'] = iuid_str
-    except:
-        pass
+    # Sorted and unique so the iuids do not depend on the row order
+    insd = insd[~insd.index.duplicated(keep='last')].sort_index()
+    if not insd.empty:
+        uids = insd['uid'].values.astype(int)
+        levels = cur_frme.loc[insd.index, thr_lvl].values.astype(int)
+        cur_frme.loc[insd.index, 'uid'] = uids
+        cur_frme.loc[insd.index, 'iuid'] = next_iuids(uids, levels, iuid_cnt)
+    # Clusters still without uid receive new uids
+    null_uid = cur_frme.loc[cur_frme['uid'].isnull()].index
+    if len(null_uid) > 0:
+        max_uid = cur_frme['uid'].max()
+        if not pd.isnull(max_uid):
+            uid_iter = max(uid_iter, int(max_uid) + 1)
+        uids = np.arange(uid_iter, uid_iter + len(null_uid), 1, dtype=int)
+        cur_frme.loc[null_uid, 'uid'] = uids
+        levels = cur_frme.loc[null_uid, thr_lvl].values.astype(int)
+        inner = levels > 0
+        if inner.any():
+            cur_frme.loc[null_uid[inner], 'iuid'] = next_iuids(
+                uids[inner], levels[inner], iuid_cnt)
     return cur_frme

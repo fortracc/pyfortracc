@@ -297,6 +297,10 @@ Execution parameters
      - Resume an interrupted run (see :ref:`Resuming an interrupted run <BI/BI_TRACKING:Resuming an interrupted run>`). When using
        ``track``, pass ``resume=True`` to the function instead; the argument overrides
        this key.
+   * - ``persist_uid``
+     - ``False``
+     - Keep the tracking state between runs, so new files continue the ``uid``, ``iuid``,
+       lifetime and events of the previous runs (see :ref:`Real-time tracking <BI/BI_TRACKING:Real-time tracking>`).
    * - ``pattern_position``
      - ``[None, None]``
      - Slice ``[start, end]`` of the file name that contains the date. Use it when the file name has

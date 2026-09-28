@@ -1,3 +1,4 @@
+import glob
 import pandas as pd
 import pathlib
 from pyfortracc.default_parameters import default_parameters
@@ -7,11 +8,14 @@ from pyfortracc.utilities.utils import (get_feature_files, create_dirs,
                                         read_parquet, write_parquet,
                                         check_operational_system,
                                         is_complete_parquet)
+from pyfortracc.utilities.persist_uid import (load_state, save_state,
+                                              new_files)
 from .new_frame import new_frame
 from .max_uid import update_max_uid
 from .board_clusters import board_clusters
 from .refact_inside import refact_inside
 from .merge_trajectory import merge_trajectory
+from .iuid_counter import count_iuids
 
 
 def cluster_linking(name_lst):
@@ -33,8 +37,17 @@ def cluster_linking(name_lst):
     feat_path = name_lst['output_path'] + 'track/processing/spatial/'
     output_path = name_lst['output_path'] + 'track/processing/linked/'
     name_lst['output_spatial'] = output_path
-    feat_files = get_feature_files(feat_path)
     create_dirs(output_path)
+    # Load the state persisted by a previous run (persist_uid)
+    state = load_state(name_lst)
+    if state is not None:
+        feat_files = new_files(sorted(glob.glob(feat_path + '*.parquet')),
+                               state)
+        if not feat_files:
+            print('No new files after', state['last_stamp'])
+            return
+    else:
+        feat_files = get_feature_files(feat_path)
     # Get number of prev_files to skip based on the number of prev_time
     prev_skip = name_lst['num_prev_skip']
     # Set delta_time
@@ -54,25 +67,53 @@ def cluster_linking(name_lst):
     prv_stamp = get_featstamp(feat_files[0]) - dt_time
     # Set idx counter is used to create cindex
     cdx = 0
+    # Counters of the iuid suffixes of the inner clusters
+    iuid_cnt = {}
     # Index of the first frame to be linked
     start = 0
+    # Offset of the frame index. With a persisted state the first new frame
+    # is linked with the last frame of the previous run, so it is not frame 0
+    offset = 0
+    if state is not None:
+        prv_frame = read_parquet(state['linked'], None)
+        prv_stamp = state['prv_stamp']
+        uid_iter = state['uid_iter']
+        cdx = state['cindex']
+        iuid_cnt = state['iuid_cnt']
+        offset = 1
+        print('Continuing from the persisted state of', state['last_stamp'])
     if name_lst['resume']:
-        start, prv_frame, prv_stamp, uid_iter, cdx = resume_linking(
-            feat_files, output_path, prv_frame, prv_stamp, uid_iter, cdx)
+        start, prv_frame, prv_stamp, uid_iter, cdx, iuid_cnt = resume_linking(
+            feat_files, output_path, prv_frame, prv_stamp, uid_iter, cdx,
+            iuid_cnt)
         print('Resuming: {} of {} files already processed'.format(
             start, len(feat_files)))
     loading_bar = get_loading_bar(feat_files[start:])
-    for feat_time, feat_file in enumerate(feat_files[start:], start):
-        prv_frame, prv_stamp, uid_iter, cdx = linking((feat_time, feat_file,
+    for feat_time, feat_file in enumerate(feat_files[start:], start + offset):
+        prv_frame, prv_stamp, uid_iter, cdx, iuid_cnt = linking((
+                                                feat_time, feat_file,
                                                 prv_frame, prv_stamp,
                                                 name_lst, uid_iter,
-                                                max_dt_time, schema, cdx))
+                                                max_dt_time, schema, cdx,
+                                                iuid_cnt))
         loading_bar.update(1)
     loading_bar.close()
+    # Persist the state so a later run continues the uids and the events
+    if name_lst['persist_uid']:
+        feat_hist = state['features'] if state is not None else []
+        feat_hist = feat_hist + [name_lst['output_path'] +
+                                 'track/processing/features/' +
+                                 pathlib.Path(file).name
+                                 for file in feat_files]
+        save_state(name_lst, feat_hist,
+                   output_path + pathlib.Path(feat_files[-1]).name,
+                   get_featstamp(feat_files[-1]), prv_stamp, uid_iter, cdx,
+                   iuid_cnt)
     return
 
 
-def resume_linking(feat_files, output_path, prv_frame, prv_stamp, uid_iter, cdx):
+def resume_linking(feat_files, output_path, prv_frame, prv_stamp, uid_iter,
+                   cdx, iuid_cnt):
     """
     Restore the linking state of an interrupted run from its linked files.
 
@@ -88,32 +129,35 @@ def resume_linking(feat_files, output_path, prv_frame, prv_stamp, uid_iter, cdx)
         Spatial files to be linked, in time order.
     output_path : str
         Directory of the linked files.
-    prv_frame, prv_stamp, uid_iter, cdx :
+    prv_frame, prv_stamp, uid_iter, cdx, iuid_cnt :
         Initial linking state, returned unchanged if no frame was linked.
 
     Returns
     -------
     tuple
         Index of the first frame to be linked and the restored prv_frame,
-        prv_stamp, uid_iter and cdx.
+        prv_stamp, uid_iter, cdx and iuid_cnt.
     """
     start = 0
     for feat_file in feat_files:
         linked_file = output_path + pathlib.Path(feat_file).name
         if not is_complete_parquet(linked_file):
             break
-        uids = pd.read_parquet(linked_file, columns=['uid'])['uid']
+        frame = pd.read_parquet(linked_file, columns=['uid', 'iuid',
+                                                      'threshold_level'])
+        uids = frame['uid']
         # Same counter updates made by linking()
         cdx += 1
         if len(uids) > 0:
             cdx += len(uids) - 1
             uid_iter = update_max_uid(uids.max(), uid_iter)
+        iuid_cnt = count_iuids(frame, iuid_cnt)
         start += 1
     if start > 0:
         last_file = feat_files[start - 1]
         prv_frame = read_parquet(output_path + pathlib.Path(last_file).name, None)
         prv_stamp = get_featstamp(last_file)
-    return start, prv_frame, prv_stamp, uid_iter, cdx
+    return start, prv_frame, prv_stamp, uid_iter, cdx, iuid_cnt
 
 
 def linking(args):
@@ -134,6 +178,8 @@ def linking(args):
         - max_dt (pandas.Timedelta): The maximum allowed time difference between frames.
         - schm (pandas.DataFrame): The schema for the output DataFrame.
         - icdx (int): The current index counter, which increments with each frame processed.
+        - iuid_cnt (dict, optional): Counters {(uid, threshold_level): suffix} used to
+          create deterministic iuids. If None, they are taken from prv_frame.
 
     Returns
     -------
@@ -143,8 +189,12 @@ def linking(args):
         - cur_stamp (pandas.Timestamp): The timestamp of the current frame.
         - uid_iter (int): The updated UID iterator.
         - icdx (int): The updated index counter.
+        - iuid_cnt (dict): The updated iuid counters.
     """
-    time_, cur_file, prv_frame, prv_stamp, nm_lst, uid_iter, max_dt, schm, icdx = args
+    time_, cur_file, prv_frame, prv_stamp, nm_lst, uid_iter, max_dt, schm, icdx = args[:9]
+    iuid_cnt = args[9] if len(args) > 9 else None
+    # Keep the counters of the uids that can still be linked
+    iuid_cnt = count_iuids(prv_frame, iuid_cnt)
     # Read current file        print('Empty frame:', cur_file)
     cur_frame = read_parquet(cur_file, ['status','threshold_level',
                                         'past_idx','inside_idx',
@@ -171,7 +221,7 @@ def linking(args):
         cur_frame['lifetime'] = []
         cur_frame['lifetime'] = cur_frame['lifetime'].fillna(0)
         write_parquet(cur_frame, output_file)
-        return cur_frame, prv_stamp, uid_iter, icdx
+        return cur_frame, prv_stamp, uid_iter, icdx, iuid_cnt
     # Get schema and cols
     link_df = set_outputdf(schm)
     linked_cols = list(link_df.columns)
@@ -196,14 +246,14 @@ def linking(args):
             cur_frame = board_clusters(cur_frame)
             cur_frame = new_frame(cur_frame, uid_iter)
         # Refact inside clusters
-        cur_frame = refact_inside(cur_frame, uid_iter)
+        cur_frame = refact_inside(cur_frame, uid_iter, iuid_cnt)
         # Update max uid
         uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
         # Set lifetime equals to name_lst['delta_time']
         cur_frame['lifetime'] = nm_lst['delta_time']
         # Write linked file
         write_parquet(cur_frame[linked_cols], output_file)
-        return cur_frame, cur_stamp, uid_iter, cdx_range[-1]
+        return cur_frame, cur_stamp, uid_iter, cdx_range[-1], iuid_cnt
     # Get previous indx based for conditions:
     #  - prev_idx is not null
     #  - status is not NEW
@@ -247,7 +297,7 @@ def linking(args):
         cur_frame = board_clusters(cur_frame)
         cur_frame = new_frame(cur_frame, uid_iter)
     # Refact inside clusters
-    cur_frame = refact_inside(cur_frame, uid_iter)
+    cur_frame = refact_inside(cur_frame, uid_iter, iuid_cnt)
     # Update max uid
     uid_iter = update_max_uid(cur_frame['uid'].max(), uid_iter)
     # Calculate lifetime, get previous lifetime and add to current lifetime
@@ -266,4 +316,4 @@ def linking(args):
     cur_frame['lifetime'] = cur_frame['lifetime'].fillna(nm_lst['delta_time'])
     # Write linked file
     write_parquet(cur_frame[linked_cols], output_file)
-    return cur_frame, cur_stamp, uid_iter, cdx_range[-1]
+    return cur_frame, cur_stamp, uid_iter, cdx_range[-1], iuid_cnt

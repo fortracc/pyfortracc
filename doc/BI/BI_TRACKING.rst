@@ -113,6 +113,31 @@ written are processed again. When calling the steps separately, set
 ``name_list['resume'] = True`` instead.
 
 
+Real-time tracking
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To track data as it arrives, set ``name_list['persist_uid'] = True`` and call ``track``
+each time new files are available:
+
+.. code-block:: python
+
+    name_list['persist_uid'] = True
+    pyfortracc.track(name_list, read_function)
+
+At the end of the cluster linking, the tracking state is saved in
+``output_path/track/state/``: the next ``uid``, the ``cindex``, the counters of the
+``iuid`` of the inner clusters, the last linked frame and the last features frames. The
+next runs only process the files after the last tracked time stamp, which may stay in
+``input_path`` or be removed, and link the first new frame with the last frame of the
+previous run. The ``uid``, ``iuid``, lifetime and events (continuity, merges and splits)
+continue as in a single run, and the new time steps are added to the tracking table.
+
+While a state exists, ``track`` does not clean the ``output_path``. Files older than the
+last tracked time stamp are ignored. If the gap to the last tracked frame is greater than
+``delta_time + delta_tolerance``, the clusters start new tracks, as in a single run. To
+start a new tracking, remove ``output_path/track/state/`` (or the whole ``output_path``).
+
+
 Output folder
 --------------------------------------------------------
 
@@ -124,6 +149,7 @@ Output folder
         │   ├── 20140816_1000.parquet
         │   ├── 20140816_1012.parquet
         │   └── ...
+        ├── state/                  # tracking state (only with persist_uid)
         └── processing/             # intermediate files (removed after the concatenation)
             ├── features/
             ├── spatial/

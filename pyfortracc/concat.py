@@ -59,6 +59,11 @@ def concat(name_list, mode='track', clean=True, parallel=True):
     fet_files = sorted(glob.glob(proc_path + 'features/*.parquet'))
     spt_files = sorted(glob.glob(proc_path + 'spatial/*.parquet'))
     lnk_files = sorted(glob.glob(proc_path + 'linked/*.parquet'))
+    if not lnk_files:
+        print('No files to concatenate in', proc_path + 'linked/')
+        if clean:
+            shutil.rmtree(proc_path)
+        return
     # Set default columns
     if name_list['default_columns']:
         default_cols = default_columns(name_list)

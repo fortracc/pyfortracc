@@ -225,7 +225,7 @@ def forecast(name_list, read_function):
         previous_stamp = pd.to_datetime(prv_frame['timestamp'].max()) if not prv_frame.empty else None
      
         # Call linking function
-        _, _, uid_iter, cdx_range = linking((
+        _, _, uid_iter, cdx_range, _ = linking((
                 -1,
                 cur_file,
                 prv_frame.reset_index(drop=True),

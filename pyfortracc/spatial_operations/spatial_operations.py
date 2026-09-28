@@ -1,3 +1,4 @@
+import glob
 import pandas as pd
 import numpy as np
 import pathlib
@@ -12,6 +13,7 @@ from pyfortracc.utilities.utils import (get_feature_files, get_edges,
                                         get_geotransform, set_nworkers, 
                                         create_dirs, set_schema, set_outputdf,
                                         read_parquet, write_parquet)
+from pyfortracc.utilities.persist_uid import load_state, new_files
 from pyfortracc.vector_methods.split_mtd import split_mtd
 from pyfortracc.vector_methods.merge_mtd import merge_mtd
 from pyfortracc.vector_methods.incores_mtd import innercores_mtd
@@ -51,7 +53,22 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
     name_lst, parallel = check_operational_system(name_lst, parallel)
     # Get feature files to be processed
     feat_path = name_lst['output_path'] + 'track/processing/features/'
-    feat_files = get_feature_files(feat_path)
+    # Load the state persisted by a previous run (persist_uid)
+    state = load_state(name_lst)
+    # Number of previous frames of the state added before the new frames
+    n_state = 0
+    if state is not None:
+        feat_files = new_files(sorted(glob.glob(feat_path + '*.parquet')),
+                               state)
+        if not feat_files:
+            print('No new files after', state['last_stamp'])
+            return
+        # The last features of the previous run are the previous frames of
+        # the first new frame
+        feat_files = state['features'] + feat_files
+        n_state = len(state['features'])
+    else:
+        feat_files = get_feature_files(feat_path)
     # Set ouput to spatial operations
     output_path = name_lst['output_path'] + 'track/processing/spatial/'
     name_lst['output_spatial'] = output_path
@@ -69,14 +86,15 @@ def spatial_operations(name_lst, read_fnc, parallel=True):
               feat_files[(feat_time - 1 + prev_skip) - 1: feat_time],
               name_lst, left_edge, right_edge,
               read_fnc, schema, False, geotrf)
-             for feat_time, feat_file in enumerate(feat_files)]
+             for feat_time, feat_file in enumerate(feat_files)][n_state:]
     # Skip the frames already processed by an interrupted run. Each frame
     # only depends on the feature files, so the frames are independent
     if name_lst['resume']:
         tasks = [task for task in tasks if not is_complete_parquet(
                  output_path + pathlib.Path(task[1]).name)]
         print('Resuming: {} of {} files already processed'.format(
-            len(feat_files) - len(tasks), len(feat_files)))
+            len(feat_files) - n_state - len(tasks),
+            len(feat_files) - n_state))
     # Get loading bar
     loading_bar = get_loading_bar(tasks)
     if parallel:
