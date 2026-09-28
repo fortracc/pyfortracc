@@ -1,0 +1,73 @@
+# =============================================================================
+# pyFortraCC IR - real-time tracking and forecasting with GOES-19 (channel 13)
+# -----------------------------------------------------------------------------
+# This file is copied into the image as /app/namelist.yaml.
+# After editing it, rebuild and restart the container:
+#     docker compose up -d --build
+# =============================================================================
+
+# Working directories (inside the container, mapped to ./data on the host)
+paths:
+  input: /data/input/     # NetCDFs downloaded by goesgcp (temporary)
+  output: /data/output/   # Tracking table + GeoJSON
+
+# Routine schedule
+schedule:
+  interval_minutes: 10    # GOES-19 acquisition interval (Full Disk)
+  offset_minutes: 8       # Delay after each slot (e.g. 12:18, 12:28...) for the
+                          # files to reach the GCP bucket
+  retry_seconds: 120      # Retry time when no new data was found
+
+# Data acquisition (goesgcp arguments)
+download:
+  satellite: goes-19
+  product: ABI-L2-CMIPF
+  channel: 13
+  op_mode: M6
+  resolution: 0.045       # degrees (~5 km)
+  lat_min: -35
+  lat_max: 5
+  lon_min: -80
+  lon_max: -30
+  bootstrap_files: 6      # Images downloaded on the first run (no state)
+  max_backfill_hours: 3   # After a long stop, recover at most this period
+  processes: 4            # Parallel download/reprojection processes
+
+# Tracking parameters: passed directly to the pyfortracc name_list.
+# input_path, output_path, lat/lon, timestamp_pattern and pattern_position are
+# set automatically from the paths/download sections.
+tracking:
+  thresholds: [235, 210]        # Brightness temperature (K)
+  min_cluster_size: [100, 50]   # Minimum cluster size (pixels)
+  operator: '<='
+  delta_time: 10                # minutes between images
+  delta_tolerance: 0            # extra minutes accepted between consecutive images
+  spl_correction: true
+  mrg_correction: true
+  inc_correction: true
+  opt_correction: true
+  elp_correction: true
+  new_correction: true          # vector for NEW clusters (no previous match)
+                                # from the mean of the nearest clusters' vectors
+  new_neighbors: 3              # nearest clusters used by new_correction
+  validation: true              # picks the best vector method per cluster
+  n_jobs: -1                    # -1 = all cores
+
+# Forecast (persistence extrapolation) for each new tracked time stamp
+forecast:
+  enabled: true
+  forecast_mode: persistence
+  lead_time: 6                  # forecast steps (6 x 10 min = 1 h)
+  observation_window: 3         # images used to estimate the displacement
+  keep_forecast_table: false    # true also keeps the forecast parquet files
+
+# Saved products
+output:
+  # Tracking GeoJSON layers: boundary, trajectory, vector_field
+  geojson_layers: [boundary, trajectory]
+
+# Data retention: files older than these periods (from the current UTC time)
+# are removed at every cycle. 0 = never remove.
+retention:
+  input_hours: 2                # NetCDFs in paths.input
+  output_hours: 48              # tracking table, GeoJSON and forecasts

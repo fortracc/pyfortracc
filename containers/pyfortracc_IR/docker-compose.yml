@@ -1,0 +1,12 @@
+services:
+  pyfortracc_ir:
+    build: .
+    image: pyfortracc_ir:latest
+    container_name: pyfortracc_ir
+    restart: unless-stopped
+    # Inputs and outputs are kept in ./data, in the same folder as this file:
+    #   ./data/input   goesgcp NetCDFs (temporary)
+    #   ./data/output  tracking table + GeoJSON
+    volumes:
+      - ./data:/data
+    stop_grace_period: 2m
