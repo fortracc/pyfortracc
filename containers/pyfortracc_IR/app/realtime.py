@@ -17,6 +17,7 @@ import pathlib
 import shutil
 import signal
 import subprocess
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -35,6 +36,11 @@ GEOJSON_LAYERS = {'boundary': boundaries,
                   'vector_field': vectorfield}
 # Consecutive failed tracking cycles before the pending input files are dropped
 MAX_TRACK_FAILURES = 3
+# Time stamps of the cycle in progress: left behind when the cycle is
+# interrupted (stuck process, docker stop, power loss) and read by recover()
+PENDING_FILE = 'track/pending.json'
+# Exit code of the watchdog; any exit makes Docker restart the container
+EXIT_STUCK = 70
 
 
 def read_function(path):
@@ -63,6 +69,8 @@ class RealTime:
         self.track_failures = 0
         # Images dropped after repeated tracking failures are not retried
         self.skip_until = None
+        # Set by recover(): the next tracking continues the interrupted one
+        self.resume_next = False
 
     # ------------------------------------------------------------------ time
     def file_stamp(self, file):
@@ -117,8 +125,12 @@ class RealTime:
             start = last_stamp + timedelta(minutes=1)
             oldest = now - timedelta(hours=dwn.get('max_backfill_hours', 3))
             start = max(start, oldest)
+            # goesgcp lists the bucket hour folders stepping 1 h from --start
+            # while <= --end: with start 13:51 and end 14:18 the 14 h folder is
+            # never listed. One more hour at the end covers it; the files are
+            # still filtered by their scan time.
             cmd += ['--start', start.strftime(GOES_FMT),
-                    '--end', now.strftime(GOES_FMT)]
+                    '--end', (now + timedelta(hours=1)).strftime(GOES_FMT)]
             LOG.info('Download: images between %s and %s', start, now)
         # goesgcp writes tmp/ and fail.log in the working directory
         result = subprocess.run(cmd, cwd=self.work_path, capture_output=True,
@@ -133,6 +145,8 @@ class RealTime:
     def name_list(self, sample_file):
         """ pyfortracc name_list from the namelist.yaml and the grid. """
         name_list = dict(self.cfg['tracking'])
+        # Read by recover(); pyfortracc takes it as an argument of track()
+        name_list.pop('resume', None)
         with xr.open_dataset(sample_file) as ds:
             name_list['lon_min'] = float(ds['lon'].min())
             name_list['lon_max'] = float(ds['lon'].max())
@@ -151,9 +165,86 @@ class RealTime:
         return name_list
 
     def track(self, name_list):
-        # Intermediate files of an interrupted cycle; the state is kept apart
-        shutil.rmtree(self.output_path + 'track/processing/', ignore_errors=True)
-        _call(pyfortracc.track, name_list, read_function)
+        resume, self.resume_next = self.resume_next, False
+        if resume:
+            # Each stage skips the files already written by the interrupted
+            # cycle and the linking continues from its last linked frame
+            LOG.info('Resuming the interrupted tracking (resume=True)')
+        else:
+            # Intermediate files of the previous cycle; the state is kept apart
+            shutil.rmtree(self.output_path + 'track/processing/',
+                          ignore_errors=True)
+        _call(pyfortracc.track, name_list, read_function, resume=resume)
+
+    # -------------------------------------------------------------- recovery
+    def pending(self):
+        """ Time stamps of the interrupted cycle, or an empty list. """
+        try:
+            with open(self.output_path + PENDING_FILE) as file:
+                return sorted(datetime.strptime(stamp, STAMP_FMT)
+                              for stamp in json.load(file)['stamps'])
+        except (OSError, ValueError, KeyError, TypeError):
+            return []
+
+    def set_pending(self, stamps):
+        path = pathlib.Path(self.output_path + PENDING_FILE)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix('.tmp')
+        tmp.write_text(json.dumps(
+            {'stamps': [stamp.strftime(STAMP_FMT) for stamp in stamps]}))
+        tmp.replace(path)
+
+    def clear_pending(self):
+        pathlib.Path(self.output_path + PENDING_FILE).unlink(missing_ok=True)
+
+    def table(self, stamp):
+        return (self.output_path + 'track/trackingtable/' +
+                stamp.strftime(STAMP_FMT) + '.parquet')
+
+    def recover(self):
+        """
+        Continue the cycle that was interrupted before the restart
+        (tracking.resume). Stopped before the linking saved its state: the
+        next tracking runs with resume=True over the files already written.
+        Stopped after it: only the concatenation, the GeoJSON and the
+        forecasts of those time stamps are missing and are done here.
+        """
+        stamps = self.pending()
+        if not stamps:
+            return
+        if not self.cfg['tracking'].get('resume', True):
+            self.clear_pending()
+            return
+        last = self.last_tracked()
+        if last is None or last < max(stamps):
+            LOG.info('Interrupted cycle (%s to %s): the tracking resumes '
+                     'after %s', stamps[0], stamps[-1], last)
+            self.resume_next = True
+            return
+        files = self.input_files()
+        if not files:
+            LOG.warning('Interrupted cycle: no input file left to finish it')
+            self.clear_pending()
+            return
+        LOG.info('Interrupted cycle (%s to %s): already tracked, finishing '
+                 'the outputs', stamps[0], stamps[-1])
+        name_list = self.name_list(files[-1][1])
+        linked = pathlib.Path(self.output_path + 'track/processing/linked/')
+        if (not all(os.path.isfile(self.table(stamp)) for stamp in stamps)
+                and any(linked.glob('*.parquet'))):
+            _call(pyfortracc.track, dict(name_list), read_function,
+                  feat_ext=False, spat_ope=False, clst_lnk=False, resume=True)
+        self.finish(name_list, stamps)
+        self.clear_pending()
+
+    def finish(self, name_list, stamps):
+        """ GeoJSON and forecast of the tracked time stamps. """
+        stamps = [stamp for stamp in stamps if os.path.isfile(self.table(stamp))]
+        if stamps:
+            self.export_geojson(name_list, stamps)
+            if self.cfg.get('forecast', {}).get('enabled', True):
+                for stamp in stamps:
+                    self.forecast(name_list, stamp)
 
     def export_geojson(self, name_list, stamps):
         start, end = min(stamps), max(stamps)
@@ -172,28 +263,44 @@ class RealTime:
     def forecast(self, name_list, stamp):
         fct = self.cfg.get('forecast', {})
         out_dir = self.output_path + 'forecast/' + stamp.strftime(STAMP_FMT) + '/'
+        keep = {'geometry'}
+        if fct.get('keep_forecast_table', False):
+            keep.add('forecasttable')
         if os.path.isdir(out_dir + 'geometry/'):
-            return
+            # The working folders are removed at the end: while they exist the
+            # forecast was interrupted and is done again
+            if all(item.name in keep for item in pathlib.Path(out_dir).iterdir()):
+                return
+            shutil.rmtree(out_dir, ignore_errors=True)
         fct_list = dict(name_list)
         fct_list['forecast_time'] = stamp.strftime(GOES_FMT)
         fct_list['forecast_mode'] = fct.get('forecast_mode', 'persistence')
-        fct_list['lead_time'] = int(fct.get('lead_time', 6))
+        # pyfortracc forecasts at the tracking interval (each frame is built
+        # from the previous one): run every interval up to the last lead time
+        # and keep only the frames of the forecast steps
+        steps, every = forecast_steps(self.cfg)
+        delta_time = timedelta(minutes=fct_list['delta_time'])
+        fct_list['lead_time'] = steps * every
         fct_list['observation_window'] = int(fct.get('observation_window', 3))
-        LOG.info('Forecast %s: %s x %s min', stamp, fct_list['lead_time'],
-                 fct_list['delta_time'])
+        LOG.info('Forecast %s: %s x %g min', stamp, steps,
+                 every * fct_list['delta_time'])
         try:
             _call(pyfortracc.forecast, fct_list, read_function)
         except Exception:
             # E.g. the first frames of a tracking have no displacement yet
             LOG.exception('Forecast %s failed', stamp)
         # Keep only the GeoJSON (and optionally the forecast table)
-        keep = {'geometry'}
-        if fct.get('keep_forecast_table', False):
-            keep.add('forecasttable')
         if os.path.isdir(out_dir):
             for item in pathlib.Path(out_dir).iterdir():
                 if item.name not in keep:
                     shutil.rmtree(item, ignore_errors=True)
+            for item in pathlib.Path(out_dir).glob('geometry/*/*'):
+                try:
+                    lead = datetime.strptime(item.stem, STAMP_FMT) - stamp
+                except ValueError:
+                    continue
+                if lead % (every * delta_time):
+                    item.unlink(missing_ok=True)
 
     # --------------------------------------------------------------- cleanup
     def apply_retention(self):
@@ -240,9 +347,11 @@ class RealTime:
         LOG.info('Tracking %d new image(s): %s to %s', len(new), new[0][0],
                  new[-1][0])
         name_list = self.name_list(new[-1][1])
+        self.set_pending([stamp for stamp, _ in new])
         try:
             self.track(name_list)
         except Exception:
+            self.clear_pending()
             self.track_failures += 1
             LOG.exception('Tracking failed (%d/%d)', self.track_failures,
                           MAX_TRACK_FAILURES)
@@ -255,14 +364,8 @@ class RealTime:
                 self.track_failures = 0
             return False
         self.track_failures = 0
-        stamps = [stamp for stamp, _ in new
-                  if os.path.isfile(self.output_path + 'track/trackingtable/' +
-                                    stamp.strftime(STAMP_FMT) + '.parquet')]
-        if stamps:
-            self.export_geojson(name_list, stamps)
-            if self.cfg.get('forecast', {}).get('enabled', True):
-                for stamp in stamps:
-                    self.forecast(name_list, stamp)
+        self.finish(name_list, [stamp for stamp, _ in new])
+        self.clear_pending()
         LOG.info('Cycle done: last tracked time stamp %s', self.last_tracked())
         return True
 
@@ -271,7 +374,16 @@ class RealTime:
         interval = timedelta(minutes=sch.get('interval_minutes', 10))
         offset = timedelta(minutes=sch.get('offset_minutes', 8))
         retry = sch.get('retry_seconds', 120)
+        watchdog = Watchdog(float(sch.get('max_cycle_minutes', 45) or 0))
+        watchdog.begin()
+        try:
+            self.recover()
+        except Exception:
+            LOG.exception('Recovery of the interrupted cycle failed')
+            self.resume_next = False
+            self.clear_pending()
         while True:
+            watchdog.begin()
             try:
                 updated = self.cycle()
             except Exception:
@@ -281,6 +393,7 @@ class RealTime:
                 self.apply_retention()
             except Exception:
                 LOG.exception('Retention cleanup failed')
+            watchdog.end()
             if once:
                 return
             # Next acquisition slot (e.g. 12:18, 12:28, ...)
@@ -292,6 +405,71 @@ class RealTime:
                 wait = min(wait, retry)
             LOG.info('Next cycle in %.0f s', wait)
             time.sleep(wait)
+
+
+class Watchdog(threading.Thread):
+    """
+    Ends the process when a cycle takes longer than schedule.max_cycle_minutes
+    (0 disables it). A stuck cycle never fails by itself, and Docker only
+    restarts a container that exits: the restart policy of the compose file
+    brings it back and recover() continues from the last tracked frame.
+    """
+
+    def __init__(self, minutes):
+        super().__init__(daemon=True)
+        self.limit = minutes * 60
+        self.started = None
+        if self.limit > 0:
+            self.start()
+
+    def begin(self):
+        self.started = time.monotonic()
+
+    def end(self):
+        self.started = None
+
+    def run(self):
+        while True:
+            time.sleep(15)
+            started = self.started
+            if started is not None and time.monotonic() - started > self.limit:
+                LOG.error('Cycle stuck for more than %g min: exiting, Docker '
+                          'restarts the container', self.limit / 60)
+                logging.shutdown()
+                os._exit(EXIT_STUCK)
+
+
+def forecast_steps(cfg):
+    """
+    (forecast steps, tracking intervals in each step) of the namelist: e.g.
+    lead_time 6 and step_minutes 30 with delta_time 10 is (6, 3).
+    """
+    fct = cfg.get('forecast', {})
+    delta_time = float(cfg['tracking']['delta_time'])
+    step_minutes = float(fct.get('step_minutes') or delta_time)
+    every = int(round(step_minutes / delta_time))
+    if every < 1 or abs(every * delta_time - step_minutes) > 1e-6:
+        raise ValueError('forecast.step_minutes ({:g}) must be a multiple of '
+                         'tracking.delta_time ({:g})'.format(step_minutes,
+                                                             delta_time))
+    return int(fct.get('lead_time', 6)), every
+
+
+def _stop(main_pid):
+    """
+    SIGTERM handler. docker stop sends SIGTERM: the main process stops like a
+    Ctrl+C. The pool workers of pyfortracc inherit the handler and are ended
+    with SIGTERM when each stage finishes: they have to die as usual, a
+    KeyboardInterrupt there can leave the queue lock held and the pool waiting
+    for ever.
+    """
+    def handler(signum, frame):
+        if os.getpid() != main_pid:
+            signal.signal(signum, signal.SIG_DFL)
+            os.kill(os.getpid(), signum)
+            return
+        raise KeyboardInterrupt
+    return handler
 
 
 def _call(function, *args, **kwargs):
@@ -317,8 +495,7 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s %(levelname)s %(message)s')
-    # docker stop sends SIGTERM: stop like a Ctrl+C
-    signal.signal(signal.SIGTERM, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, _stop(os.getpid()))
     try:
         RealTime(args.config).run(once=args.once)
     except KeyboardInterrupt:

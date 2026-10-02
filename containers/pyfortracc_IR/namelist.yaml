@@ -17,6 +17,10 @@ schedule:
   offset_minutes: 8       # Delay after each slot (e.g. 12:18, 12:28...) for the
                           # files to reach the GCP bucket
   retry_seconds: 120      # Retry time when no new data was found
+  max_cycle_minutes: 45   # A cycle longer than this is stuck: the process exits and
+                          # Docker restarts the container (0 disables)
+  max_age_minutes: 60     # healthcheck: last tracked time stamp older than this =
+                          # unhealthy (0 disables)
 
 # Data acquisition (goesgcp arguments)
 download:
@@ -52,12 +56,16 @@ tracking:
   new_neighbors: 3              # nearest clusters used by new_correction
   validation: true              # picks the best vector method per cluster
   n_jobs: -1                    # -1 = all cores
+  resume: true                  # after a stop or a restart, continue the interrupted
+                                # cycle from the files already written (resume=True)
 
 # Forecast (persistence extrapolation) for each new tracked time stamp
 forecast:
   enabled: true
   forecast_mode: persistence
-  lead_time: 6                  # forecast steps (6 x 10 min = 1 h)
+  lead_time: 6                  # forecast steps (6 x 30 min = 3 h)
+  step_minutes: 30              # minutes between forecast steps: a multiple of
+                                # tracking.delta_time (the tracking stays at 10 min)
   observation_window: 3         # images used to estimate the displacement
   keep_forecast_table: false    # true also keeps the forecast parquet files
 

@@ -1,3 +1,5 @@
 README.md
 docker-compose.yml
 data/
+__pycache__/
+*.pyc

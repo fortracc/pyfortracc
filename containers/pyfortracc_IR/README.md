@@ -13,7 +13,7 @@ Default configuration:
 | Minimum cluster size | 100 and 50 pixels |
 | Interval | 10 min |
 | Domain | lat -35 to 5, lon -80 to -30, 0.045° (~5 km) |
-| Forecast | 6 steps of 10 min (1 h), window of 3 images |
+| Forecast | 6 steps of 30 min (3 h), window of 3 images |
 | Retention | inputs: 2 h, outputs: 48 h |
 
 ## Usage
@@ -52,14 +52,21 @@ docker compose up -d --build
 
 Sections:
 
-- `schedule`: interval, delay after each acquisition slot and retry time.
+- `schedule`: interval, delay after each acquisition slot, retry time,
+  maximum cycle duration (`max_cycle_minutes`, see [Recovery](#recovery)) and
+  maximum age of the last tracked time stamp for the healthcheck
+  (`max_age_minutes`).
 - `download`: satellite, product, channel, crop and resolution (goesgcp
   arguments), number of images downloaded on the first run and maximum hours
   recovered after a stop.
 - `tracking`: keys passed to the pyfortracc `name_list` (thresholds, minimum
   sizes, vector corrections...). The paths, lat/lon limits,
   `timestamp_pattern` and `pattern_position` are set automatically.
-- `forecast`: enables the forecast, `lead_time` and `observation_window`.
+  `resume` is read by the container (see [Recovery](#recovery)).
+- `forecast`: enables the forecast, `lead_time` (number of steps),
+  `step_minutes` (minutes between the steps, a multiple of
+  `tracking.delta_time`: the tracking stays at 10 min) and
+  `observation_window`.
 - `output`: tracking GeoJSON layers (`boundary`, `trajectory`,
   `vector_field`).
 - `retention`: hours of input (`input_hours`, default 2) and output
@@ -87,6 +94,24 @@ Each cycle (`app/realtime.py`):
 
 If no new image is available, it tries again after `retry_seconds`.
 
+## Recovery
+
+- **Stuck cycle**: a watchdog ends the process when a cycle takes longer than
+  `schedule.max_cycle_minutes` (45). The `restart: unless-stopped` policy
+  brings the container back.
+- **Interrupted cycle** (stuck cycle, `docker stop`, power loss): the time
+  stamps of the cycle in progress are kept in `track/pending.json`. On the
+  next start, with `tracking.resume: true`, the tracking continues from the
+  files already written (`resume=True`) or, when it was already tracked, only
+  the GeoJSON and the forecasts are done. An interrupted forecast is done
+  again.
+- **`docker stop`**: the main process stops like a Ctrl+C and the pyfortracc
+  pool workers end with the default SIGTERM, so the pool never waits for a
+  worker that holds the queue lock.
+- **Health**: `docker ps` shows the container as `healthy` while the last
+  tracked time stamp is at most `schedule.max_age_minutes` (60) old
+  (`app/health.py`).
+
 ## Outputs (`./data/output/`)
 
 ```
@@ -97,7 +122,7 @@ track/
 └── state/                                    # real-time tracking state
 forecast/
 └── YYYYMMDD_HHMM/                            # forecast origin time stamp
-    └── geometry/boundary/YYYYMMDD_HHMM.GeoJSON  # one file per lead time
+    └── geometry/boundary/YYYYMMDD_HHMM.GeoJSON  # one file per lead time (30 min)
 ```
 
 Restart the tracking from scratch:
@@ -117,7 +142,15 @@ docker compose run --rm pyfortracc_ir python /app/realtime.py --once
 ## Versions
 
 pyfortracc and goesgcp are installed from their git repositories (`main`
-branch). To pin a version:
+branch) when the image is built. The container does not update itself: to
+get a new pyfortracc release, rebuild it. Every build checks the latest commit
+of each ref and reinstalls only when it changed:
+
+```bash
+docker compose up -d --build
+```
+
+To pin a version:
 
 ```bash
 docker compose build --build-arg PYFORTRACC_REF=<tag|commit> --build-arg GOESGCP_REF=<tag|commit>

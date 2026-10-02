@@ -10,3 +10,8 @@ services:
     volumes:
       - ./data:/data
     stop_grace_period: 2m
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "3"

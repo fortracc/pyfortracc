@@ -51,9 +51,10 @@ def persistence(tracked_files, name_list):
 
     # Check if name_list have lat_min, lat_max, lon_min, lon_max is different from None
     if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
-        # Convert u_ and v_ unints are in degrees to pixels
-        track_df['u_'] = track_df['u_'] / name_list['y_res']
-        track_df['v_'] = track_df['v_'] / name_list['x_res']
+        # Convert u_ and v_ units from degrees to pixels. u_ is the zonal
+        # (x/column) component and v_ the meridional (y/row) component
+        track_df['u_'] = track_df['u_'] / name_list['x_res']
+        track_df['v_'] = track_df['v_'] / name_list['y_res']
 
     # Get vectors to be used in the forecast
     forecast_vectors = persistence_mean(track_df)
@@ -63,6 +64,9 @@ def persistence(tracked_files, name_list):
 
     # Merge the mean vector with the latest timestamp dataframe
     track_last = track_last.merge(forecast_vectors, on=['threshold_level', 'uid'], how='left')
+    # Clusters without a mean vector (e.g. NaN uid, dropped by the groupby)
+    # cannot be moved, and a NaN shift breaks the rounding below
+    track_last = track_last.dropna(subset=['u_mean', 'v_mean'])
 
     # No cluster at the anchor frame carries a valid motion vector (e.g. all
     # systems left the domain or dissipated). Return an empty (NaN) field
@@ -70,9 +74,9 @@ def persistence(tracked_files, name_list):
     if track_last.empty:
         return np.full((name_list['y_dim'], name_list['x_dim']), np.nan)
 
-    # Apply the mean vector to the array_y and array_x columns
-    track_last['array_y'] = track_last['array_y'] + track_last['u_mean']
-    track_last['array_x'] = track_last['array_x'] + track_last['v_mean']
+    # Apply the mean vector: u_ moves the columns (x) and v_ the rows (y)
+    track_last['array_x'] = track_last['array_x'] + track_last['u_mean']
+    track_last['array_y'] = track_last['array_y'] + track_last['v_mean']
 
    # Clip the array_x and array_y values to the valid range
     track_last['array_x'] = track_last['array_x'].apply(

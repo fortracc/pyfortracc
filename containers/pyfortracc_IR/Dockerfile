@@ -19,6 +19,12 @@ RUN apt-get update \
 RUN python -m venv /opt/venv
 ENV PATH=/opt/venv/bin:$PATH
 
+# Commit of each ref (branch, tag or sha): the content only changes with a new
+# commit, so a build reuses the cached install below until the ref moves and
+# `docker compose up -d --build` always gets the latest commit of main
+ADD https://api.github.com/repos/fortracc/pyfortracc/commits/${PYFORTRACC_REF} /tmp/pyfortracc.json
+ADD https://api.github.com/repos/helvecioneto/goesgcp/commits/${GOESGCP_REF} /tmp/goesgcp.json
+
 RUN pip install "git+https://github.com/fortracc/pyfortracc@${PYFORTRACC_REF}" \
     && pip install "git+https://github.com/helvecioneto/goesgcp@${GOESGCP_REF}" \
     && pip install pyyaml
@@ -40,11 +46,15 @@ RUN apt-get update \
 COPY --from=builder /opt/venv /opt/venv
 
 WORKDIR /app
-COPY app/realtime.py /app/realtime.py
+COPY app/ /app/
 COPY namelist.yaml /app/namelist.yaml
 
 RUN mkdir -p /data/input /data/output
 VOLUME ["/data"]
+
+# First cycle (bootstrap + forecasts) takes a few minutes
+HEALTHCHECK --interval=2m --timeout=30s --start-period=20m --retries=3 \
+    CMD ["python", "/app/health.py"]
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["python", "/app/realtime.py"]
