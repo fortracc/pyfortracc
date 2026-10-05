@@ -361,7 +361,12 @@ columns:
      - Optical flow (Lucas-Kanade or Farneback, ``opt_mtd``) computed on the input images.
    * - ``elp_correction``
      - ``u_elp``, ``v_elp``
-     - Displacement of the centroid of an ellipse fitted to the cluster.
+     - Displacement of the centre of an ellipse fitted by least squares to the exterior contour
+       of the cluster (Fitzgibbon et al., 1999, ``cv2.fitEllipseDirect``), from the previous
+       cluster (``past_idx``) to the current one. For a ``MultiPolygon`` (DBSCAN) the exteriors
+       of all parts are used and holes are ignored. The fitted centre is less sensitive than the
+       centroid to irregular changes of the contour. ``NaN`` when a cluster has less than 5
+       contour points or the fit fails, so the method is left out of the validation.
    * - ``new_correction``
      - ``u_new``, ``v_new``
      - ``NEW`` clusters: mean vector of the ``new_neighbors`` nearest clusters.

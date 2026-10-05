@@ -99,6 +99,28 @@ to the outer threshold (red arrow).
     Schematic for Inner Cores method. The black arrows represent the displacement vectors for each inner cell. The average of black arrows is the blue 
     arrow which replaces the primary displacement vector (red arrow).
 
+Correction by Ellipse Fitting
+****************************************************
+
+The centroid of a non-rigid object moves whenever its contour changes, even if the system itself does not move, for example when a 
+bulge grows on one side of the rain cell. The Ellipse Correction (ECor) gives a displacement estimate that is less sensitive to these 
+irregular deformations of the contour. Each rain cell is represented by an ellipse fitted to its contour, and the correction vector is 
+the displacement of the centre of this ellipse between the cell at time :math:`t-1` and the cell at time :math:`t`.
+
+The ellipse is fitted by least squares to the points of the exterior contour of the cell (direct least squares fitting [6]_, 
+``cv2.fitEllipseDirect`` in OpenCV). The fitted ellipse is rotated, i.e. it has a centre, two axes and an orientation. For cells made of 
+several parts (``MultiPolygon``, e.g. DBSCAN clusters) the exteriors of all parts are used, and holes are ignored. When the cell at 
+:math:`t` is linked to more than one cell at :math:`t-1`, the ellipse at :math:`t-1` is fitted to the union of them. The vector components 
+are computed in the same coordinates as the other methods: :math:`u` is zonal (x) and :math:`v` is meridional (y), in degrees (or pixels) 
+per time step:
+
+.. math::
+
+   u = x_c(t) - x_c(t-1), \qquad v = y_c(t) - y_c(t-1)
+
+where :math:`(x_c, y_c)` is the centre of the fitted ellipse. At least 5 contour points are needed to fit an ellipse. When a cell has 
+fewer points, or the fit fails or is degenerate, the vector is undefined (``NaN``) and the method is not used for that cell in the validation.
+
 Combination
 ****************************************************
 
@@ -115,4 +137,5 @@ methods were combined with the uncorrected vector, here called “NONE”.
 .. [3] Garstang, M.; Massie, H.L.; Halverson, J.; Greco, S.; Scala, J. Amazon coastal squall lines. Part I: Structure and kinematics. Mon. Weather Rev. 1994, 122, 608–622.
 .. [4] Cotton, W.R.; Anthes, R.A. Storm and Cloud Dynamics; Academic Press: Cambridge, MA, USA, 1992.
 .. [5] Houze, R.A. Structure and dynamics of a tropical squall–line system. Am. Meteorol. Soc. Mon. Weather Rev. 1977, 105, 1540–1567.
+.. [6] Fitzgibbon, A.; Pilu, M.; Fisher, R.B. Direct least square fitting of ellipses. IEEE Trans. Pattern Anal. Mach. Intell. 1999, 21, 476–480.
 

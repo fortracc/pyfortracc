@@ -5,6 +5,8 @@ Ellipse mtd
 -------------------------------------------------------
 
 .. autofunction:: pyfortracc.vector_methods.ellipse_mtd.ellipse_mtd
+.. autofunction:: pyfortracc.vector_methods.ellipse_mtd.fit_ellipse
+.. autofunction:: pyfortracc.vector_methods.ellipse_mtd.contour_points
 
 Incores mtd
 -------------------------------------------------------

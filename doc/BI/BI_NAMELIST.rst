@@ -215,7 +215,9 @@ and the :doc:`vector correction methods <../CF/CORRECTION>` page.
      - Optical flow algorithm: ``'lucas-kanade'`` or ``'farneback'``.
    * - ``elp_correction``
      - ``False``
-     - Correction using the centroids of ellipses fitted to the clusters (``u_elp``, ``v_elp``).
+     - Correction using the displacement of the centre of an ellipse fitted by least squares
+       to the exterior contour of each cluster (``u_elp``, ``v_elp``). ``NaN`` for clusters with
+       less than 5 contour points. Before v1.4.4 this vector was equal to ``u_noc``/``v_noc``.
    * - ``new_correction``
      - ``False``
      - Estimates a vector for ``NEW`` clusters, which have no previous match and therefore no

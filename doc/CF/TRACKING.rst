@@ -5,7 +5,9 @@ The tracking module utilizes data from two consecutive time points to extract th
 It identifies the movement of rain cells by analyzing the centroids of these clusters, focusing on areas of overlap between their geometries 
 at successive times. This overlap is critical for classifying events into categories such as continuous, splits, and mergers. Although many 
 algorithms employ similar methods, variations in centroid positioning due to the defined geometry can affect the computation of velocity and 
-position along the trajectory [1]_ [2]_ [3]_. 
+position along the trajectory [1]_ [2]_ [3]_. The correction methods (see Correction) compute alternative displacement vectors, such as the 
+displacement of the centre of an ellipse fitted by least squares to the contour of each cell, which is less sensitive to irregular 
+deformations of the contour than the centroid.
 
 To mitigate these issues, smoothing techniques are applied to the shapes of tracked objects, helping to eliminate 
 gaps and holes caused by pixel thresholding. Each tracked rain cell is associated with key metrics, including size, expansion rate, average 
