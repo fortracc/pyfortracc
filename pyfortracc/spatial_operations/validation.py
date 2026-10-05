@@ -107,10 +107,13 @@ def extrapolate(row, u_, v_):
             continue
         mtd_u = np.round(mtd_u).astype(int)
         mtd_v = np.round(mtd_v).astype(int)
-        mtd_u = mtd_u + row['prev_y'] # Apply method to previous cluster
-        mtd_v = mtd_v + row['prev_x'] # Apply method to previous cluster
-        # Create a tuple with the extrapolated previous cluster
-        prv_cluster = tuple(zip(mtd_u, mtd_v))
+        # Apply method to previous cluster: u_ is the zonal (x/column)
+        # component and v_ the meridional (y/row) component
+        ext_x = mtd_u + row['prev_x']
+        ext_y = mtd_v + row['prev_y']
+        # Create a tuple with the extrapolated previous cluster (y, x),
+        # in the same order as cur_cluster
+        prv_cluster = tuple(zip(ext_y, ext_x))
         # Compute the scores
         hit = len(set(prv_cluster).intersection(set(cur_cluster)))
         false_ = len(set(prv_cluster).difference(set(cur_cluster)))

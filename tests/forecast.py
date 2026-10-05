@@ -95,6 +95,67 @@ def check_uv_axes(name_list):
     assert err_ok < err_swap, "u_/v_ do not follow array_x/array_y"
 
 
+def check_validation(name_list):
+    """Check the validation scores on the observed tracking. For each CON
+    cluster the previous cluster (same key at the previous frame) is moved by
+    the vector of each method, u_ along the columns (x) and v_ along the rows
+    (y), and the FAR against the current cluster is computed with plain loops.
+    It must match the far_<method> written by the validation. The FAR with
+    u_/v_ swapped is also shown, so the check discriminates."""
+    files = sorted(glob.glob(name_list['output_path'] + 'track/trackingtable/*.parquet'))
+    df = read_table(files)
+    y_dim, x_dim = read_function(sorted(glob.glob(name_list['input_path'] + '*'))[0]).shape
+    x_res = (name_list['lon_max'] - name_list['lon_min']) / x_dim
+    y_res = (name_list['lat_max'] - name_list['lat_min']) / y_dim
+    if len(name_list['thresholds']) > 1:
+        df['key'] = df['iuid'].fillna(df['uid'])
+    else:
+        df['key'] = df['uid']
+    df = df.dropna(subset=['key'])
+    df['prev_time'] = df['timestamp'] - pd.Timedelta(minutes=name_list['delta_time'])
+    prev = df[['timestamp', 'threshold_level', 'key', 'array_y', 'array_x']]
+    prev = prev.drop_duplicates(subset=['timestamp', 'threshold_level', 'key'], keep=False)
+    cur = df[df['status'] == 'CON'].merge(
+        prev, left_on=['prev_time', 'threshold_level', 'key'],
+        right_on=['timestamp', 'threshold_level', 'key'], suffixes=('', '_prv'))
+    methods = [c[4:] for c in cur.columns if c.startswith('far_')]
+    checked, mismatch, far_ok, far_swap = 0, 0, [], []
+    for _, row in cur.iterrows():
+        cur_pts = set(zip(row['array_y'], row['array_x']))
+        for mtd in methods:
+            u = row['u_noc' if mtd == '' else 'u_' + mtd]
+            v = row['v_noc' if mtd == '' else 'v_' + mtd]
+            if pd.isna(u) or pd.isna(v) or pd.isna(row['far_' + mtd]):
+                continue
+            dx, dy = round(u / x_res), round(v / y_res)  # zonal -> x, meridional -> y
+            ok = {(y + dy, x + dx) for y, x in zip(row['array_y_prv'], row['array_x_prv'])}
+            sw = {(y + dx, x + dy) for y, x in zip(row['array_y_prv'], row['array_x_prv'])}
+            far = len(ok - cur_pts) / len(ok)
+            checked += 1
+            mismatch += not np.isclose(far, row['far_' + mtd])
+            far_ok.append(far)
+            far_swap.append(len(sw - cur_pts) / len(sw))
+    print(f"[check_validation] {len(cur)} CON clusters | {checked} method scores | "
+          f"mismatches: {mismatch} | mean FAR u_->x/v_->y = {np.mean(far_ok):.3f}, "
+          f"u_->y/v_->x = {np.mean(far_swap):.3f}")
+    assert checked > 0 and mismatch == 0, "validation FAR does not follow u_ -> x, v_ -> y"
+
+
+def check_merge_vector():
+    """Check that the merge correction is the mean of the vectors from the
+    merged cells to the current cell, not their sum. Two cells at x = 0 and
+    x = 10 merge into a cell at x = 6: the vectors are +6 and -4, so the mean
+    is +1 (the sum, +2, grows with the number of merged cells)."""
+    import geopandas as gpd
+    from shapely.geometry import Point
+    from pyfortracc.vector_methods.merge_mtd import merge_mtd
+    cur = gpd.GeoDataFrame({'centroid': [Point(6, 3)]}, index=[0])
+    prv = gpd.GeoDataFrame({'centroid': [Point(0, 0), Point(10, 2)]}, index=[0, 1])
+    u_, v_ = merge_mtd(cur, prv, [0], pd.Series([[0, 1]], index=[0]))
+    print(f"[check_merge_vector] u_mrg = {u_[0]:.3f}, v_mrg = {v_[0]:.3f} (expected 1.000, 2.000)")
+    assert np.isclose(u_[0], 1) and np.isclose(v_[0], 2), "merge vector is not the mean"
+
+
 def expected_persistence(tracked_files, name_list, shape, swap=False):
     """Independent persistence oracle written with plain loops: each cluster
     at the anchor frame is moved by its mean vector over the observation
@@ -175,6 +236,10 @@ if __name__ == '__main__':
 
     # The tracked u_/v_ must follow the cluster pixels (u_ -> x, v_ -> y)
     check_uv_axes(name_list)
+    # The validation must move the previous cluster with u_ -> x, v_ -> y
+    check_validation(name_list)
+    # The merge correction is the mean of the vectors of the merged cells
+    check_merge_vector()
 
     for time in pd.date_range(start='2014-08-16 14:00:00', end='2014-08-16 17:00:00', freq='12min'):
         name_list['forecast_time'] = time.strftime('%Y-%m-%d %H:%M:%S')

@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import stats
-from pyfortracc.utilities.math_utils import uv_components, calc_addition_uv
+from pyfortracc.utilities.math_utils import uv_components, calc_mean_uv
 
 
 def merge_mtd(cur_mrg_df, prv_mrg_df, cur_mrgs_idx, prv_mrg_idx):
@@ -43,8 +43,9 @@ def merge_mtd(cur_mrg_df, prv_mrg_df, cur_mrgs_idx, prv_mrg_idx):
         prv_crtds = prv_mrg_df.loc[prv_mrg_idx[cidx]]['centroid'].values
         uv_comps = np.array([uv_components(p.coords[0], cur_crtd.coords[0])
                     for p in prv_crtds])
-        # Calculate adding of vectors
-        mean_uv = calc_addition_uv(uv_comps)
+        # Mean of the vectors. A sum would grow with the number of merged
+        # cells (2 cells -> twice the displacement)
+        mean_uv = calc_mean_uv(uv_comps)
         u_.append(mean_uv[0])
         v_.append(mean_uv[1])    
     return u_, v_

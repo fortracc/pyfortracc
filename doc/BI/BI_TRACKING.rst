@@ -350,7 +350,8 @@ columns:
      - Split events: vector from the centroid of the parent cluster to each piece.
    * - ``mrg_correction``
      - ``u_mrg``, ``v_mrg``
-     - Merge events: combines the vectors of the clusters that merged.
+     - Merge events: mean of the vectors from the centroids of the clusters that merged to the
+       centroid of the merged cluster.
    * - ``inc_correction``
      - ``u_inc``, ``v_inc``
      - Inner cores: uses the displacement of the clusters of higher thresholds inside the
