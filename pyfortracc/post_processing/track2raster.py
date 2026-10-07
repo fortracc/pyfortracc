@@ -1,13 +1,15 @@
 import glob
 import pandas as pd
 import multiprocessing as mp
-import geopandas as gpd
 import xarray as xr
 import numpy as np
 import pathlib
-from geocube.api.core import make_geocube
+from affine import Affine
+from rasterio import features
+from rasterio.transform import from_bounds, rowcol
 from shapely.wkt import loads
-from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system, get_geotransform
+from pyfortracc.utilities.utils import (set_nworkers, get_loading_bar, check_operational_system, get_geotransform,
+                                        grid_coordinates)
 from pyfortracc.default_parameters import default_parameters
 
 
@@ -96,15 +98,16 @@ def process_file(args):
     use_latlon = all(key in name_list and name_list[key] is not None 
                      for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max'])
     
-    # Calculate resolution and grid parameters based on lat/lon if available
+    # Output grid = tracking grid. The cluster geometries are burned (and the opt_field points placed)
+    # directly on it, so every value lands on the pixels of its cluster.
+    out_shape = (name_list['y_dim'], name_list['x_dim'])
     if use_latlon:
-        res_lat = abs(name_list['lat_max'] - name_list['lat_min']) / name_list['y_dim']
-        res_lon = abs(name_list['lon_max'] - name_list['lon_min']) / name_list['x_dim']
-        resolution = (res_lon, res_lat)
-        
-        # Create consistent lat/lon coordinates for all variables
-        lons = np.linspace(name_list['lon_min'], name_list['lon_max'], name_list['x_dim'], dtype=np.float32)
-        lats = np.linspace(name_list['lat_max'], name_list['lat_min'], name_list['y_dim'], dtype=np.float32)
+        # Rows from north to south; coordinates are the pixel centres (the bounds are the outer edges)
+        grid_transform = from_bounds(name_list['lon_min'], name_list['lat_min'],
+                                     name_list['lon_max'], name_list['lat_max'],
+                                     name_list['x_dim'], name_list['y_dim'])
+        lons, lats = grid_coordinates(name_list)
+        lons, lats = lons.astype(np.float32), lats[::-1].astype(np.float32)
         
         # Create coordinates dictionary with threshold_level
         coords = {
@@ -115,7 +118,8 @@ def process_file(args):
         }
         spatial_dims = ('time', 'threshold_level', 'lat', 'lon')
     else:
-        resolution = (1, 1)
+        # Pixel space of the cluster geometries without bounds: pixel (row y, col x) spans x - 0.5 .. x + 0.5
+        grid_transform = Affine(1, 0, -0.5, 0, 1, -0.5)
         # Create coordinates dictionary without lat/lon but with threshold_level
         coords = {
             'time': [timestamp],
@@ -240,39 +244,12 @@ def process_file(args):
                         opt_field_v.append(opt_geom.coords[-1][1] - opt_geom.coords[0][1])
                 
                 if len(point_geoms) > 0:
-                    # Create GeoDataFrame with point geometries
-                    gdf = gpd.GeoDataFrame({
-                        'u_opt_field': opt_field_u,
-                        'v_opt_field': opt_field_v
-                    }, geometry=point_geoms, crs='EPSG:4326')
-                    
-                    # Create cube
-                    cube = make_geocube(
-                        vector_data=gdf,
-                        measurements=['u_opt_field', 'v_opt_field'],
-                        resolution=resolution,
-                        fill=np.nan
-                    )
-                    
-                    # Extract data and interpolate to target grid
-                    if use_latlon:
-                        # Rename and interpolate
-                        lats_target = coords['lat']
-                        lons_target = coords['lon']
-                        cube_renamed = cube.rename({'y': 'lat', 'x': 'lon'})
-                        cube_interp = cube_renamed.interp(lat=lats_target, lon=lons_target, method='nearest')
-                        
-                        u_all_levels[level_idx, :, :] = cube_interp['u_opt_field'].values
-                        v_all_levels[level_idx, :, :] = cube_interp['v_opt_field'].values
-                    else:
-                        # Direct indexing for pixel coordinates
-                        u_data = cube['u_opt_field'].data
-                        v_data = cube['v_opt_field'].data
-                        # Clip to target dimensions
-                        y_size = min(u_data.shape[0], name_list['y_dim'])
-                        x_size = min(u_data.shape[1], name_list['x_dim'])
-                        u_all_levels[level_idx, :y_size, :x_size] = u_data[:y_size, :x_size]
-                        v_all_levels[level_idx, :y_size, :x_size] = v_data[:y_size, :x_size]
+                    # Pixel of the tracking grid that contains each start point
+                    rows, cols = rowcol(grid_transform, [pt.x for pt in point_geoms], [pt.y for pt in point_geoms])
+                    rows, cols = np.asarray(rows, dtype=int), np.asarray(cols, dtype=int)
+                    inside = (rows >= 0) & (rows < out_shape[0]) & (cols >= 0) & (cols < out_shape[1])
+                    u_all_levels[level_idx, rows[inside], cols[inside]] = np.asarray(opt_field_u)[inside]
+                    v_all_levels[level_idx, rows[inside], cols[inside]] = np.asarray(opt_field_v)[inside]
             
             # Add to data_vars with DataArrays
             data_vars['u_opt_field'] = xr.DataArray(
@@ -288,44 +265,25 @@ def process_file(args):
             
             continue
         
-        # Standard processing for all other columns - loop over threshold levels
+        # Standard processing for all other columns (numeric only) - loop over threshold levels
+        try:
+            col_values = pd.to_numeric(df_original[col]).astype(np.float32)
+        except (TypeError, ValueError):
+            print(f"Warning: Column '{col}' is not numeric. Skipping.")
+            continue
         for level_idx, threshold_level in enumerate(threshold_levels):
-            # Filter data for this specific threshold level
-            df_level = df_original[df_original['threshold_level'] == threshold_level]
-            df_col = df_level[['geometry', col]].copy()
-            df_col = df_col.dropna(subset=[col])
-            
-            if df_col.empty:
+            # Clusters of this threshold level with a value
+            rows = (df_original['threshold_level'] == threshold_level) & col_values.notna()
+            if not rows.any():
                 continue
             
-            # Get geometries and create GeoDataFrame
-            geometries = gpd.GeoSeries(df_col['geometry'].apply(loads))
-            gdf = gpd.GeoDataFrame(df_col[[col]], geometry=geometries, crs='EPSG:4326')
-            
-            # Create cube with make_geocube
-            cube = make_geocube(
-                vector_data=gdf,
-                measurements=[col],
-                resolution=resolution,
-                fill=np.nan
-            )
-            
-            # Extract data and interpolate to target grid
-            if use_latlon:
-                # Rename and interpolate
-                lats_target = coords['lat']
-                lons_target = coords['lon']
-                cube_renamed = cube.rename({'y': 'lat', 'x': 'lon'})
-                cube_interp = cube_renamed.interp(lat=lats_target, lon=lons_target, method='nearest')
-                
-                col_all_levels[level_idx, :, :] = cube_interp[col].values
-            else:
-                # Direct indexing for pixel coordinates
-                col_data = cube[col].data
-                # Clip to target dimensions
-                y_size = min(col_data.shape[0], name_list['y_dim'])
-                x_size = min(col_data.shape[1], name_list['x_dim'])
-                col_all_levels[level_idx, :y_size, :x_size] = col_data[:y_size, :x_size]
+            # Burn the cluster geometries on the tracking grid (pixels whose centre is inside a cluster)
+            shapes = [(geom, value) for geom, value in zip(df_original.loc[rows, 'geometry'].apply(loads),
+                                                           col_values[rows])
+                      if geom is not None and not geom.is_empty]
+            if shapes:
+                col_all_levels[level_idx, :, :] = features.rasterize(
+                    shapes, out_shape=out_shape, transform=grid_transform, fill=np.nan, dtype='float32')
         
         # Add to data_vars with DataArray
         data_vars[col] = xr.DataArray(

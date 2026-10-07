@@ -7,7 +7,7 @@ import numpy as np
 import pathlib
 from geocube.api.core import make_geocube
 from shapely.wkt import loads
-from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system, get_geotransform
+from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system, get_geotransform, grid_coordinates
 from pyfortracc.default_parameters import default_parameters
 
 
@@ -75,8 +75,8 @@ def process_file(args):
                      for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max'])
     
     if use_latlon:
-        lats = np.linspace(name_list['lat_min'], name_list['lat_max'], name_list['y_dim'], dtype=np.float32)
-        lons = np.linspace(name_list['lon_min'], name_list['lon_max'], name_list['x_dim'], dtype=np.float32)
+        lons, lats = grid_coordinates(name_list)          # pixel centres, row 0 = south
+        lons, lats = lons.astype(np.float32), lats.astype(np.float32)
         coords = {
             'time': [timestamp],
             'threshold_level': threshold_levels,

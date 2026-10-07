@@ -6,7 +6,7 @@ import pyarrow.parquet as pq
 from multiprocessing import Pool
 from pyfortracc.utilities.utils import (get_parquets, get_loading_bar,
                                         set_nworkers, check_operational_system,
-                                        create_dirs, get_featstamp)
+                                        create_dirs, get_featstamp, grid_coordinates)
 from pyfortracc.default_parameters import default_parameters
 
 
@@ -107,13 +107,8 @@ def translate_cluster(args):
         y_coords = row['array_y']
         x_coords = row['array_x']
         array[level, y_coords, x_coords] = values
-    # Create longitude and latitude array
-    LON_MIN = n_list['lon_min']
-    LON_MAX = n_list['lon_max']
-    LAT_MIN = n_list['lat_min']
-    LAT_MAX = n_list['lat_max']
-    lon = np.linspace(LON_MIN, LON_MAX, array.shape[-1])
-    lat = np.linspace(LAT_MIN, LAT_MAX, array.shape[-2])
+    # Longitude and latitude of the pixel centres (row 0 = south)
+    lon, lat = grid_coordinates(n_list, array.shape[-1], array.shape[-2])
     # Create xarray
     data_xarray = xr.DataArray(array,
                             coords=[np.arange(array.shape[0]),

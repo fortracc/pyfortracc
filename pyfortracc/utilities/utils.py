@@ -760,6 +760,38 @@ def get_geotransform(name_list):
     return geotransform, geotransform_inv
 
 
+def grid_coordinates(name_list, x_dim=None, y_dim=None):
+    """
+    Longitudes and latitudes of the pixel centres of the tracking grid, both ascending.
+
+    The bounds of the name_list ('lon_min', 'lon_max', 'lat_min', 'lat_max') are the outer edges of
+    the grid: pixel i spans lon_min + i * dx .. lon_min + (i + 1) * dx, the transform used for the
+    cluster polygons (features_extraction/statistics.py) and get_geotransform. Its centre is
+    lon_min + (i + 0.5) * dx (np.linspace(lon_min, lon_max, x_dim) would put the first and last
+    centres on the edges, stretching the grid by one pixel).
+
+    Parameters
+    ----------
+    name_list : dict
+        Dictionary with 'lon_min', 'lon_max', 'lat_min', 'lat_max' and, unless given, 'x_dim', 'y_dim'.
+    x_dim, y_dim : int, optional
+        Number of columns and rows (default: name_list['x_dim'], name_list['y_dim']).
+
+    Returns
+    -------
+    lon, lat : np.ndarray
+        Pixel-centre longitudes (x_dim) and latitudes (y_dim), ascending; row 0 of the tracking
+        arrays is the southernmost latitude.
+    """
+    x_dim = name_list['x_dim'] if x_dim is None else x_dim
+    y_dim = name_list['y_dim'] if y_dim is None else y_dim
+    x_res = abs(name_list['lon_max'] - name_list['lon_min']) / x_dim
+    y_res = abs(name_list['lat_max'] - name_list['lat_min']) / y_dim
+    lon = name_list['lon_min'] + (np.arange(x_dim) + 0.5) * x_res
+    lat = name_list['lat_min'] + (np.arange(y_dim) + 0.5) * y_res
+    return lon, lat
+
+
 def check_operational_system(name_list, parallel):
     # Check if the operational system is Windows
     if os.name == 'nt' and 'output_path' in name_list and 'input_path' in name_list:
@@ -791,8 +823,7 @@ def save_netcdf(data, name_list, output_file):
     LON_MAX = name_list['lon_max']
     LAT_MIN = name_list['lat_min']
     LAT_MAX = name_list['lat_max']
-    lon = np.linspace(LON_MIN, LON_MAX, data.shape[-1])
-    lat = np.linspace(LAT_MIN, LAT_MAX, data.shape[-2])
+    lon, lat = grid_coordinates(name_list, data.shape[-1], data.shape[-2])   # pixel centres, row 0 = south
 
     # If data contains only two dimensions, expand it to three dimensions
     if data.ndim == 2:

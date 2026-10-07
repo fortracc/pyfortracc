@@ -205,7 +205,8 @@ forecast cluster. ``uid`` is the identifier of the observed cluster it was extra
 and ``u_`` / ``v_`` are the displacements measured between consecutive forecast frames.
 
 **forecast_images/**: NetCDF files with a ``data`` variable of dimensions
-``(threshold_level, lat, lon)``. Pixels outside the forecast clusters are ``NaN``.
+``(threshold_level, lat, lon)``, with ``lat``/``lon`` at the pixel centres (``lat`` ascending,
+row 0 = south). Pixels outside the forecast clusters are ``NaN``.
 
 **geometry/boundary/**: the boundaries of the forecast clusters, ready to open in a GIS
 (QGIS, ArcGIS, geopandas).

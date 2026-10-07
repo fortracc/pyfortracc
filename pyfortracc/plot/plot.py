@@ -225,8 +225,9 @@ def plot(name_list,
             im = ax.contour(data, cmap=cmap, extent=orig_extent, origin=origin,
                         interpolation=interpolation, vmax=max_val, vmin=min_val, zorder=5)
         elif plot_type == 'pcolormesh':
-            lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1])
-            lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0])
+            # Pixel edges (one more than the pixels): the bounds are the outer edges of the grid
+            lons = np.linspace(name_list['lon_min'], name_list['lon_max'], data.shape[1] + 1)
+            lats = np.linspace(name_list['lat_min'], name_list['lat_max'], data.shape[0] + 1)
             im = ax.pcolormesh(lons, lats, data, transform= ccrs.PlateCarree(), cmap=cmap,
                            vmax=max_val, vmin=min_val, alpha=0.7, zorder=5)
         

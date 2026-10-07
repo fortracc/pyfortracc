@@ -101,6 +101,20 @@ The pixel resolution is computed as ``(lon_max - lon_min) / x_dim`` and
 (south). If your array starts in the north, flip it in the read function
 (``data[::-1, :]``); see :doc:`BI_DATA`.
 
+The bounds are the **outer edges** of the grid: pixel ``i`` spans ``lon_min + i * x_res`` to
+``lon_min + (i + 1) * x_res``, so its centre is ``lon_min + (i + 0.5) * x_res``. The cluster
+geometries follow these edges, and the ``lat``/``lon`` coordinates of every NetCDF written by
+pyForTraCC (forecast images, cluster masks, ``track2raster``, ``spatial_vectors``) are these
+pixel centres.
+
+.. note::
+
+   Before v1.4.6 the NetCDF outputs used ``np.linspace(lon_min, lon_max, x_dim)``, which puts the
+   first and last pixel centres on the edges: the coordinates were up to half a pixel off near
+   the edges of the grid (exact only in the middle), with a spacing of
+   ``(lon_max - lon_min) / (x_dim - 1)``. The values were on the right pixels, except in
+   ``track2raster`` (see :doc:`BI_POSTPROCESSING`).
+
 .. code-block:: python
 
     name_list['lon_min'] = -62.1475

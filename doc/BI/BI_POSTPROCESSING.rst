@@ -349,8 +349,17 @@ each pixel". Grids are easier to combine with other gridded data and to use for 
   ``add_raster_data(..., statistics='values', return_positions=True)`` is written pixel by
   pixel using the ``<var>_xy`` positions.
 * Output: one NetCDF per frame in ``output_path + 'track/raster/'`` with dimensions
-  ``(time, threshold_level, lat, lon)`` (or ``y``, ``x`` without geographic bounds). Pixels
-  outside the clusters are ``NaN``.
+  ``(time, threshold_level, lat, lon)`` (or ``y``, ``x`` without geographic bounds), with
+  ``lat``/``lon`` at the pixel centres (``lat`` from north to south). Each cluster is burned on
+  the tracking grid (the pixels whose centre is inside the cluster). Pixels outside the
+  clusters are ``NaN``.
+
+.. note::
+
+   Fixed in v1.4.6: the clusters were rasterized on a separate grid and interpolated to
+   coordinates up to half a pixel off, so clusters near the edges of the grid lost or shifted
+   pixels at their borders; without geographic bounds the values were moved to the origin of the
+   grid; ``opt_field`` vectors could land on a neighbouring pixel.
 
 .. code-block:: python
 
@@ -376,8 +385,8 @@ For the optical flow method, the individual flow vectors of ``opt_field`` are al
     spatial_vectors(name_list, read_function, parallel=False)
 
 Output: one NetCDF per frame in ``output_path + 'track/spatial_vectors/'`` with variables
-``u_<method>`` and ``v_<method>`` and dimensions ``(time, threshold_level, lat, lon)``. Frames
-without any valid vector are skipped.
+``u_<method>`` and ``v_<method>`` and dimensions ``(time, threshold_level, lat, lon)``, with
+``lat``/``lon`` at the pixel centres (``lat`` ascending). Frames without any valid vector are skipped.
 
 
 ForTraCC family files (convert_parquet_to_family)
@@ -453,7 +462,7 @@ opened in GIS software. It requires the geographic bounds (``lon_min``, ``lon_ma
      - Optical flow vectors (only when tracking with ``opt_correction = True``).
    * - ``cluster``
      - ``track/clusters/``
-     - NetCDF with a ``Clusters`` variable (the ``uid`` of each cluster on the grid), one file per frame.
-       Requires ``save_arrays = True`` during the tracking.
+     - NetCDF with a ``Clusters`` variable (the ``uid`` of each cluster on the grid, ``lat``/``lon`` at
+       the pixel centres), one file per frame. Requires ``save_arrays = True`` during the tracking.
 
 ``start_time`` and ``end_time`` limit the export to a period.
