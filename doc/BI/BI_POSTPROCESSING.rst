@@ -113,7 +113,9 @@ are extracting satellite brightness temperature for radar-tracked cells, reanaly
 variables (wind shear, CAPE, humidity), or land cover and topography.
 
 The external raster does **not** need to have the same grid or resolution as the tracking
-data: the extraction uses the geographic coordinates of both.
+data: the extraction uses the geographic coordinates of both. Every raster pixel touched by
+the cluster polygon is used (``all_touched``); on the tracking grid (or a grid whose pixel
+edges coincide with it) this is exactly the cluster pixels.
 
 Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -136,13 +138,20 @@ Parameters
      - *required*
      - Folder with the raster files (all files in it are used), or the path/glob of the files.
    * - ``raster_file_pattern``
-     - *required*
+     - ``None``
      - ``datetime`` pattern of the raster **file names**, used to match each raster to a
-       tracking frame, e.g. ``'era5_%Y%m%d_%H.nc'``.
+       tracking frame, e.g. ``'era5_%Y%m%d_%H.nc'``. Required for ``'nearest'`` and ``'tolerance'``.
    * - ``merge_mode``
      - ``'nearest'``
      - How raster files are matched to tracking frames in time. ``'nearest'`` uses the
-       raster closest in time to each frame.
+       raster closest in time to each frame; ``'fixed'`` uses the same (first) raster for every
+       frame, e.g. topography; ``'tolerance'`` uses the closest raster only if it is within
+       ``time_tolerance``.
+   * - ``time_tolerance``
+     - ``None``
+     - Maximum time difference for ``'tolerance'`` mode (e.g. ``'15min'``, ``'1h'``). Frames
+       without a raster within the tolerance get the new columns with no data (``NaN``,
+       ``count`` = 0).
    * - ``statistics``
      - ``None``
      - What to extract. ``None`` (or ``'pixels'``) stores the list of all pixel values inside
@@ -160,12 +169,25 @@ Parameters
 
 .. warning::
 
-   In the current version only ``merge_mode='nearest'`` works. The ``'fixed'`` and
-   ``'tolerance'`` modes described in the function docstring raise a ``KeyError``. To use a
-   single static raster (e.g. topography), put only that file in ``raster_path`` with
-   ``'nearest'``: every frame is matched to it.
+   ``'nearest'`` always finds a raster, however far in time it is. When rasters may be missing
+   (data gaps), use ``'tolerance'`` so that frames without a raster get no data instead of
+   the values of another time.
 
-   The function also fails if a tracking frame has no clusters (an empty parquet file).
+Every tracking file gets the same new columns, also frames without clusters (empty columns)
+and clusters outside the raster (``NaN``, ``count`` = 0). Numeric statistics are written as
+``float64`` and ``count`` as ``int64``.
+
+.. note::
+
+   Fixed in v1.4.5 (results of earlier versions are affected):
+
+   * the tracking files (``YYYYMMDD_HHMM.parquet``) were read with seconds, so a frame at
+     ``HH:30`` was taken as ``HH:03`` and matched to the raster of ``HH:00``;
+   * the raster grid was built with the first and last pixel **centres** as its outer edges,
+     stretching it by one pixel: clusters took extra pixels and the values were shifted by up
+     to half a pixel; rasters with latitude ascending were read upside down;
+   * ``'fixed'`` and ``'tolerance'`` raised a ``KeyError``, and frames without clusters
+     stopped the function.
 
 The raster function
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -173,7 +195,8 @@ The raster function
 The raster function must return an ``xarray`` object with:
 
 * dimensions named ``lat`` and ``lon`` (rename them if your file uses ``latitude``/``longitude``
-  or ``y``/``x``);
+  or ``y``/``x``), whose coordinates are the **pixel centres** of a regular grid, in any order
+  (latitude ascending or descending), with at least 2 pixels in each dimension;
 * a coordinate reference system, set with `rioxarray <https://corteva.github.io/rioxarray/>`_
   (``import rioxarray`` enables the ``.rio`` accessor).
 
@@ -269,10 +292,10 @@ land/ocean mask.
      - ``True``
      - Process the tracking files in parallel.
 
-.. warning::
+.. note::
 
-   In the current version only ``merge_mode='fixed'`` works; ``'nearest'`` and ``'tolerance'``
-   raise a ``KeyError``. Use a single, static vector file.
+   Before v1.4.5 ``'nearest'`` and ``'tolerance'`` raised a ``KeyError``, and frames at
+   ``HH:30`` were matched as ``HH:03``.
 
 .. important::
 

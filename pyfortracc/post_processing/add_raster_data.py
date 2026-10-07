@@ -6,9 +6,10 @@ import numpy as np
 import multiprocessing as mp
 from scipy import stats as scipy_stats
 from rasterstats import zonal_stats
-from rasterio.transform import from_bounds
+from rasterio.transform import from_bounds, from_origin, rowcol
 from rasterio.warp import reproject, Resampling
-from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system
+from pyfortracc.utilities.utils import (set_nworkers, get_loading_bar, check_operational_system,
+                                        get_featstamp)
 
 def add_raster_data(
     name_list,
@@ -28,15 +29,20 @@ def add_raster_data(
     ----------
     name_list : dict
         A dictionary containing configuration parameters (from pyForTraCC).
+    raster_function : callable
+        Function that receives a raster file path and returns an xarray DataArray or Dataset with
+        1-D 'lat' and 'lon' coordinates (pixel centres of a regular grid, in any order) and a CRS.
     raster_path : str
         Path to raster data folder or files.
     raster_file_pattern : str
         Datetime pattern in raster filenames (e.g. '%Y.tif', '%Y%m%d_%H%M.nc').
+        Not needed in 'fixed' mode.
     merge_mode : str, default='nearest'
         Defines how to match rasters to tracks. Options:
             - 'nearest'  : Select raster closest in time to each track timestamp.
-            - 'fixed'    : Use the same raster for all tracks (first or latest).
-            - 'tolerance': Match rasters only if within `time_tolerance`.
+            - 'fixed'    : Use the same raster (the first file) for all tracks.
+            - 'tolerance': Match rasters only if within `time_tolerance`. Tracks without a
+                           raster get the new columns with no data (NaN; count = 0).
     time_tolerance : str or pd.Timedelta, optional
         Maximum allowed time difference (e.g. '3H', '1D') for tolerance mode.
     statistics : list or str, default=None
@@ -73,11 +79,9 @@ def add_raster_data(
         print(f"No track files found in {track_dir}")
         return
 
-    track_timestamps = [
-        pd.to_datetime(os.path.basename(f).split(".")[0], format="%Y%m%d_%H%M%S")
-        for f in track_files
-    ]
-    track_df = pd.DataFrame({"path": track_files}, index=track_timestamps)
+    # Tracking tables are named YYYYMMDD_HHMM.parquet
+    track_timestamps = [pd.Timestamp(get_featstamp(f)) for f in track_files]
+    track_df = pd.DataFrame({"track_path": track_files}, index=track_timestamps).sort_index()
 
     # --- Load raster files ---
     raster_path = raster_path.strip()
@@ -91,47 +95,40 @@ def add_raster_data(
         print(f"No raster files found in {raster_path}")
         return
 
-    raster_timestamps = [
-        pd.to_datetime(os.path.basename(f), format=raster_file_pattern)
-        for f in raster_files
-    ]
-    raster_df = pd.DataFrame({"path": raster_files}, index=raster_timestamps)
-
     # --- Merge logic depending on mode ---
-    if merge_mode == "nearest":
-        merged_df = pd.merge_asof(
-            track_df.sort_index(),
-            raster_df.sort_index(),
-            left_index=True,
-            right_index=True,
-            direction="nearest"
-        )
-
-    elif merge_mode == "fixed":
+    if merge_mode == "fixed":
         # Use the same raster for all track files
-        fixed_raster = raster_df.iloc[0]  # or use [-1] for latest
-        merged_df = track_df.copy()
-        merged_df["raster_path"] = fixed_raster.path
+        merged_df = track_df.assign(raster_path=raster_files[0])
 
-    elif merge_mode == "tolerance":
-        if time_tolerance is None:
+    elif merge_mode in ("nearest", "tolerance"):
+        if raster_file_pattern is None:
+            raise ValueError(f"You must specify `raster_file_pattern` for '{merge_mode}' mode.")
+        if merge_mode == "tolerance" and time_tolerance is None:
             raise ValueError("You must specify `time_tolerance` for tolerance mode.")
-        tolerance = pd.Timedelta(time_tolerance)
+        raster_timestamps = [
+            pd.to_datetime(os.path.basename(f), format=raster_file_pattern)
+            for f in raster_files
+        ]
+        raster_df = pd.DataFrame({"raster_path": raster_files}, index=raster_timestamps).sort_index()
         merged_df = pd.merge_asof(
-            track_df.sort_index(),
-            raster_df.sort_index(),
+            track_df,
+            raster_df,
             left_index=True,
             right_index=True,
             direction="nearest",
-            tolerance=tolerance
+            tolerance=pd.Timedelta(time_tolerance) if merge_mode == "tolerance" else None
         )
-        merged_df = merged_df.dropna(subset=["path_y"]).rename(columns={"path_y": "raster_path"})
+        # Tracks without a raster within the tolerance get the new columns with no data
+        merged_df["raster_path"] = merged_df["raster_path"].astype(object).where(merged_df["raster_path"].notna(), None)
+        n_missing = merged_df["raster_path"].isna().sum()
+        if n_missing:
+            print(f"{n_missing} track files without a raster within {time_tolerance}: new columns with no data")
 
     else:
         raise ValueError("merge_mode must be one of: 'nearest', 'fixed', or 'tolerance'")
 
-    # open first track file to get geometry
-    sample_raster = raster_df.iloc[0].path
+    # open first raster file to check its structure
+    sample_raster = raster_files[0]
     # Check if raster contains coordinates variables lon and lat
     if raster_function is None:
         raise ValueError("You must provide a `raster_function` to read raster data.")
@@ -141,11 +138,11 @@ def add_raster_data(
     # Check if raster contains crs information
     if not hasattr(sample_data, 'rio') or sample_data.rio.crs is None:
         raise ValueError("Raster data must contain CRS information.")
-    
+
     # Check for 2D variables
     if hasattr(sample_data, 'data_vars'):
         # É um Dataset
-        var_2d = [var for var in sample_data.data_vars 
+        var_2d = [var for var in sample_data.data_vars
                   if set(sample_data[var].dims) == {'lat', 'lon'}]
     else:
         # Is a DataArray, use the name of the DataArray
@@ -156,14 +153,14 @@ def add_raster_data(
     if not var_2d:
         print("No 2D variables found in raster data.")
         return
-    
+
     # --- Process files ---
     n_workers = set_nworkers(name_list)
     # Loading bar
     loading_bar = get_loading_bar(track_files)
 
     # Transform merged_df to tuples for easier processing
-    merged_list = merged_df[['path_x', 'path_y']].itertuples(index=False, name=None)
+    merged_list = merged_df[['track_path', 'raster_path']].itertuples(index=False, name=None)
     args_list = [(row[0], row[1], var_2d, raster_function, statistics, return_positions, name_list) for row in merged_list]
 
     # Execução paralela
@@ -179,22 +176,79 @@ def add_raster_data(
         loading_bar.close()
 
 
+def raster_grid(var_data):
+    """
+    North-up array and affine transform of a raster with 1-D 'lat' and 'lon' coordinates.
+
+    The coordinates are the pixel centres of a regular grid, in any order (latitude ascending
+    rasters are flipped, longitude descending rasters are reversed). The transform places the
+    outer pixel edges half a pixel beyond the first and last centres.
+
+    Parameters
+    ----------
+    var_data : xarray.DataArray
+        Raster with 'lat' and 'lon' dimensions (at least 2 pixels in each).
+
+    Returns
+    -------
+    raster_array : np.ndarray
+        Array with rows from north to south and columns from west to east.
+    affine_transform : affine.Affine
+        Transform of `raster_array`.
+    """
+    var_data = var_data.transpose('lat', 'lon', ...)
+    lon = var_data.coords['lon'].values.astype('float64')
+    lat = var_data.coords['lat'].values.astype('float64')
+    if len(lon) < 2 or len(lat) < 2:
+        raise ValueError(f"Raster must have at least 2 pixels in 'lat' and 'lon': lat={len(lat)}, lon={len(lon)}")
+    if lon[0] > lon[-1]:
+        var_data, lon = var_data.isel(lon=slice(None, None, -1)), lon[::-1]
+    if lat[0] < lat[-1]:
+        var_data, lat = var_data.isel(lat=slice(None, None, -1)), lat[::-1]
+    x_res = (lon[-1] - lon[0]) / (len(lon) - 1)
+    y_res = (lat[0] - lat[-1]) / (len(lat) - 1)
+    if not (np.allclose(np.diff(lon), x_res, rtol=1e-3, atol=0) and
+            np.allclose(-np.diff(lat), y_res, rtol=1e-3, atol=0)):
+        raise ValueError("Raster 'lat' and 'lon' coordinates must be regularly spaced (pixel centres).")
+    affine_transform = from_origin(lon[0] - x_res / 2, lat[0] + y_res / 2, x_res, y_res)
+    return var_data.values, affine_transform
+
+
+def statistics_columns(var_2d, stats_to_extract, return_positions):
+    """
+    Names and dtypes of the columns created by process_file (used for frames without
+    clusters or without a raster, so every tracking file gets the same columns).
+    """
+    columns = {}
+    for var_name in var_2d:
+        if stats_to_extract is None:
+            columns[var_name] = 'object'
+            continue
+        for stat_name in stats_to_extract:
+            if stat_name == 'values':
+                columns[f"{var_name}_values"] = 'object'
+                if return_positions:
+                    columns[f"{var_name}_xy"] = 'object'
+                    columns[f"{var_name}_coords"] = 'object'
+            elif stat_name == 'count':
+                columns[f"{var_name}_count"] = 'int64'
+            else:
+                columns[f"{var_name}_{stat_name}"] = 'float64'
+    return columns
+
+
 def process_file(args):
     """
     Function executed for each line of track and raster file pair.
+
+    `raster_file` None means no raster for this track file (tolerance mode): the new columns
+    are written with no data (NaN; count = 0).
     """
 
     track_file, raster_file, var_2d, raster_function, statistics, return_positions, name_list = args
 
     # Load track data
-    track_data = gpd.GeoDataFrame(
-        pd.read_parquet(track_file),
-        geometry=gpd.GeoSeries.from_wkt(pd.read_parquet(track_file)['geometry']),
-        crs="EPSG:4326"
-    )
-
-    # Load raster data
-    raster_data = raster_function(raster_file)
+    track_data = pd.read_parquet(track_file)
 
     # Normalize statistics parameter
     if statistics is None or statistics == 'pixels':
@@ -203,6 +257,22 @@ def process_file(args):
         stats_to_extract = [statistics]
     else:
         stats_to_extract = statistics
+    columns = statistics_columns(var_2d, stats_to_extract, return_positions)
+
+    # Frames without clusters or without a raster: same columns, no data
+    if track_data.empty or raster_file is None:
+        for col, dtype in columns.items():
+            if dtype == 'int64':
+                track_data[col] = pd.Series(0, index=track_data.index, dtype='int64')
+            else:
+                track_data[col] = pd.Series(np.nan, index=track_data.index, dtype=dtype)
+        track_data.to_parquet(track_file)
+        return
+
+    geometries = gpd.GeoSeries.from_wkt(track_data['geometry'], crs="EPSG:4326")
+
+    # Load raster data
+    raster_data = raster_function(raster_file)
 
     # Process each 2D variable
     for var_name in var_2d:
@@ -213,47 +283,23 @@ def process_file(args):
         else:
             # It's a DataArray
             var_data = raster_data
-        
-        # Ensure proper dimension order (lat, lon)
-        if 'lat' in var_data.dims and 'lon' in var_data.dims:
-            var_data = var_data.transpose('lat', 'lon', ...)
-        
-        # Get raster array
-        raster_array = var_data.values
-    
+
+        if 'lon' not in var_data.coords or 'lat' not in var_data.coords:
+            raise ValueError("Cannot determine affine transform from raster data")
+
+        # North-up array and transform from the pixel-centre coordinates
+        raster_array, affine_transform = raster_grid(var_data)
+
         # Check if array has valid dimensions
         if raster_array.ndim < 2 or min(raster_array.shape[:2]) == 0:
             raise ValueError(f"Invalid raster dimensions: {raster_array.shape}. Must be at least 2D with both dimensions > 0")
-        
-        # Compute zonal statistics
-        # Always calculate affine transform from coordinates for reliability
-        if 'lon' in var_data.coords and 'lat' in var_data.coords:
-            lon = var_data.coords['lon'].values
-            lat = var_data.coords['lat'].values
-            
-            # Ensure we have valid coordinate arrays
-            if len(lon) == 0 or len(lat) == 0:
-                raise ValueError(f"Invalid coordinate dimensions: lon={len(lon)}, lat={len(lat)}")
-            
-            # Calculate pixel size
-            # Note: from_bounds expects (west, south, east, north, width, height)
-            # width corresponds to number of columns (longitude dimension)
-            # height corresponds to number of rows (latitude dimension)
-            # The array shape should be (height, width) = (lat, lon)
-            height, width = raster_array.shape[:2]
-            affine_transform = from_bounds(
-                lon.min(), lat.min(), lon.max(), lat.max(),
-                width=width, height=height
-            )
-        else:
-            raise ValueError("Cannot determine affine transform from raster data")
-        
+
         # Get nodata value from rio if available, otherwise None
         nodata_value = var_data.rio.nodata if (hasattr(var_data, 'rio') and var_data.rio.crs is not None) else None
-        
+
         try:
             stats = zonal_stats(
-                track_data.geometry,
+                geometries,
                 raster_array,
                 affine=affine_transform,
                 nodata=nodata_value,
@@ -281,78 +327,83 @@ def process_file(args):
                     values_list = []
                     xy_list = [] if return_positions else None
                     coords_list = [] if return_positions else None
-                    
+
                     # If return_positions is True, resample raster to tracking grid resolution
                     if return_positions and name_list:
                         # Check if we have lat/lon bounds in name_list
                         if all(key in name_list for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max', 'x_dim', 'y_dim']):
                             # Create affine transform for the tracking grid
                             tracking_affine = from_bounds(
-                                name_list['lon_min'], 
-                                name_list['lat_min'], 
-                                name_list['lon_max'], 
+                                name_list['lon_min'],
+                                name_list['lat_min'],
+                                name_list['lon_max'],
                                 name_list['lat_max'],
-                                width=name_list['x_dim'], 
+                                width=name_list['x_dim'],
                                 height=name_list['y_dim']
                             )
-                            
-                            # Create empty array for resampled raster
-                            resampled_array = np.empty(
+
+                            # Resampled raster: pixels outside the source raster are no data
+                            # (NaN for float rasters without a nodata value)
+                            fill_value = nodata_value
+                            if fill_value is None and np.issubdtype(raster_array.dtype, np.floating):
+                                fill_value = np.nan
+                            resampled_array = np.full(
                                 (name_list['y_dim'], name_list['x_dim']),
+                                0 if fill_value is None else fill_value,
                                 dtype=raster_array.dtype
                             )
-                            
+
                             # Resample the raster to tracking grid
                             reproject(
                                 source=raster_array,
                                 destination=resampled_array,
                                 src_transform=affine_transform,
                                 src_crs='EPSG:4326',
+                                src_nodata=fill_value,
                                 dst_transform=tracking_affine,
                                 dst_crs='EPSG:4326',
+                                dst_nodata=fill_value,
                                 resampling=Resampling.nearest
                             )
-                            
+
                             # Now use resampled array for zonal stats
                             stats_resampled = zonal_stats(
-                                track_data.geometry,
+                                geometries,
                                 resampled_array,
                                 affine=tracking_affine,
-                                nodata=nodata_value,
+                                nodata=fill_value,
                                 all_touched=True,
                                 raster_out=True
                             )
-                            
+
                             # Extract values and positions from resampled raster
                             for res in stats_resampled:
                                 if res and res.get('mini_raster_array') is not None:
                                     arr = res['mini_raster_array']
-                                    mask = ~arr.mask
+                                    mask = ~np.ma.getmaskarray(arr)
 
                                     if np.any(mask):
                                         rows, cols = np.where(mask)
                                         vals = arr[rows, cols]
-                                        values_list.append(vals.tolist())
+                                        values_list.append(np.asarray(vals).tolist())
 
                                         # Get the affine transform for the mini raster
                                         mini_affine = res.get('mini_raster_affine')
-                                        
+
                                         if mini_affine is not None:
-                                            # Convert local mini raster positions to spatial coordinates
-                                            xs, ys = mini_affine * (cols, rows)
-                                            
+                                            # Spatial coordinates of the pixel centres
+                                            xs, ys = mini_affine * (cols + 0.5, rows + 0.5)
+
                                             # Store spatial coordinates
                                             coord_pairs = np.column_stack([xs, ys])
                                             coords_list.append(coord_pairs.tolist())
-                                            
-                                            # Convert spatial coordinates to pixel indices in tracking grid
-                                            from rasterio.transform import rowcol
+
+                                            # Pixel indices of the centres in the tracking grid (row 0 = north)
                                             pixel_rows, pixel_cols = rowcol(tracking_affine, xs, ys)
-                                            
-                                            # Convert to integers and store as [col, row] (x, y) convention
-                                            pixel_cols = np.round(pixel_cols).astype(int)
-                                            pixel_rows = np.round(pixel_rows).astype(int)
-                                            xy_pairs = np.column_stack([pixel_cols, pixel_rows])
+
+                                            # Store as [col, row] (x, y) convention
+                                            xy_pairs = np.column_stack([np.asarray(pixel_cols, dtype=int),
+                                                                        np.asarray(pixel_rows, dtype=int)])
                                             xy_list.append(xy_pairs.tolist())
                                         else:
                                             xy_list.append(np.nan)
@@ -369,25 +420,25 @@ def process_file(args):
                             # Fallback to original method if tracking grid info not available
                             return_positions = False
                             print("Warning: Tracking grid information not available. Disabling position extraction.")
-                    
+
                     # If return_positions is False or no tracking grid info, use original method
                     if not return_positions:
                         for res in stats:
                             if res and res.get('mini_raster_array') is not None:
                                 arr = res['mini_raster_array']
-                                mask = ~arr.mask
+                                mask = ~np.ma.getmaskarray(arr)
 
                                 if np.any(mask):
                                     rows, cols = np.where(mask)
                                     vals = arr[rows, cols]
-                                    values_list.append(vals.tolist())
+                                    values_list.append(np.asarray(vals).tolist())
                                 else:
                                     values_list.append(np.nan)
                             else:
                                 values_list.append(np.nan)
 
                     track_data[col_values] = values_list
-                    
+
                     if return_positions and xy_list is not None:
                         col_xy = f"{var_name}_xy"
                         col_coords = f"{var_name}_coords"
@@ -400,7 +451,10 @@ def process_file(args):
                     track_data[col_name] = values
                 elif stat_name == 'median':
                     col_name = f"{var_name}_{stat_name}"
-                    values = [np.median(res['mini_raster_array'].compressed()) if res and res.get('mini_raster_array') is not None else np.nan for res in stats]
+                    values = []
+                    for res in stats:
+                        compressed_array = res['mini_raster_array'].compressed() if res and res.get('mini_raster_array') is not None else []
+                        values.append(np.median(compressed_array) if len(compressed_array) > 0 else np.nan)
                     track_data[col_name] = values
                 elif stat_name == 'std':
                     col_name = f"{var_name}_{stat_name}"
@@ -430,7 +484,7 @@ def process_file(args):
                     track_data[col_name] = values
                 elif stat_name == 'count':
                     col_name = f"{var_name}_{stat_name}"
-                    values = [res.get('count', np.nan) if res else np.nan for res in stats]
+                    values = [res.get('count', 0) if res else 0 for res in stats]
                     track_data[col_name] = values
                 elif stat_name.startswith('percentile_'):
                     # Extract percentile (e.g., 'percentile_25', 'percentile_75')
@@ -454,9 +508,11 @@ def process_file(args):
                         raise ValueError(f"Invalid percentile format: {stat_name}. Use 'percentile_X' where X is 0-100. Error: {e}")
                 else:
                     raise ValueError(f"Unknown statistic: {stat_name}. Options are: values, mean, median, std, min, max, mode, count, percentile_X (e.g., percentile_25, percentile_75)")
-    
-    # Return geometry column to WKT for saving in parquet
-    track_data['geometry'] = track_data['geometry'].apply(lambda geom: geom.wkt)
-    
-    # Save updated track data
+
+    # Same dtypes in every file (rasterstats returns None for clusters without valid pixels)
+    for col, dtype in columns.items():
+        if dtype != 'object':
+            track_data[col] = pd.to_numeric(track_data[col].astype(object).where(track_data[col].notna(), np.nan)).astype(dtype)
+
+    # Save updated track data (plain parquet, geometry kept as WKT as in the tracking)
     track_data.to_parquet(track_file)

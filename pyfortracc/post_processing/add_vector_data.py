@@ -4,7 +4,7 @@ import pandas as pd
 import geopandas as gpd
 import multiprocessing as mp
 from shapely.wkt import loads
-from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system
+from pyfortracc.utilities.utils import set_nworkers, get_loading_bar, check_operational_system, get_featstamp
 
 
 def add_vector_data(
@@ -76,10 +76,8 @@ def add_vector_data(
         print(f"No track files found in {track_dir}")
         return
 
-    track_timestamps = [
-        pd.to_datetime(os.path.basename(f).split(".")[0], format="%Y%m%d_%H%M%S")
-        for f in track_files
-    ]
+    # Tracking tables are named YYYYMMDD_HHMM.parquet
+    track_timestamps = [pd.Timestamp(get_featstamp(f)) for f in track_files]
     track_df = pd.DataFrame({"path": track_files}, index=track_timestamps)
 
     # --- Load vector files ---
@@ -126,7 +124,7 @@ def add_vector_data(
             print(f"No vector files matching pattern '{vector_file_pattern}' found in {vector_path}")
             return
 
-        vector_df = pd.DataFrame({"path": valid_vector_files}, index=vector_timestamps)
+        vector_df = pd.DataFrame({"vector_path": valid_vector_files}, index=vector_timestamps)
 
         if merge_mode == "nearest":
             merged_df = pd.merge_asof(
@@ -136,8 +134,6 @@ def add_vector_data(
                 right_index=True,
                 direction="nearest"
             )
-            merged_df = merged_df.rename(columns={"path_y": "vector_path"}).drop(columns=["path_x"])
-            merged_df = merged_df.rename(columns={"vector_path": "vector_path"})
 
         elif merge_mode == "tolerance":
             if time_tolerance is None:
@@ -151,8 +147,7 @@ def add_vector_data(
                 direction="nearest",
                 tolerance=tolerance
             )
-            merged_df = merged_df.dropna(subset=["path_y"]).rename(columns={"path_y": "vector_path"})
-            merged_df = merged_df.drop(columns=["path_x"])
+            merged_df = merged_df.dropna(subset=["vector_path"])
 
         else:
             raise ValueError("merge_mode must be one of: 'fixed', 'nearest', or 'tolerance'")
