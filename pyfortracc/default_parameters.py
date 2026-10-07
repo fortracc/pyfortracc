@@ -41,6 +41,9 @@ def default_parameters(name_lst=None, read_function=None):
         Method to perform the clustering. It can be 'dbscan' or 'ndimage'.
     eps: int
         Epsilon distance to be used in the clustering for the dbscan method.
+    min_samples: int
+        Number of points within eps (the point itself included) for a core
+        point of the dbscan method. Default 3.
     delta_tolerance: int
         Delta tolerance is the maximum time difference between two files.
     num_prev_skip: int
@@ -134,6 +137,8 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['cluster_method'] = 'ndimage'
     if 'eps' not in name_lst:
         name_lst['eps'] = 1
+    if 'min_samples' not in name_lst:
+        name_lst['min_samples'] = 3
     if 'delta_tolerance' not in name_lst:
         name_lst['delta_tolerance'] = 0
     if 'pattern_position' not in name_lst:

@@ -3,7 +3,7 @@ from scipy import ndimage
 from sklearn.cluster import DBSCAN
 
 
-def clustering(mtd, data, operator, thld, min_size, eps=None):
+def clustering(mtd, data, operator, thld, min_size, eps=None, min_samples=3):
     """
     Return the cluster labels for each point based on the method used
 
@@ -21,6 +21,10 @@ def clustering(mtd, data, operator, thld, min_size, eps=None):
         threshold value
     min_size: int
         minimum number of points per cluster
+    eps: int
+        DBSCAN neighbourhood radius (Chebyshev distance, in pixels)
+    min_samples: int
+        DBSCAN number of points within eps for a core point (itself included)
     Returns:
     -------
     clusters: numpy array
@@ -28,7 +32,7 @@ def clustering(mtd, data, operator, thld, min_size, eps=None):
     """
     if mtd == 'dbscan':
         clusters, labels = dbscan_clustering(data, operator, thld, min_size,
-                                            eps=eps)
+                                            eps=eps, min_samples=min_samples)
     elif mtd == 'ndimage':
         clusters, labels = ndimage_clustering(data, operator, thld, min_size,
                                             eps=eps)
@@ -37,7 +41,7 @@ def clustering(mtd, data, operator, thld, min_size, eps=None):
     return clusters, labels
 
 
-def dbscan_clustering(data, operator, threshold, min_size, eps=1):
+def dbscan_clustering(data, operator, threshold, min_size, eps=1, min_samples=3):
     """
     Return the cluster labels for each point
 
@@ -51,6 +55,10 @@ def dbscan_clustering(data, operator, threshold, min_size, eps=1):
         threshold value
     min_size: int
         minimum number of points per cluster
+    eps: int
+        neighbourhood radius (Chebyshev distance, in pixels)
+    min_samples: int
+        number of points within eps for a core point (itself included)
 
     returns:
     ------
@@ -67,7 +75,7 @@ def dbscan_clustering(data, operator, threshold, min_size, eps=1):
         return clusters, labels
     # Set the dbscan object
     dbscan = DBSCAN(algorithm='kd_tree', metric='chebyshev',
-                    eps=eps, min_samples=3)
+                    eps=eps, min_samples=min_samples)
     # Fit the dbscan model
     dbscan.fit(points)
     labels = np.concatenate((points, dbscan.labels_[:, np.newaxis]), axis=1)

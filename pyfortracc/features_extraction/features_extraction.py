@@ -130,7 +130,7 @@ def extract_features(args):
         # Calculate the clusters
         clusters, labels = clustering(cluster_mtd, data, operator,
                                     threshold, min_size[thld_lvl],
-                                    name_list['eps'])
+                                    name_list['eps'], name_list['min_samples'])
         # Calculate the geo_statistics
         clu_stats = geo_statistics(clusters, labels, data, name_list)
         clu_stats['threshold'] = threshold

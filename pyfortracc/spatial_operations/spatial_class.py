@@ -68,13 +68,19 @@ def merge(operation):
     mergs_idx_1 = np.unique(mergs_idx_1)
     # Add complete merge information
     merges_gp = operation.loc[mergs_][['index_1','index_2',
-                                        'cluster_id_2','size_2']]
+                                        'cluster_id_2','size_2','overlap']]
     merges_ids = merges_gp.groupby('index_1')['index_2'].apply(list)
     merges_ids = merges_ids.reset_index(name='merge_ids')
     merge_counts = merges_gp.groupby('index_1')['size_2'].apply(list)
     merge_counts = merge_counts.reset_index(name='merge_counts')
-    mergMax = merges_gp.loc[merges_gp.groupby('index_1')['size_2'].idxmax()]
-    mergMax = mergMax.reset_index()[['index_1','index_2','cluster_id_2']]
+    # The merged cluster continues the largest previous cluster. Ties in size
+    # (frequent with DBSCAN, where size is a small count of points) are broken
+    # by the largest overlap, then by the index, so the choice does not depend
+    # on the order of the rows
+    mergMax = merges_gp.sort_values(['size_2', 'overlap', 'index_2'],
+                                    ascending=[False, False, True])
+    mergMax = mergMax.drop_duplicates('index_1')
+    mergMax = mergMax.reset_index(drop=True)[['index_1','index_2','cluster_id_2']]
     merge_frame = pd.merge(merges_ids, merge_counts, on='index_1')
     merge_frame = pd.merge(merge_frame, mergMax, on='index_1')
     merge_frame = merge_frame.loc[merge_frame['index_1'].isin(mergs_idx_1)]
@@ -109,7 +115,7 @@ def split(operation):
     splits_idx = operation.loc[splits_]['index_1'].values
     splits_idx = np.unique(splits_idx)
     splits_group = operation.loc[splits_][['index_1','index_2','cluster_id_1',
-                                           'cluster_id_2','size_1']]
+                                           'cluster_id_2','size_1','overlap']]
     splits_group = splits_group.groupby('cluster_id_2')
     splits_idx = []
     split_prev_idx = []
@@ -117,14 +123,21 @@ def split(operation):
     new_splts_prev_idx = []
     new_splt_comming_idx = []
     for _, sgroup in splits_group:
-        max_count = sgroup['size_1'].max()
-        max_idx = sgroup.loc[sgroup['size_1'] == max_count]['index_1'].values
-        min_idx = sgroup.loc[sgroup['size_1'] != max_count]['index_1'].values
-        splits_idx.append(max_idx[0])
-        split_prev_idx.append(sgroup['index_2'].unique()[0])
+        # Exactly one branch continues the previous cluster (SPL): the largest,
+        # with ties in size (frequent with DBSCAN, where size is a small count
+        # of points) broken by the largest overlap, then by the index. Every
+        # other branch is a new split (NEW/SPL). Before, branches tied with the
+        # largest were neither SPL nor NEW/SPL and stayed NEW, losing the split
+        sgroup = sgroup.sort_values(['size_1', 'overlap', 'index_1'],
+                                    ascending=[False, False, True])
+        max_idx = sgroup['index_1'].values[0]
+        min_idx = sgroup['index_1'].values[1:]
+        prev_idx = sgroup['index_2'].values[0]
+        splits_idx.append(max_idx)
+        split_prev_idx.append(prev_idx)
         new_splts_idx.extend(min_idx)
-        new_splts_prev_idx.extend([sgroup['index_2'].unique()[0]]*len(min_idx))
-        new_splt_comming_idx.extend([sgroup['index_1'].unique()[0]]*len(min_idx))
+        new_splts_prev_idx.extend([prev_idx]*len(min_idx))
+        new_splt_comming_idx.extend([max_idx]*len(min_idx))
     # Convert lists to array
     splits_idx = np.array(splits_idx)
     split_prev_idx = np.array(split_prev_idx)
