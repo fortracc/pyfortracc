@@ -1,6 +1,7 @@
 import glob
 import pandas as pd
 import pathlib
+import pyarrow.parquet as pq
 from pyfortracc.default_parameters import default_parameters
 from pyfortracc.utilities.utils import (get_feature_files, create_dirs, 
                                         get_loading_bar, get_featstamp,
@@ -143,8 +144,10 @@ def resume_linking(feat_files, output_path, prv_frame, prv_stamp, uid_iter,
         linked_file = output_path + pathlib.Path(feat_file).name
         if not is_complete_parquet(linked_file):
             break
-        frame = pd.read_parquet(linked_file, columns=['uid', 'iuid',
-                                                      'threshold_level'])
+        # Empty frames of a single-threshold run are written without iuid
+        names = pq.read_schema(linked_file).names
+        frame = pd.read_parquet(linked_file, columns=[
+            c for c in ('uid', 'iuid', 'threshold_level') if c in names])
         uids = frame['uid']
         # Same counter updates made by linking()
         cdx += 1
