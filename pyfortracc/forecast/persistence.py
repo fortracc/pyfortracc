@@ -25,98 +25,114 @@ def persistence_mean(track_df):
 
     return mean_vector
 
+def shifted_pixels(clusters, name_list):
+    """
+    Pixels of the clusters moved by their whole-pixel shift (columns dx, dy).
+
+    Every pixel of a cluster gets the same shift, so the cluster keeps its shape. With
+    name_list['edges'] the grid is periodic in x (global longitude); pixels moved out
+    of the grid are dropped (never piled on the border).
+
+    Returns
+    -------
+    (np.ndarray, np.ndarray)
+        Flat indices of the moved pixels in the (y_dim, x_dim) grid and their values.
+    """
+    h, w = name_list['y_dim'], name_list['x_dim']
+    if clusters.empty:
+        return np.empty(0, dtype=np.int64), np.empty(0)
+    n_pix = clusters['array_x'].map(len).to_numpy()
+    xs = np.concatenate(clusters['array_x'].to_numpy()).astype(np.int64)
+    ys = np.concatenate(clusters['array_y'].to_numpy()).astype(np.int64)
+    values = np.concatenate(clusters['array_values'].to_numpy()).astype(float)
+    xs = xs + np.repeat(clusters['dx'].to_numpy(), n_pix)
+    ys = ys + np.repeat(clusters['dy'].to_numpy(), n_pix)
+    if name_list.get('edges'):
+        xs = xs % w
+    keep = (xs >= 0) & (xs < w) & (ys >= 0) & (ys < h) & np.isfinite(values)
+    return ys[keep] * w + xs[keep], values[keep]
+
 def persistence(tracked_files, name_list):
+    """
+    Lagrangian persistence forecast of the next frame: every system of the last
+    tracked frame is moved by the mean of its vectors over the observation window,
+    keeping its shape, its size and its values.
+
+    The systems are the clusters of the first threshold (uid). Each one is moved
+    rigidly, with all its pixels, by a single whole-pixel shift (its mean vector,
+    rounded half up), so the clusters of the other thresholds, which lie inside it,
+    move with it and keep their place in the system. An inner cluster that lies
+    outside every cluster of the first threshold (the outer one was below the
+    minimum size) is moved, also rigidly, by its own mean vector. Where moved
+    systems overlap, the forecast keeps the most intense value (the largest for
+    the '>' operators, the smallest for '<', e.g. brightness temperature), so every
+    system stays above its thresholds. Clusters without a vector at the last frame
+    are not forecast.
+
+    Parameters
+    ----------
+    tracked_files : list
+        Tracking (or forecast) tables of the observation window, the last one being
+        the frame the forecast starts from.
+    name_list : dict
+        The parameters of the tracking (y_dim, x_dim, operator, edges and, for
+        vectors in degrees, x_res, y_res and the lat/lon bounds).
+
+    Returns
+    -------
+    np.ndarray
+        The forecast image (y_dim, x_dim); NaN where no system was moved.
+    """
 
     # Read the tracked files
     dfs = [pd.read_parquet(f) for f in tracked_files]
     track_df = pd.concat(dfs, ignore_index=True)
+    h, w = name_list['y_dim'], name_list['x_dim']
+    forecast_image = np.full(h * w, np.nan)
 
-    # Define colunas de agrupamento
-    if len(name_list['thresholds']) > 1:
-        cluster_columns = ['threshold_level', 'uid', 'iuid']
-        track_df['iuid'] = track_df['iuid'].where(track_df['iuid'].notna(), track_df['uid'])
-        track_df['uid'] = track_df['iuid']
-    else:
-        cluster_columns = ['threshold_level', 'uid']
+    # Identity of a cluster: uid at the first threshold, iuid at the others
+    if 'iuid' in track_df.columns:
+        track_df['uid'] = track_df['iuid'].where(track_df['iuid'].notna(), track_df['uid'])
 
-    # Get the latest timestamp
-    last_timestamp = track_df['timestamp'].max()
-    
-    # Filter clusters that exist in the latest timestamp
-    latest_clusters = track_df[track_df['timestamp'] == last_timestamp][cluster_columns].drop_duplicates().index
-    # Drop the clusters not have u_ and v_ values
-    latest_clusters = track_df.loc[latest_clusters].dropna(subset=['u_', 'v_']).index
-    # Filter track_df to only include the latest timestamp based on the latest clusters but keep the values of other timestamps
-    track_df = track_df[track_df[cluster_columns].apply(tuple, axis=1).isin(track_df.loc[latest_clusters, cluster_columns].apply(tuple, axis=1))]
-
-    # Check if name_list have lat_min, lat_max, lon_min, lon_max is different from None
+    # Convert u_ and v_ units from degrees to pixels. u_ is the zonal
+    # (x/column) component and v_ the meridional (y/row) component
     if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
-        # Convert u_ and v_ units from degrees to pixels. u_ is the zonal
-        # (x/column) component and v_ the meridional (y/row) component
         track_df['u_'] = track_df['u_'] / name_list['x_res']
         track_df['v_'] = track_df['v_'] / name_list['y_res']
 
-    # Get vectors to be used in the forecast
-    forecast_vectors = persistence_mean(track_df)
-
-    # Get only latest timestamp dataframe
+    # Clusters of the last frame and the mean vector of each one over the window
+    last_timestamp = track_df['timestamp'].max()
     track_last = track_df[track_df['timestamp'] == last_timestamp]
+    level0 = track_last['threshold_level'] == track_last['threshold_level'].min()
+    systems = track_last[level0]
+    inner = track_last[~level0]
+    vectors = persistence_mean(track_df)
 
-    # Merge the mean vector with the latest timestamp dataframe
-    track_last = track_last.merge(forecast_vectors, on=['threshold_level', 'uid'], how='left')
-    # Clusters without a mean vector (e.g. NaN uid, dropped by the groupby)
-    # cannot be moved, and a NaN shift breaks the rounding below
-    track_last = track_last.dropna(subset=['u_mean', 'v_mean'])
+    # Inner clusters inside a system move with it; the others (orphans) on their own
+    in_system = np.zeros(h * w, dtype=bool)
+    if not systems.empty:
+        in_system[np.concatenate(systems['array_y'].to_numpy()).astype(np.int64) * w +
+                  np.concatenate(systems['array_x'].to_numpy()).astype(np.int64)] = True
+    if not inner.empty:
+        first_pixel = (inner['array_y'].map(lambda a: int(a[0])) * w +
+                       inner['array_x'].map(lambda a: int(a[0]))).to_numpy()
+        inner = inner[~in_system[first_pixel]]
 
-    # No cluster at the anchor frame carries a valid motion vector (e.g. all
-    # systems left the domain or dissipated). Return an empty (NaN) field
-    # instead of crashing on the np.concatenate calls below.
-    if track_last.empty:
-        return np.full((name_list['y_dim'], name_list['x_dim']), np.nan)
+    # Clusters with a vector at the last frame, shifted by their rounded mean vector
+    moved = pd.concat([systems, inner], ignore_index=True)
+    moved = moved[moved['u_'].notna() & moved['v_'].notna()]
+    moved = moved.merge(vectors, on=['threshold_level', 'uid'], how='left')
+    moved = moved.dropna(subset=['u_mean', 'v_mean'])
+    if moved.empty:
+        return forecast_image.reshape((h, w))
+    moved['dx'] = np.floor(moved['u_mean'].to_numpy() + 0.5).astype(np.int64)
+    moved['dy'] = np.floor(moved['v_mean'].to_numpy() + 0.5).astype(np.int64)
+    flat_idx, values = shifted_pixels(moved, name_list)
 
-    # Apply the mean vector: u_ moves the columns (x) and v_ the rows (y)
-    track_last['array_x'] = track_last['array_x'] + track_last['u_mean']
-    track_last['array_y'] = track_last['array_y'] + track_last['v_mean']
+    # Write the values so that the most intense one wins where moved systems overlap
+    order = np.argsort(values, kind='stable')
+    if str(name_list.get('operator', '>=')).startswith('<'):
+        order = order[::-1]
+    forecast_image[flat_idx[order]] = values[order]
 
-   # Clip the array_x and array_y values to the valid range
-    track_last['array_x'] = track_last['array_x'].apply(
-        lambda arr: np.clip([round(x) for x in arr], 0, name_list['x_dim'] - 1)
-    )
-    track_last['array_y'] = track_last['array_y'].apply(
-        lambda arr: np.clip([round(y) for y in arr], 0, name_list['y_dim'] - 1)
-    )
-
-    # Check if edges are present in the name_list
-    if 'edges' in name_list and name_list['edges']:
-        # Send the board coordinates to the other side
-        track_last['array_x'] = track_last['array_x'].apply(
-            lambda arr: [x + name_list['x_dim'] if x < 0 else x for x in arr]
-        )
-        track_last['array_y'] = track_last['array_y'].apply(
-            lambda arr: [y + name_list['y_dim'] if y < 0 else y for y in arr]
-        )
-
-    # Fill the forecast image with flattened array_y and array_x values
-    array_y = np.concatenate(track_last['array_y'].values).astype(int)
-    array_x = np.concatenate(track_last['array_x'].values).astype(int)
-    values = np.concatenate(track_last['array_values'].values)
-
-    # Map array_y and array_x to 1D indices
-    h, w = name_list['y_dim'], name_list['x_dim']
-    flat_idx = array_y * w + array_x  # Convert 2D indices to 1D indices
-
-    # Sum of values for each position
-    sum_image_flat = np.bincount(flat_idx, weights=values, minlength=h*w)
-
-    # Count occurrences for each position
-    count_image_flat = np.bincount(flat_idx, minlength=h*w)
-
-    # Avoid division by zero
-    with np.errstate(invalid='ignore', divide='ignore'):
-        mean_image_flat = sum_image_flat / count_image_flat
-
-    # Convert back to 2D image
-    forecast_image = mean_image_flat.reshape((h, w))
-
-    return forecast_image
- 
+    return forecast_image.reshape((h, w))
