@@ -15,3 +15,7 @@ ipykernel
 psutil
 requests
 gdown
+matplotlib
+goesgcp
+rioxarray
+pytest

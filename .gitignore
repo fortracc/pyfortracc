@@ -19,6 +19,8 @@ CLAUDE.md
 # Ignore examples data each have input or output path
 input/
 output/
+input_goes19/
+output_goes19/
 experiments/
 doc/_build/
 pro/

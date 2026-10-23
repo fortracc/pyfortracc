@@ -12,4 +12,7 @@ WORKDIR /app/..
 
 COPY . .
 
+# Test drivers dependencies (gdown for the radar sample, goesgcp + rioxarray for GOES-19)
+RUN pip install --no-cache-dir -r requirements.txt
+
 CMD ["python"]

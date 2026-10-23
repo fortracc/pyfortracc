@@ -111,6 +111,14 @@ def default_parameters(name_lst=None, read_function=None):
         opt_correction and validation, so these cannot be used with
         save_arrays False. The forecast also requires them in the tracking
         table, and plot requires them when no read_function is given.
+    morph_trend: bool
+        Persistence forecast only. If True, each system follows its own trend
+        over the observation_window: it is dilated (growing) or eroded
+        (decaying) by its area trend, with a smooth border and its inner
+        thresholds kept nested, and its values follow the trend of its mean,
+        kept inside their threshold levels. The trends fade with the lead time.
+        Not applied with the '==' and '!=' operators. Default False. Its
+        settings are fixed in pyfortracc/forecast/morphology.py.
     'epsg': int
         EPSG code for the projection.
     Returns
@@ -131,6 +139,8 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['observation_window'] = None
     if 'lead_time' not in name_lst:
         name_lst['lead_time'] = None
+    if 'morph_trend' not in name_lst:
+        name_lst['morph_trend'] = False
     if 'mean_dbz' not in name_lst:
         name_lst['mean_dbz'] = False
     if 'cluster_method' not in name_lst:

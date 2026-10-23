@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from pyfortracc.forecast.morphology import apply_trends
 
 def persistence_mean(track_df):
     """    Calculate the mean vector for each cluster in the track dataframe.
@@ -52,7 +53,15 @@ def shifted_pixels(clusters, name_list):
     keep = (xs >= 0) & (xs < w) & (ys >= 0) & (ys < h) & np.isfinite(values)
     return ys[keep] * w + xs[keep], values[keep]
 
-def persistence(tracked_files, name_list):
+def read_window(files):
+    """Tables of a window, with the identity of each cluster in uid (iuid at the inner thresholds)."""
+    df = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+    if 'iuid' in df.columns:
+        df['uid'] = df['iuid'].where(df['iuid'].notna(), df['uid'])
+    return df
+
+
+def persistence(tracked_files, name_list, lead=0, history_files=None):
     """
     Lagrangian persistence forecast of the next frame: every system of the last
     tracked frame is moved by the mean of its vectors over the observation window,
@@ -69,6 +78,11 @@ def persistence(tracked_files, name_list):
     system stays above its thresholds. Clusters without a vector at the last frame
     are not forecast.
 
+    With name_list['morph_trend'] each moved cluster is also dilated or eroded by
+    its area trend and its values are shifted by the trend of its mean value, kept
+    inside its threshold levels; both trends come from history_files and are damped
+    with the lead time (see pyfortracc.forecast.morphology).
+
     Parameters
     ----------
     tracked_files : list
@@ -77,6 +91,13 @@ def persistence(tracked_files, name_list):
     name_list : dict
         The parameters of the tracking (y_dim, x_dim, operator, edges and, for
         vectors in degrees, x_res, y_res and the lat/lon bounds).
+    lead : int
+        Index of the lead time being forecast (0 for the first one), used to damp
+        the trends.
+    history_files : list, optional
+        Observed tracking tables the trends are taken from (default:
+        tracked_files). The forecast passes the observed window, so the trends are
+        not fed back by the forecast frames.
 
     Returns
     -------
@@ -84,15 +105,11 @@ def persistence(tracked_files, name_list):
         The forecast image (y_dim, x_dim); NaN where no system was moved.
     """
 
-    # Read the tracked files
-    dfs = [pd.read_parquet(f) for f in tracked_files]
-    track_df = pd.concat(dfs, ignore_index=True)
+    # Read the tracked files; the identity of a cluster is its uid at the first
+    # threshold and its iuid at the others
+    track_df = read_window(tracked_files)
     h, w = name_list['y_dim'], name_list['x_dim']
     forecast_image = np.full(h * w, np.nan)
-
-    # Identity of a cluster: uid at the first threshold, iuid at the others
-    if 'iuid' in track_df.columns:
-        track_df['uid'] = track_df['iuid'].where(track_df['iuid'].notna(), track_df['uid'])
 
     # Convert u_ and v_ units from degrees to pixels. u_ is the zonal
     # (x/column) component and v_ the meridional (y/row) component
@@ -127,6 +144,10 @@ def persistence(tracked_files, name_list):
         return forecast_image.reshape((h, w))
     moved['dx'] = np.floor(moved['u_mean'].to_numpy() + 0.5).astype(np.int64)
     moved['dy'] = np.floor(moved['v_mean'].to_numpy() + 0.5).astype(np.int64)
+    # Optionally dilate/erode the systems and shift their values by their trends
+    if name_list.get('morph_trend'):
+        history_df = track_df if history_files is None else read_window(history_files)
+        moved = apply_trends(moved, history_df, name_list, lead)
     flat_idx, values = shifted_pixels(moved, name_list)
 
     # Write the values so that the most intense one wins where moved systems overlap

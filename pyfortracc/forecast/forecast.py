@@ -125,13 +125,18 @@ def forecast(name_list, read_function):
         print(f"Forecast mode {name_list['forecast_mode']} not implemented yet.")
         return
     
+    # The observed window: the trends of morph_trend are taken from it
+    # at every lead time, so they are not fed back by the forecast frames
+    observed_files = list(tracked_files)
+
     print(f"\nForecasting window: {forecast_times[0]} to {forecast_times[-1]}\n")
     # Loop through forecast times to create forecast output path
     for ftsmp in range(len(forecast_times)):
         
         # 1 - First Step of the forecast is create forecast image
         print(f"- Generating forecast image lead time +{ftsmp + 1}: {forecast_times[ftsmp]}")
-        forecast_img = forecast_function(tracked_files, name_list)
+        forecast_img = forecast_function(tracked_files, name_list, lead=ftsmp,
+                                         history_files=observed_files)
         
         # Saving the forecast image
         frcst_out = forecast_output
