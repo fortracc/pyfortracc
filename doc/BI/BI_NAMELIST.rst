@@ -292,6 +292,11 @@ Used only by ``pyfortracc.forecast``. See :doc:`BI_FORECAST`.
    * - ``forecast_mode``
      - ``'persistence'``
      - Forecast method. Only ``'persistence'`` is available.
+   * - ``morph_trend``
+     - ``False``
+     - Persistence only: dilate/erode each system by its area trend and shift its values by its
+       intensity trend, kept inside the threshold levels and damped with the lead time (see
+       :ref:`Growth and decay of the systems <BI/BI_FORECAST:Growth and decay of the systems (morph_trend)>`).
 
 
 Execution parameters

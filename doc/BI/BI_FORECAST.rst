@@ -18,7 +18,9 @@ How the forecast works
 
 The only forecast mode available at the moment is **persistence** (``forecast_mode = 'persistence'``).
 It assumes that each cluster keeps the mean motion it had in the recent past, and that its shape
-and intensity do not change. For a forecast issued at ``forecast_time``, each lead time
+and intensity do not change (unless ``morph_trend`` is enabled, see
+:ref:`Growth and decay of the systems <BI/BI_FORECAST:Growth and decay of the systems (morph_trend)>`).
+For a forecast issued at ``forecast_time``, each lead time
 runs these steps:
 
 1. **Select the observation window**: the last ``observation_window`` frames of the tracking table
@@ -30,9 +32,12 @@ runs these steps:
 3. **Compute the mean vector**: for each active cluster, the ``u_`` and ``v_`` components are
    averaged over the observation window. Groups are ``uid`` for single-threshold runs and
    ``iuid`` for multi-threshold runs.
-4. **Build the virtual image**: the pixels of each cluster (``array_x``, ``array_y``,
-   ``array_values``) are shifted by the mean vector. They are clipped to the domain and written
-   to a new 2D field. Where two clusters overlap, the values are averaged.
+4. **Build the virtual image**: each system (cluster of the first threshold) is shifted rigidly,
+   with all its pixels (``array_x``, ``array_y``, ``array_values``), by its mean vector rounded
+   to whole pixels, so the inner thresholds move with it and keep their place. With
+   ``morph_trend = True`` the system is also dilated or eroded and its values follow its trend.
+   Pixels moved out of the domain are dropped. Where two systems overlap, the most intense
+   value is kept (the largest for the ``>`` operators, the smallest for ``<``).
 5. **Track the virtual image**: the virtual image goes through features extraction, spatial
    operations (against the last frame), cluster linking and concatenation. Forecast clusters
    keep the ``uid`` of the observed cluster they came from, and their ``lifetime`` keeps
@@ -50,6 +55,64 @@ runs these steps:
     observation_window = 3                         lead_time = 3
                       ▲
                  forecast_time
+
+
+Growth and decay of the systems (morph_trend)
+-------------------------------------------------------
+
+Plain persistence keeps the size of every system, so a growing system is under-forecast and a
+decaying one is over-forecast. With ``name_list['morph_trend'] = True`` each moved system also
+follows its own trend over the observation window:
+
+* **Area trend**: the mean rate of change of the size of the cluster between consecutive
+  frames. Only the steps where the cluster continues (status ``CON``, one ``delta_time`` apart,
+  not touching the border of the domain) are used, since in a merge or a split the area jumps
+  without the system growing. The rate is limited to a growth of 50% (or the inverse decay) per
+  time step.
+* **Dilation and erosion**: the system is dilated (growing) or eroded (decaying) to the
+  forecast area, with a smooth border. A dilated system always contains the original one and an
+  eroded system is always inside it. Every threshold has its own trend, and the inner thresholds
+  stay nested in the outer ones.
+* **Values**: the new pixels take a local average of the neighbouring values **of their own
+  threshold level**, never a mean of the whole system, so no artificial cores are created and the
+  field keeps its texture. All the values are then shifted by the trend of the mean value of the
+  cluster, but they are kept inside their threshold level and within the extremes observed in the
+  window. This keeps the method independent of the variable (reflectivity, brightness
+  temperature, precipitation...).
+* **Damping**: a growth or a decay does not last for ever, so the trends fade with the lead time
+  (multiplied by ``0.6 ** n`` at the *n*-th step after the first). The trends are always taken
+  from the **observed** frames, never from the forecast frames, so forecast errors are not fed
+  back into the trends.
+
+.. code-block:: python
+
+    name_list['morph_trend'] = True
+    pyfortracc.forecast(name_list, read_function)
+
+.. note::
+
+   ``morph_trend`` is not applied with the ``'=='`` and ``'!='`` operators, where the values are
+   classes and have no intensity. The settings of the method (maximum rate, damping, border
+   smoothing) are fixed constants in ``pyfortracc/forecast/morphology.py`` (``MAX_RATE``,
+   ``DAMPING``, ``SIGMA``), so the ``name_list`` only switches it on or off.
+
+The figure below compares the two modes with GOES-19 channel 13 (10.3 µm) brightness temperature
+over South America (2025-11-05, forecasts issued every 30 min from 18:00 to 20:00 UTC, thresholds
+235, 220 and 210 K). ``morph_trend`` improves POD and CSI at every lead time and brings the area
+bias closer to 1 (for example, CSI at 235 K and +60 min: 0.47 against 0.45; area bias at 210 K and
++60 min: 0.90 against 0.86).
+
+.. image:: image/forecast_morph_trend_scores.png
+   :width: 100%
+   :align: center
+
+.. note::
+
+   The damping was tuned on this same event, so these scores are optimistic. The test can be
+   reproduced with ``tests/forecast_goes19.py``, which downloads the images with
+   `goesgcp <https://github.com/helvecioneto/goesgcp>`_, tracks them, runs the forecast with
+   ``morph_trend`` off and on, and saves the scores and comparison figures in
+   ``tests/output_goes19/`` (``python forecast_goes19.py plots`` only redraws the figures).
 
 
 Forecast parameters
@@ -83,6 +146,11 @@ of them is missing, the function prints a message and returns without running.
    * - ``forecast_mode``
      - ``'persistence'``
      - Extrapolation method. Only ``'persistence'`` is implemented.
+   * - ``morph_trend``
+     - ``False``
+     - Dilate/erode each system by its area trend and shift its values by its intensity trend,
+       both taken from the observation window and damped with the lead time (see
+       :ref:`Growth and decay of the systems <BI/BI_FORECAST:Growth and decay of the systems (morph_trend)>`).
 
 Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -252,7 +320,8 @@ Comparing forecast and observation of a single cluster:
 
 Because persistence keeps each cluster's shape, the forecast ``size`` stays constant, while
 the observed size keeps changing. This growth and decay is the main source of forecast error
-for this method.
+for this method; ``morph_trend = True`` makes the forecast ``size`` follow the observed trend
+of each cluster.
 
 
 Rolling forecasts over a period
@@ -364,15 +433,20 @@ Choosing the parameters
   ``validation = True`` is used during tracking, these columns hold the vector of the best
   correction method for each cluster (see :doc:`BI_TRACKING`). Better vectors lead to better
   forecasts.
-* **Multiple thresholds**: every threshold is forecast. With several thresholds, the internal
-  clusters (``iuid``) are extrapolated with their own vectors.
+* **Multiple thresholds**: every threshold is forecast. The internal clusters (``iuid``) move
+  with the system that contains them; an internal cluster outside every cluster of the first
+  threshold is moved by its own vector.
+* **morph_trend**: enable it when the systems grow or decay during the forecast horizon (e.g.
+  convection). It needs ``observation_window >= 2`` to measure a trend; with a single frame, or
+  for systems with no ``CON`` step in the window, the systems are only moved.
 
 
 Limitations
 -------------------------------------------------------
 
-* Only the **persistence** mode is available: no growth, decay, splitting or merging is
-  predicted during the forecast.
+* Only the **persistence** mode is available. With ``morph_trend`` the growth and decay of the
+  systems follow their observed trends, but no splitting, merging or initiation is predicted.
 * Clusters that appear after ``forecast_time`` cannot be forecast, and clusters without a
   displacement vector in the last observed frame are skipped.
-* Clusters moved outside the domain are clipped to the domain border.
+* Pixels moved outside the domain are dropped (with ``edges = True`` they wrap around in
+  longitude).

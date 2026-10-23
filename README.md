@@ -24,7 +24,7 @@ The algorithm is divided into two main modules: **Track** and **Forecast**.
    - **Concatenation**: Combines all identified features and trajectories into a single Parquet file, forming a consolidated tracking table with complete tracking data.
 
 2. **Forecast**: This module will predict future cluster positions through:
-   - **Virtual Image**: A persistence-based forecast of cluster positions by shifting clusters in the current time step to a specified future position based on average vector displacement.
+   - **Virtual Image**: A persistence-based forecast of cluster positions by shifting clusters in the current time step to a specified future position based on average vector displacement. Optionally (`morph_trend`), each cluster is also dilated or eroded and its values follow its observed trend.
    - **Track Routine**: Applies the tracking routine to the virtual image, projecting cluster identification to the anticipated time step.
 
 ## Documentation
