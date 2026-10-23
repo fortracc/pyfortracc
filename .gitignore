@@ -21,6 +21,8 @@ input/
 output/
 input_goes19/
 output_goes19/
+input_goes19_rnn/
+output_goes19_rnn/
 experiments/
 doc/_build/
 pro/

@@ -226,6 +226,16 @@ def apply_trends(clusters, history_df, name_list, lead=0):
     clusters = clusters.merge(trends, on=['threshold_level', 'uid'], how='left')
     clusters['log_rate'] = clusters['log_rate'].fillna(0.0)
     clusters['value_delta'] = clusters['value_delta'].fillna(0.0)
+    return morph_clusters(clusters, name_list)
+
+
+def morph_clusters(clusters, name_list):
+    """
+    Dilate/erode each cluster by its log_rate and shift its values by its
+    value_delta (columns of clusters, see morph_cluster), the values kept between
+    value_min and value_max at the last threshold level (NaN: the extremes of the
+    cluster). Clusters eroded away are dropped.
+    """
     new_x, new_y, new_v = [], [], []
     for row in clusters.itertuples():
         xs, ys, vs = morph_cluster(np.asarray(row.array_x, dtype=np.int64),

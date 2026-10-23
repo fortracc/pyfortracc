@@ -119,6 +119,43 @@ def default_parameters(name_lst=None, read_function=None):
         kept inside their threshold levels. The trends fade with the lead time.
         Not applied with the '==' and '!=' operators. Default False. Its
         settings are fixed in pyfortracc/forecast/morphology.py.
+    forecast_mode: str
+        'persistence' (default), 'lstm' or 'gru'. The recurrent modes (with
+        PyTorch) read the history of each system in
+        the tracking table and predict, for the next time step, a correction
+        of its persistence displacement, its area rate and the change of its
+        values. The forecast image is drawn like the persistence one (moved,
+        dilated/eroded systems) and enters the tracking cycle again at every
+        lead time. The model runs on the best device available (CUDA, TPU,
+        Apple MPS or CPU). See pyfortracc/forecast/rnn_model.py.
+    rnn_weights: str or None
+        Recurrent modes only. None (default): the model is trained (see
+        rnn_train_period) and saved in output_path/forecast/models/, where
+        the next calls with the same settings reuse it. Its file name tells
+        the mode, the training period, the operator and thresholds,
+        delta_time, observation_window and the architecture, e.g.
+        lstm_202511050000-202511051200_le235-220-210_dt10min_win3_h32l1seq6_<hash>.pt
+        (seq6: the network reads the last 6 time steps of each system). A
+        path: the weights of a trained model (a .pt file written by a
+        previous run), used for inference only.
+    rnn_train_period: None or [start, end]
+        Recurrent modes only. None (default): the model is trained on the
+        whole tracking up to forecast_time (it never learns from frames after
+        the forecast start). [start, end] (timestamps, e.g.
+        ['2025-11-05 00:00', '2025-11-05 12:00']): trained on the frames of
+        that period only.
+    rnn_aux: list of str
+        Recurrent modes only. Extra columns of the tracking table used as
+        inputs of the model (e.g. ['land_use'] or the columns added by
+        post_processing.add_raster_data, such as 'dbz' or 'dbz_mean'). Numeric
+        columns are used as they are and columns of arrays by their mean.
+        Default [].
+    rnn_arch: None, dict or 'optuna'
+        Recurrent modes only. None (default): the default architecture.
+        A dict overrides some of its settings: hidden (32), layers (1),
+        dropout (0.1), seq_len (6, time steps of history read by the model),
+        lr (3e-3), weight_decay (1e-4) and device ('auto', or e.g. 'cpu',
+        'cuda', 'mps'). 'optuna': the settings are searched with optuna within a small time budget.
     'epsg': int
         EPSG code for the projection.
     Returns
@@ -141,6 +178,14 @@ def default_parameters(name_lst=None, read_function=None):
         name_lst['lead_time'] = None
     if 'morph_trend' not in name_lst:
         name_lst['morph_trend'] = False
+    if 'rnn_weights' not in name_lst:
+        name_lst['rnn_weights'] = None
+    if 'rnn_aux' not in name_lst:
+        name_lst['rnn_aux'] = []
+    if 'rnn_arch' not in name_lst:
+        name_lst['rnn_arch'] = None
+    if 'rnn_train_period' not in name_lst:
+        name_lst['rnn_train_period'] = None
     if 'mean_dbz' not in name_lst:
         name_lst['mean_dbz'] = False
     if 'cluster_method' not in name_lst:
@@ -245,4 +290,20 @@ def default_parameters(name_lst=None, read_function=None):
                              "with {0}, which require the array_x, array_y and "
                              "array_values columns. Set save_arrays to True "
                              "or disable {0}.".format(needs_arrays))
+    # Settings of the recurrent forecast modes
+    if name_lst['forecast_mode'] not in ('persistence', 'lstm', 'gru'):
+        raise ValueError("name_list['forecast_mode'] must be 'persistence', "
+                         "'lstm' or 'gru', not {!r}.".format(name_lst['forecast_mode']))
+    if isinstance(name_lst['rnn_aux'], str):
+        name_lst['rnn_aux'] = [name_lst['rnn_aux']]
+    arch = name_lst['rnn_arch']
+    arch_keys = {'hidden', 'layers', 'dropout', 'seq_len', 'lr', 'weight_decay', 'device'}
+    if not (arch is None or arch == 'optuna' or isinstance(arch, dict)):
+        raise ValueError("name_list['rnn_arch'] must be None, a dict or 'optuna'.")
+    period = name_lst['rnn_train_period']
+    if period is not None and (not isinstance(period, (list, tuple)) or len(period) != 2):
+        raise ValueError("name_list['rnn_train_period'] must be None or [start, end].")
+    if isinstance(arch, dict) and set(arch) - arch_keys:
+        raise ValueError("Unknown keys in name_list['rnn_arch']: {}. Valid keys: {}.".format(
+            sorted(set(arch) - arch_keys), sorted(arch_keys)))
     return name_lst

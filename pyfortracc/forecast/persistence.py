@@ -107,16 +107,33 @@ def persistence(tracked_files, name_list, lead=0, history_files=None):
 
     # Read the tracked files; the identity of a cluster is its uid at the first
     # threshold and its iuid at the others
-    track_df = read_window(tracked_files)
-    h, w = name_list['y_dim'], name_list['x_dim']
-    forecast_image = np.full(h * w, np.nan)
+    track_df = to_pixels(read_window(tracked_files), name_list)
+    moved = moved_clusters(track_df, name_list)
+    # Optionally dilate/erode the systems and shift their values by their trends
+    if name_list.get('morph_trend') and not moved.empty:
+        history_df = track_df if history_files is None else read_window(history_files)
+        moved = apply_trends(moved, history_df, name_list, lead)
+    return render(moved, name_list)
 
-    # Convert u_ and v_ units from degrees to pixels. u_ is the zonal
-    # (x/column) component and v_ the meridional (y/row) component
+
+def to_pixels(track_df, name_list):
+    """Vectors u_ (zonal, x/column) and v_ (meridional, y/row) converted from degrees to pixels (in place)."""
     if all(key in name_list and name_list[key] is not None for key in ['lat_min', 'lat_max', 'lon_min', 'lon_max']):
         track_df['u_'] = track_df['u_'] / name_list['x_res']
         track_df['v_'] = track_df['v_'] / name_list['y_res']
+    return track_df
 
+
+def moved_clusters(track_df, name_list):
+    """
+    The clusters of the last frame of the window that the forecast moves, with the
+    mean vector of each one over the window (u_mean, v_mean, in pixels).
+
+    The systems are the clusters of the first threshold; the inner clusters inside
+    a system move with it and are left out, the others (orphans) move on their own.
+    Clusters without a vector at the last frame are not moved.
+    """
+    h, w = name_list['y_dim'], name_list['x_dim']
     # Clusters of the last frame and the mean vector of each one over the window
     last_timestamp = track_df['timestamp'].max()
     track_last = track_df[track_df['timestamp'] == last_timestamp]
@@ -135,19 +152,27 @@ def persistence(tracked_files, name_list, lead=0, history_files=None):
                        inner['array_x'].map(lambda a: int(a[0]))).to_numpy()
         inner = inner[~in_system[first_pixel]]
 
-    # Clusters with a vector at the last frame, shifted by their rounded mean vector
+    # Clusters with a vector at the last frame
     moved = pd.concat([systems, inner], ignore_index=True)
     moved = moved[moved['u_'].notna() & moved['v_'].notna()]
     moved = moved.merge(vectors, on=['threshold_level', 'uid'], how='left')
-    moved = moved.dropna(subset=['u_mean', 'v_mean'])
+    return moved.dropna(subset=['u_mean', 'v_mean'])
+
+
+def render(moved, name_list):
+    """
+    The forecast image of the clusters moved by their rounded mean vector (u_mean,
+    v_mean, rounded half up). Where moved systems overlap, the most intense value
+    wins (the largest for the '>' operators, the smallest for '<'). NaN where no
+    system was moved.
+    """
+    h, w = name_list['y_dim'], name_list['x_dim']
+    forecast_image = np.full(h * w, np.nan)
     if moved.empty:
         return forecast_image.reshape((h, w))
+    moved = moved.copy()
     moved['dx'] = np.floor(moved['u_mean'].to_numpy() + 0.5).astype(np.int64)
     moved['dy'] = np.floor(moved['v_mean'].to_numpy() + 0.5).astype(np.int64)
-    # Optionally dilate/erode the systems and shift their values by their trends
-    if name_list.get('morph_trend'):
-        history_df = track_df if history_files is None else read_window(history_files)
-        moved = apply_trends(moved, history_df, name_list, lead)
     flat_idx, values = shifted_pixels(moved, name_list)
 
     # Write the values so that the most intense one wins where moved systems overlap

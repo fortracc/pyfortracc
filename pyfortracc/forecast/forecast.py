@@ -117,10 +117,14 @@ def forecast(name_list, read_function):
         def frcst_read_func(frcst_out):
             return np.load(frcst_out)
 
-    # Get forecast mode function
+    # Get forecast mode function. The recurrent model is created here, once,
+    # while output_path still points to the tracking (see rnn_model.forecaster)
     if name_list['forecast_mode'] == 'persistence':
         # import persistence_forecast as mode
         from pyfortracc.forecast.persistence import persistence as forecast_function
+    elif name_list['forecast_mode'] in ('lstm', 'gru'):
+        from pyfortracc.forecast.rnn_model import forecaster
+        forecast_function = forecaster(name_list)
     else:
         print(f"Forecast mode {name_list['forecast_mode']} not implemented yet.")
         return

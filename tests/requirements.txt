@@ -19,3 +19,5 @@ matplotlib
 goesgcp
 rioxarray
 pytest
+torch
+optuna

@@ -16,3 +16,5 @@ requests==2.33.0
 gdown==5.2.2
 geocube==0.7.1
 rasterstats==0.20.0
+torch==2.14.1
+optuna==5.0.0
