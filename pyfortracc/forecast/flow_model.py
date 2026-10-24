@@ -35,11 +35,13 @@ trends of the base fade with the lead time (morphology.DAMPING), as in morph_tre
 The training is self-supervised on the tracking table: every frame is a forecast
 start, its base is computed with the persistence functions and the target is the
 next frame. The network is trained on CROP x CROP crops around the systems, so it is
-independent of the size of the grid. As the forecast reads its own frames at the next
-lead times, part of the samples are learned at the end of a rollout of ROLLOUT frames
-(the pushforward trick): the model generates the first frames without gradient and
-learns the last one from them, so that it learns to correct its own errors instead of
-compounding them. The settings below are fixed on purpose; the
+independent of the size of the grid. Optionally (ROLLOUT_PROB > 0, off by default), as
+the forecast reads its own frames at the next lead times, part of the samples are
+learned at the end of a rollout of ROLLOUT frames (the pushforward trick): the model
+generates the first frames without gradient and learns the last one from them, so that
+it learns to correct its own errors instead of compounding them (in the GOES-19 test it
+changed little: better 235 K CSI at 3-4 h, warmer systems at long lead times, twice the
+training time). The settings below are fixed on purpose; the
 architecture is set by name_list['rnn_arch'] (base, lr, weight_decay, device). As the
 recurrent modes, the model is trained on the whole tracking up to forecast_time, or
 on name_list['rnn_train_period'] = [start, end], and saved in
@@ -81,7 +83,7 @@ MIN_SAMPLES = 20       # below this number of frames the model is not trained (p
 EMA = 0.999            # decay of the moving average of the weights (the weights saved)
 BACKGROUND = 0.1       # weight in the loss of the pixels far from every system
 ROLLOUT = 3            # frames of the rollouts of the training (the model reads its own generated frames)
-ROLLOUT_PROB = 0.5     # fraction of the training samples learned at the end of a rollout
+ROLLOUT_PROB = 0.0     # fraction of the training samples learned at the end of a rollout (0: off)
 # Generation
 STEPS = 4              # Euler steps of the flow (network evaluations per member)
 MEMBERS = 8            # samples combined by their probability matched mean
