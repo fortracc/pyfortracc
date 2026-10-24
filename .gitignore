@@ -23,6 +23,9 @@ input_goes19/
 output_goes19/
 input_goes19_rnn/
 output_goes19_rnn/
+# Test inputs/outputs (figures, animations, models) of every test script
+tests/input*/
+tests/output*/
 experiments/
 doc/_build/
 pro/

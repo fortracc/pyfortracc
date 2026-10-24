@@ -128,34 +128,43 @@ def default_parameters(name_lst=None, read_function=None):
         dilated/eroded systems) and enters the tracking cycle again at every
         lead time. The model runs on the best device available (CUDA, TPU,
         Apple MPS or CPU). See pyfortracc/forecast/rnn_model.py.
+        'flow' (with PyTorch): residual flow matching. The network draws the
+        next image as a correction of the persistence + morph_trend image
+        (growth, decay, deformation and new systems), reading the last frames,
+        maps of the history of the systems and the optical flow of the
+        tracking. Not available with the '==' and '!=' operators. See
+        pyfortracc/forecast/flow_model.py.
     rnn_weights: str or None
-        Recurrent modes only. None (default): the model is trained (see
-        rnn_train_period) and saved in output_path/forecast/models/, where
-        the next calls with the same settings reuse it. Its file name tells
-        the mode, the training period, the operator and thresholds,
-        delta_time, observation_window and the architecture, e.g.
+        Learned modes ('lstm', 'gru', 'flow') only. None (default): the model
+        is trained (see rnn_train_period) and saved in
+        output_path/forecast/models/, where the next calls with the same
+        settings reuse it. Its file name tells the mode, the training period,
+        the operator and thresholds, delta_time, observation_window and the
+        architecture, e.g.
         lstm_202511050000-202511051200_le235-220-210_dt10min_win3_h32l1seq6_<hash>.pt
         (seq6: the network reads the last 6 time steps of each system). A
         path: the weights of a trained model (a .pt file written by a
         previous run), used for inference only.
     rnn_train_period: None or [start, end]
-        Recurrent modes only. None (default): the model is trained on the
+        Learned modes only. None (default): the model is trained on the
         whole tracking up to forecast_time (it never learns from frames after
         the forecast start). [start, end] (timestamps, e.g.
         ['2025-11-05 00:00', '2025-11-05 12:00']): trained on the frames of
         that period only.
     rnn_aux: list of str
-        Recurrent modes only. Extra columns of the tracking table used as
+        Learned modes only. Extra columns of the tracking table used as
         inputs of the model (e.g. ['land_use'] or the columns added by
         post_processing.add_raster_data, such as 'dbz' or 'dbz_mean'). Numeric
         columns are used as they are and columns of arrays by their mean.
         Default [].
     rnn_arch: None, dict or 'optuna'
-        Recurrent modes only. None (default): the default architecture.
-        A dict overrides some of its settings: hidden (32), layers (1),
-        dropout (0.1), seq_len (6, time steps of history read by the model),
-        lr (3e-3), weight_decay (1e-4) and device ('auto', or e.g. 'cpu',
-        'cuda', 'mps'). 'optuna': the settings are searched with optuna within a small time budget.
+        Learned modes only. None (default): the default architecture.
+        A dict overrides some of its settings. 'lstm' and 'gru': hidden (32),
+        layers (1), dropout (0.1), seq_len (6, time steps of history read by
+        the model), lr (3e-3), weight_decay (1e-4) and device ('auto', or e.g.
+        'cpu', 'cuda', 'mps'); 'optuna': the settings are searched with optuna
+        within a small time budget. 'flow': base (32, channels of the first
+        level of the network), lr (2e-4), weight_decay (1e-4) and device.
     'epsg': int
         EPSG code for the projection.
     Returns
@@ -290,14 +299,21 @@ def default_parameters(name_lst=None, read_function=None):
                              "with {0}, which require the array_x, array_y and "
                              "array_values columns. Set save_arrays to True "
                              "or disable {0}.".format(needs_arrays))
-    # Settings of the recurrent forecast modes
-    if name_lst['forecast_mode'] not in ('persistence', 'lstm', 'gru'):
+    # Settings of the learned forecast modes
+    if name_lst['forecast_mode'] not in ('persistence', 'lstm', 'gru', 'flow'):
         raise ValueError("name_list['forecast_mode'] must be 'persistence', "
-                         "'lstm' or 'gru', not {!r}.".format(name_lst['forecast_mode']))
+                         "'lstm', 'gru' or 'flow', not {!r}.".format(name_lst['forecast_mode']))
+    if name_lst['forecast_mode'] == 'flow' and name_lst['operator'] in ('==', '!='):
+        raise ValueError("forecast_mode 'flow' needs an ordered operator ('>', '>=', '<', '<=').")
     if isinstance(name_lst['rnn_aux'], str):
         name_lst['rnn_aux'] = [name_lst['rnn_aux']]
     arch = name_lst['rnn_arch']
-    arch_keys = {'hidden', 'layers', 'dropout', 'seq_len', 'lr', 'weight_decay', 'device'}
+    if name_lst['forecast_mode'] == 'flow':
+        arch_keys = {'base', 'lr', 'weight_decay', 'device'}
+        if not (arch is None or isinstance(arch, dict)):
+            raise ValueError("name_list['rnn_arch'] must be None or a dict with forecast_mode 'flow'.")
+    else:
+        arch_keys = {'hidden', 'layers', 'dropout', 'seq_len', 'lr', 'weight_decay', 'device'}
     if not (arch is None or arch == 'optuna' or isinstance(arch, dict)):
         raise ValueError("name_list['rnn_arch'] must be None, a dict or 'optuna'.")
     period = name_lst['rnn_train_period']

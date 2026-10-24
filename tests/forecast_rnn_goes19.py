@@ -72,7 +72,7 @@ name_list['lat_max'] = -11.982779820396285 # Max latitude of data in degrees
 
 # Forecast parameters
 name_list['forecast_time'] = str(ANCHORS[0]) # Overwritten by the loop over the ANCHORS below
-name_list['observation_window'] = 3 # Number of previous images of the persistence (mean vector and trends)
+name_list['observation_window'] = 6 # Number of previous images (60 min) of the persistence (mean vector and trends)
 name_list['lead_time'] = 6 # Amount of time steps to forecast (1 hour)
 name_list['forecast_mode'] = 'persistence' # 'persistence', 'lstm' or 'gru' (each forecast below sets its own)
 name_list['morph_trend'] = False # Persistence only: dilate/erode the systems by their area trend
